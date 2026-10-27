@@ -85,6 +85,10 @@ const be = {
   listenAthletes(coachUid, cb) { return live(() => cb(Object.values(store.users).filter(u => u.profile.coachId === coachUid).map(u => ({ ...u.profile })))); },
   listenPending(cb) { return live(() => cb(Object.values(store.users).filter(u => u.profile.pending === true).map(u => ({ ...u.profile })))); },
   async acceptAthlete(uid, coachUid, team) { Object.assign(store.users[uid].profile, { coachId: coachUid, team, pending: false }); notify(); },
-  async sendNote(uid, note) { store.users[uid].notes.push({ id: 'n' + Date.now(), ...note }); notify(); }
+  async sendNote(uid, note) { store.users[uid].notes.push({ id: 'n' + Date.now(), ...note }); notify(); },
+  async sendFeedback(fb) { (store.feedback = store.feedback || []).unshift({ id: 'f' + Date.now(), ...fb }); notify(); },
+  listenFeedback(cb) { return live(() => cb([...(store.feedback || [])])); },
+  async markFeedback(id, read) { const x = (store.feedback || []).find(f => f.id === id); if (x) x.read = !!read; notify(); },
+  async removeFeedback(id) { store.feedback = (store.feedback || []).filter(f => f.id !== id); notify(); }
 };
 export default be;

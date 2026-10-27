@@ -108,6 +108,20 @@ const be = {
   },
   sendNote(uid, note) {
     return setDoc(doc(collection(db, 'users', uid, 'notes')), clean(note));
+  },
+  // Consultas, ideas y comentarios de los atletas (los lee y gestiona solo el coach).
+  sendFeedback(fb) {
+    return setDoc(doc(collection(db, 'feedback')), clean(fb));
+  },
+  listenFeedback(cb) {
+    const q = query(collection(db, 'feedback'), orderBy('ts', 'desc'), limit(50));
+    return onSnapshot(q, (s) => cb(rows(s)), fail('comentarios'));
+  },
+  markFeedback(id, read) {
+    return updateDoc(doc(db, 'feedback', id), { read: !!read });
+  },
+  removeFeedback(id) {
+    return deleteDoc(doc(db, 'feedback', id));
   }
 };
 

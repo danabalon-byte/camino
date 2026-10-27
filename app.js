@@ -67,7 +67,7 @@ if (!['auto', 'noche', 'tierra', 'dia'].includes(PREF.tone)) PREF.tone = 'auto';
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { ready: false, user: null, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const ST = { ready: false, user: null, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
@@ -212,6 +212,10 @@ function teamTotals(team) {
   const meta = ST.teamMeta[team] || {};
   return { km: Math.round(km), goal: Number(meta.goal) || KM_GOAL_DEFAULT, hito: meta.hito || '', members: rows.length };
 }
+function teamsTotal() {
+  const a = teamTotals('grnt'), b = teamTotals('zn');
+  return { km: a.km + b.km, goal: a.goal + b.goal, hito: '', members: a.members + b.members };
+}
 function myMonthKm(extra) {
   const m = monthKey(); const base = ST.myCk.filter((c) => c.date.slice(0, 7) === m && c.date !== off(0)).reduce((s, c) => s + ((c.activity && c.activity.km) || 0), 0);
   return Math.round(base + (extra || 0));
@@ -277,6 +281,39 @@ function logoSrc() {
   } catch (e) { /* sin estilos: usa el logo negro */ }
   return './logo-negro.svg';
 }
+
+/* ---------- Mensajes: globo con el número de pendientes ---------- */
+const seenKey = () => 'camino.seen.' + (ST.user ? ST.user.uid : '');
+function seenAt() {
+  let v = null; try { v = localStorage.getItem(seenKey()); } catch (e) { /* sin almacenamiento */ }
+  if (v == null) { v = String(Date.now()); try { localStorage.setItem(seenKey(), v); } catch (e) { /* sin almacenamiento */ } }
+  return Number(v) || 0;
+}
+const unreadNotes = () => { const t = seenAt(); return (ST.myNotes || []).filter((n) => Number(n.at) > t); };
+const replyQueue = () => athleteObjs().filter((a) => needsReply(a));
+const unreadFbk = () => (ST.fbk || []).filter((x) => !x.read);
+function bellCount() {
+  if (!ST.profile || !ST.user) return 0;
+  return isCoach() ? replyQueue().length + unreadFbk().length : unreadNotes().length;
+}
+const bellHtml = () => {
+  const n = bellCount();
+  return '<button type="button" class="bell" data-a="inbox" aria-label="Mensajes' + (n ? ': ' + n + (n === 1 ? ' pendiente' : ' pendientes') : ': sin pendientes') + '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10.3 20a1.9 1.9 0 0 0 3.4 0"></path></svg>' + (n ? '<span class="bellb" aria-hidden="true">' + (n > 9 ? '9+' : n) + '</span>' : '') + '</button>';
+};
+function inboxHtml() {
+  let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px">' + (isCoach() ? 'Pendientes por revisar' : 'De tu coach') + '</div><h1 class="title">Mensajes</h1></div><button type="button" class="x" data-a="inboxClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600">Cerrar</button></div>';
+  if (isCoach()) {
+    const q = replyQueue(), f = unreadFbk();
+    if (!q.length && !f.length) out += '<section class="card"><p class="soft">Todo al día. No tienes atletas esperando respuesta ni comentarios nuevos.</p></section>';
+    if (q.length) out += '<section class="col g10"><div class="eyebrow">Atletas por responder · ' + q.length + '</div>' + q.map((a) => '<button type="button" class="card row between g12" data-a="inboxGo" data-v="' + esc(a.id) + '" style="text-align:left;min-height:64px"><span class="col"><b>' + esc(a.name || 'Atleta') + '</b><span class="muted" style="font-size:13px">' + esc(statusOf(a).k === 'warn' ? 'Necesita atención' : 'Check-in sin respuesta') + '</span></span><span class="muted" aria-hidden="true">›</span></button>').join('') + '</section>';
+    if (f.length) out += '<section class="col g10"><div class="eyebrow">Ideas y consultas nuevas · ' + f.length + '</div><button type="button" class="card row between g12" data-a="inboxFb" style="text-align:left;min-height:64px"><span class="col"><b>' + f.length + (f.length === 1 ? ' mensaje nuevo' : ' mensajes nuevos') + '</b><span class="muted" style="font-size:13px">' + esc(String(f[0].text).slice(0, 70)) + '</span></span><span class="muted" aria-hidden="true">›</span></button></section>';
+  } else {
+    const L = (ST.myNotes || []).slice().sort((a, b) => Number(b.at) - Number(a.at)).slice(0, 15), t = UI.inboxSeen || 0;
+    if (!L.length) out += '<section class="card"><p class="soft">Aún no tienes mensajes de tu coach. Cuando te escriba, aparecerá aquí con un número en la campana.</p></section>';
+    else out += '<section class="col g10">' + L.map((n) => '<div class="card col g6" style="' + (Number(n.at) > t ? 'border:1.5px solid var(--accent)' : '') + '"><div class="eyebrow">' + (Number(n.at) > t ? '<span style="color:var(--accent)">Nuevo</span> · ' : '') + relTime(n.at) + '</div><p class="soft" style="font-size:16px;white-space:pre-wrap">' + esc(n.text) + '</p></div>').join('') + '</section>';
+  }
+  return out + '</div></div>';
+}
 function topHtml() {
   let pills = '';
   if (DEMO) pills += '<span class="pill">Demo</span>';
@@ -285,6 +322,7 @@ function topHtml() {
     if (t) pills += '<span class="pill">' + TEAMS[t] + '</span>';
     if (isCoach()) { const cm = coachMode(); pills += '<div class="modesw" role="group" aria-label="Cambiar de vista"><button type="button" data-a="mode" data-v="coach" aria-pressed="' + cm + '">Coach</button><button type="button" data-a="mode" data-v="atleta" aria-pressed="' + !cm + '">Atleta</button></div>'; }
     else pills += '<span class="pill role">Atleta</span>';
+    pills += bellHtml();
   }
   return '<div class="inner"><span class="brand row g8"><img class="brand-logo" src="' + logoSrc() + '" alt="" width="30" height="30">Camino</span><span class="row g8">' + pills + '</span></div>';
 }
@@ -438,6 +476,7 @@ function viewCabina() {
   out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div><div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Bienestar</span></div></div>' + histBlock(a);
   out += '</section>';
   out += manageCard(a);
+  out += fbInbox();
   return out + '</div></div>';
 }
 
@@ -700,15 +739,17 @@ function parsePlan(text) {
 /* ---------- Vista: Guía (como se llenan los datos) ---------- */
 const GUIA_BASE = [
   { k: 'Hoy', t: 'Tu estado de hoy', ic: 'hoy', p: ['El círculo es un puntaje de 0 a 100 que sale de tu último check-in: ánimo, calidad del sueño, sensación de piernas y estrés. Se promedian y se muestra como semáforo.', '<b>70 o más</b>: listo para rodar. <b>50 a 69</b>: ve con calma. <b>Menos de 50</b>: hoy toca cuidarte y avisar a tu coach.', 'Si hoy no hiciste check-in, usa el de ayer o el último que tengas, y lo dice debajo.'] },
+  { k: 'Constancia', t: 'Por qué el check-in diario importa', ic: 'sueno', p: ['Camino se completa, en gran medida, con las respuestas de tus <b>check-ins diarios</b>. Cada uno suma una pieza: cómo dormiste, cómo están tus piernas, tu ánimo y tu esfuerzo.', 'Con esas piezas tu coach ve cómo respondes al entrenamiento, reconoce tu esfuerzo y ajusta el plan a tu momento real. Sin ellas, el plan se queda solo en números.', 'No necesitas que sea perfecto: <b>1 minuto al día</b> basta. Mientras más constante seas, más claro se ve tu progreso.'] },
   { k: 'Check-in', t: 'Cómo se llena el check-in', ic: 'sueno', p: ['Lo llenas tú en Hoy, en 1 minuto. Hay tres tipos: <b>actividad</b> (saliste a entrenar), <b>bienestar</b> (cómo amaneciste) y <b>descanso</b>.', 'Si registras una molestia, tu coach la ve de inmediato y puede escribirte una nota. Esa nota aparece en Hoy.', 'Los check-ins son privados: solo los ven tú y tu coach. El equipo nunca ve tu bienestar ni tus molestias.'] },
   { k: 'Aptitud', t: 'Aptitud: lo que has construido', ic: 'datos', p: ['La aptitud (CTL) es tu base de entrenamiento. Es un promedio ponderado de tu carga de los últimos 42 días aproximadamente.', 'Sube lento, con semanas constantes, y baja lento si paras. Una sola salida larga casi no la mueve.', 'Más aptitud significa que tu cuerpo tolera más trabajo. Es la línea que más importa mirar en el largo plazo.'] },
   { k: 'Fatiga', t: 'Fatiga: el cansancio reciente', ic: 'racha', p: ['La fatiga (ATL) es el promedio de tu carga de los últimos 7 días aproximadamente.', 'Sube rápido con una salida dura y baja rápido con un par de días suaves. Es normal que se dispare después de un fin de semana largo.', 'Por sí sola no es mala: solo dice cuánto trabajo acumulaste esta semana.'] },
   { k: 'Forma', t: 'Forma: aptitud menos fatiga', ic: 'cinco', p: ['La forma (TSB) es la resta: aptitud menos fatiga. Es el número grande que ves en "Tu forma".', '<b>Positiva</b>: piernas frescas, buen momento para una prueba o carrera. <b>Cerca de cero</b>: equilibrio. <b>Negativa</b>: estás cargando trabajo, que es normal en bloques de construcción.', 'Si baja de -25, tu coach lo marca como alerta. Antes de una meta, el plan busca que llegues con forma positiva.'] },
   { k: 'Datos', t: 'De dónde salen los números', ic: 'datos', p: ['Aptitud, fatiga y salidas vienen de intervals.icu, donde se conectan tus actividades de Strava o Garmin. Un proceso automático las trae <b>cada hora</b> a Camino.', 'Las salidas por semana cuentan los días con actividad registrada. Los kilómetros y minutos no se traen desde Strava por una limitación de la conexión.', 'Tu bienestar, racha e insignias vienen solo de tus check-ins en Camino, no de intervals.icu.'] },
+  { k: 'Sensores', t: 'Equípate para medir tu esfuerzo', ic: 'datos', p: ['Para medir tu esfuerzo y planificar con precisión conviene salir con <b>tres sensores</b>: de <b>frecuencia cardíaca</b> (banda pectoral o de brazo), de <b>cadencia</b> y de <b>velocidad</b>.', 'La frecuencia cardíaca y la cadencia permiten estimar la carga de tus salidas y leer tu fatiga. Un sensor óptico de muñeca falla más en intervalos, frío y terreno irregular; una banda de brazo o pectoral es más fiable.', 'Si ya tienes alguno guardado, revisa primero la pila. Y recuerda: sin medidor de potencia no se calculan vatios, pero la carga estimada por frecuencia cardíaca mejora mucho con buenos sensores.'] },
   { k: 'Semana', t: 'Tu semana', ic: 'semana', p: ['Cada columna es un día. El contorno punteado es lo que dice tu plan y el relleno es lo que ya hiciste.', 'Una sesión cuenta como hecha cuando haces un check-in de tipo <b>actividad</b> ese día.', 'El plan lo carga tu coach. Si no ves sesiones, es que aún no te carga ese bloque.'] },
   { k: 'Racha', t: 'Racha e insignias', ic: 'racha', p: ['<b>Racha</b>: días seguidos con check-in, de cualquier tipo. Si hoy aún no lo haces, cuenta desde ayer. Si saltas un día, vuelve a 0.', '<b>7 días seguidos</b>: siete días consecutivos con check-in. <b>Sueño parejo</b>: 5 noches de los últimos 7 con buen sueño. <b>Semana completa</b>: cumplir todas las sesiones del plan de esta semana. <b>Cinco actividades</b>: 5 actividades registradas en 14 días.', 'La barra de progreso de cada insignia dice cuánto te falta. Las que logras quedan encendidas.'] },
   { k: 'Camino', t: 'Tu camino recorrido', ic: 'ruta', p: ['En Ruta, "Ver mi resumen" muestra tres pantallas: tus <b>salidas registradas</b>, tu <b>mejor semana</b> y lo que ha hecho tu <b>equipo</b> este mes.', 'Las salidas salen del historial de intervals.icu y de tus check-ins de actividad. La mejor semana usa los minutos registrados, y si no hay minutos, usa la cantidad de salidas.', 'Mientras más constante seas con los check-ins, más completo queda el resumen.'] },
-  { k: 'Equipo', t: 'Meta del equipo', ic: 'cabina', p: ['Cuando tu coach te asigna a GRNT o ZN, en Ruta ves los kilómetros del equipo y la meta del mes.', 'Esos kilómetros salen de lo que cada atleta anota en su check-in de actividad, no de intervals.icu. Por eso, si no anotas km, no suman. Si prefieres no aparecer, apaga <b>Compartir mis km con el equipo</b> en Ajustes.', 'El equipo ve solo kilómetros, metas e hitos. Nunca bienestar, molestias ni notas.'] }
+  { k: 'Equipo', t: 'Meta del equipo', ic: 'cabina', p: ['"Equipo" es el <b>grupo de atletas</b> al que te asigna tu coach (GRNT o ZN). No se refiere a tu bicicleta ni a tus kilómetros personales.', 'La lámina "Tu equipo" suma los <b>kilómetros del grupo en el mes</b> y los compara con la meta mensual. Ejemplo: "1.240 km juntos este mes. Entre 4 atletas ya van al 62%".', 'Esos kilómetros salen de lo que cada atleta anota en su check-in de actividad, no de intervals.icu. Si no anotas km, no suman. Si prefieres no aparecer, apaga <b>Compartir mis km con el equipo</b> en Ajustes.', 'El equipo ve solo kilómetros, metas e hitos. Nunca bienestar, molestias ni notas. Si eres coach, esa lámina suma los dos equipos.'] }
 ];
 
 const GUIA_NUEVAS = {
@@ -730,7 +771,172 @@ function viewGuia() {
   const GUIA = guiaSlides(), n = GUIA.length;
   const slides = GUIA.map((g, i) => '<article class="gslide" aria-roledescription="diapositiva" aria-label="' + (i + 1) + ' de ' + n + '"><div class="card col g12" style="min-height:100%"><div class="row g12" style="align-items:center"><span class="gic">' + (NAVIC[g.ic] ? '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + NAVIC[g.ic] + '</svg>' : icon(g.ic, 26, 'var(--accent)')) + '</span><div class="eyebrow">' + esc(g.k) + ' · ' + (i + 1) + ' de ' + n + '</div></div><h2 class="h2">' + esc(g.t) + '</h2>' + g.p.map((x) => '<p class="soft">' + x + '</p>').join('') + '</div></article>').join('');
   const dots = GUIA.map((g, i) => '<button type="button" class="gdot" data-a="guiaGo" data-v="' + i + '" aria-label="Ir a ' + esc(g.k) + '"' + (i === 0 ? ' aria-current="true"' : '') + '></button>').join('');
-  return '<div class="inner"><div class="stack">' + head('Cómo funciona Camino', 'Guía') + '<p class="muted" style="font-size:14px">Desliza hacia el lado para ver cómo se llena cada dato.</p><div class="gdots" id="gdots" role="group" aria-label="Diapositivas">' + dots + '</div><div class="gtrack" id="gtrack" tabindex="0">' + slides + '</div></div></div>';
+  return '<div class="inner"><div class="stack">' + head('Cómo funciona Camino', 'Guía') + '<p class="muted" style="font-size:14px">Desliza hacia el lado para ver cómo se llena cada dato.</p><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button><section class="card col g12" aria-label="Tutoriales animados"><div class="eyebrow">Tutoriales animados</div><p class="soft" style="font-size:15px">Mira paso a paso dónde tocar y qué puedes hacer en cada pantalla. Puedes repetirlos cuando quieras.</p><div class="tutgrid">' + tutIds().map((k) => '<button type="button" class="tutcard" data-a="tutOpen" data-v="' + k + '"><span class="gic">' + tutIc(TUT[k].ic) + '</span><span class="col" style="text-align:left"><b>' + esc(TUT[k].t) + '</b><span class="muted" style="font-size:12px">' + esc(TUT[k].sub) + '</span></span></button>').join('') + '</div></section><div class="gdots" id="gdots" role="group" aria-label="Diapositivas">' + dots + '</div><div class="gtrack" id="gtrack" tabindex="0">' + slides + '</div>' + fbForm() + '</div></div>';
+}
+
+
+/* ---------- Recorrido de bienvenida (primera vez y desde Guía/Ajustes) ---------- */
+function tourSlides() {
+  const sl = [
+    { c: 's0', ic: 'hoy', k: 'Bienvenida', t: 'Esto es Camino', p: 'Tu coach y tú en un solo lugar. Camino se completa con tus check-ins diarios: con ellos tu coach refleja tu esfuerzo y ajusta tu plan. En 1 minuto te muestro cómo se usa.' },
+    { c: 's1', ic: 'hoy', k: 'Hoy', t: 'Tu check-in diario', p: 'En Hoy respondes cómo dormiste, tus piernas, tu ánimo y tu estrés. El círculo te da un puntaje de 0 a 100 y tu coach lo ve al instante. Si te equivocas, puedes corregirlo o borrarlo.' },
+    { c: 's2', ic: 'datos', k: 'Datos', t: 'Aptitud, fatiga y forma', p: 'Aptitud es lo que has construido, fatiga es el cansancio de esta semana y forma es la resta entre ambas. Activa "Proyección del plan" para ver cómo llegarías a tu meta.' },
+    { c: 's0', ic: 'ruta', k: 'Ruta', t: 'Tu plan y tu camino', p: 'Aquí ves la semana, tus sesiones, tu meta y "Ver mi resumen" con tus salidas, tu mejor semana y los kilómetros de tu equipo.' },
+    { c: 's1', ic: 'ajustes', k: 'Ajustes', t: 'Hazla tuya', p: 'Cambia el tono visual, activa el recordatorio diario y decide con un interruptor si compartes tus km con el equipo.' },
+    { c: 's2', ic: 'guia', k: 'Guía', t: 'Si te queda una duda', p: 'En la pestaña Guía desliza las tarjetas para ver cómo se llena cada dato. Puedes volver a este recorrido cuando quieras desde ahí.', btn: 'Empezar' }
+  ];
+  if (isCoach()) sl.splice(4, 0, { c: 's0', ic: 'cabina', k: 'Cabina', t: 'Tu panel de coach', p: 'En Cabina ves quién necesita respuesta, abres a cada atleta, cargas su plan e historial y usas "Ver la app como" para ver lo que ve cada uno. El interruptor de arriba cambia entre tu vista de coach y la tuya.' });
+  return sl;
+}
+function tourHtml() {
+  if (UI.tour == null) return '';
+  const sl = tourSlides(), i = Math.min(UI.tour, sl.length - 1), s = sl[i], last = i === sl.length - 1;
+  const ico = '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (NAVIC[s.ic] || '') + '</svg>';
+  return '<div class="story tour ' + s.c + '" role="dialog" aria-label="Recorrido de bienvenida" id="tourbox"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, k) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (k <= i ? 1 : .3) + '"></i>').join('') + '</div><div class="row between" style="margin-top:6px"><button type="button" class="x" data-a="tourBack"' + (i === 0 ? ' style="visibility:hidden"' : '') + '>Atrás</button><button type="button" class="x" data-a="tourClose">Saltar</button></div><div class="col g14" style="flex:1;justify-content:center"><div>' + ico + '</div><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + esc(s.k) + ' · ' + (i + 1) + ' de ' + sl.length + '</div><div style="font-family:var(--font-d);font-weight:700;font-size:clamp(36px,11vw,52px);line-height:1.05">' + esc(s.t) + '</div><p style="font-size:19px;line-height:1.45">' + esc(s.p) + '</p></div><button type="button" class="sbtn" data-a="tourNext">' + (last ? (s.btn || 'Empezar') : 'Siguiente') + '</button></div></div>';
+}
+const tourKey = () => 'camino.tour.' + (ST.user ? ST.user.uid : '');
+function tourMaybeOpen() {
+  if (UI.tourChecked === (ST.user && ST.user.uid) || !ST.ready || !ST.user || !ST.profile) return;
+  UI.tourChecked = ST.user.uid;
+  let seen = null; try { seen = localStorage.getItem(tourKey()); } catch (e) { /* sin almacenamiento */ }
+  if (!seen) UI.tour = 0;
+}
+function tourDone() { UI.tour = null; try { localStorage.setItem(tourKey(), '1'); } catch (e) { /* sin almacenamiento */ } render(); }
+
+/* ---------- Tutoriales animados (se pueden repetir desde Guía) ---------- */
+const tmN = (id) => '<span class="tmn" id="m-nav-' + id + '">' + (NAVIC[id] ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + NAVIC[id] + '</svg>' : '') + '</span>';
+const tmNav = (ids) => '<div class="tmnav">' + ids.map(tmN).join('') + '</div>';
+const tmTop = (r) => '<div class="tmtop"><b>CAMINO</b><span class="tmchip"' + (r ? ' id="m-mode"' : '') + '>' + (r || 'Atleta') + '</span></div>';
+const tmSw = (id, k) => '<span class="tmsw" id="' + id + '" data-on="' + k + '"><i></i></span>';
+const tmL = (w) => '<i class="tml" style="width:' + w + '%"></i>';
+const TNAV = () => (isCoach() ? ['cabina', 'ajustes', 'guia'] : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']);
+const TUT = {
+  hoy: {
+    t: 'Hoy', ic: 'hoy', sub: 'Tu check-in y tu semana',
+    mock: () => tmTop() + '<div class="tmc row g10" id="m-score"><span class="tmring">78</span><div class="col g6" style="flex:1">' + tmL(70) + tmL(45) + '</div></div><div class="tmbtn" id="m-btn">Hacer check-in</div><div class="tmc col g6" id="m-chips"><div class="tml" style="width:35%"></div><div class="row g6"><span class="tmopt">Mal</span><span class="tmopt" data-on="3">Bien</span><span class="tmopt">Genial</span></div></div><div class="row g8"><div class="tmc" id="m-week" style="flex:1"><div class="tmwk"><i style="height:60%"></i><i style="height:35%"></i><i style="height:80%"></i><i style="height:20%"></i><i style="height:55%"></i></div></div><div class="tmc col g4" id="m-streak" style="width:34%"><b style="font-size:18px">5</b><span class="tml" style="width:80%"></span></div></div><div class="tmpill" id="m-edit">Corregir check-in</div>' + tmNav(TNAV()),
+    steps: [
+      { at: 'm-nav-hoy', say: 'Abajo, toca <b>Hoy</b>. Es tu pantalla de inicio.' },
+      { at: 'm-score', say: 'Este círculo es tu puntaje de hoy, de 0 a 100. Se calcula con tu último check-in: en verde estás listo para rodar.' },
+      { at: 'm-btn', say: 'Toca <b>Hacer check-in</b>. Son pocas preguntas y toma 1 minuto.' },
+      { at: 'm-chips', say: 'Responde tocando una opción en cada pregunta. Al final toca <b>Enviar</b>.' },
+      { at: 'm-week', say: '<b>Tu semana</b>: el contorno es lo que dice tu plan y el relleno lo que ya hiciste.' },
+      { at: 'm-streak', say: 'La <b>racha</b> cuenta tus días seguidos con check-in. Si saltas un día, vuelve a 0.' },
+      { at: 'm-edit', say: '¿Te equivocaste? Toca <b>Corregir check-in</b> para cambiarlo, o bórralo desde ahí.' }
+    ]
+  },
+  datos: {
+    t: 'Datos', ic: 'datos', sub: 'Aptitud, fatiga y forma',
+    mock: () => tmTop() + '<div class="tmc col g6" id="m-forma"><div class="tm3"><b style="color:var(--good)">+12</b><b style="color:var(--accent2)">47</b><b style="color:var(--accent)">35</b></div><div class="tmgauge"><i></i></div></div><div class="row g6" id="m-rng"><span class="tmchip2">30 d</span><span class="tmchip2">60 d</span><span class="tmchip2" data-on="2">90 d</span></div><div class="tmc" id="m-chart"><svg viewBox="0 0 200 70" width="100%" height="70" aria-hidden="true"><path d="M0 50 C30 48 40 20 70 30 S110 52 140 34 S180 20 200 28" fill="none" stroke="var(--accent)" stroke-width="2.5"/><path d="M0 56 C40 54 80 46 120 44 S170 40 200 38" fill="none" stroke="var(--accent2)" stroke-width="2.5"/></svg></div><div class="row between tmc" id="m-sw-row"><span class="tml" style="width:50%"></span>' + tmSw('m-sw', 4) + '</div><div class="tmc" id="m-bars"><div class="tmwk"><i style="height:30%"></i><i style="height:70%"></i><i style="height:50%"></i><i style="height:90%"></i><i style="height:40%"></i></div></div>' + tmNav(TNAV()),
+    steps: [
+      { at: 'm-nav-datos', say: 'Toca <b>Datos</b> en el menú de abajo.' },
+      { at: 'm-forma', say: '<b>Tu forma</b> junto a tu aptitud (azul) y tu fatiga (naranja). El medidor te dice si vienes cargado o fresco.' },
+      { at: 'm-rng', say: 'Cambia el rango del gráfico: <b>30, 60 o 90 días</b>.' },
+      { at: 'm-chart', swipe: true, say: '<b>Arrastra el dedo</b> sobre el gráfico para leer el valor de cada día.' },
+      { at: 'm-sw', say: 'Activa <b>Proyección del plan</b> para ver cómo llegarías a tu meta con las cargas de tu plan.' },
+      { at: 'm-bars', say: '<b>Salidas por semana</b>: toca una barra para ver el detalle de esa semana.' }
+    ]
+  },
+  ruta: {
+    t: 'Ruta', ic: 'ruta', sub: 'Tu plan y tu camino',
+    mock: () => tmTop() + '<div class="tmc col g6" id="m-ph"><div class="tmphase"><i style="flex:3;background:var(--good)"></i><i style="flex:4;background:var(--accent)"></i><i style="flex:2"></i></div>' + tmL(60) + '</div><div class="tmbtn" id="m-res" style="background:var(--accent)">Ver mi resumen</div><div class="tmc col g6" id="m-team"><b style="font-size:20px">1.240 km</b>' + tmL(70) + '<div class="tmgauge"><i style="left:62%"></i></div></div><div class="tmc row g6" id="m-badges"><span class="tmbadge"></span><span class="tmbadge"></span><span class="tmbadge off"></span><span class="tmbadge off"></span></div>' + tmNav(TNAV()),
+    steps: [
+      { at: 'm-nav-ruta', say: 'Toca <b>Ruta</b> en el menú de abajo.' },
+      { at: 'm-ph', say: '<b>Fases del plan</b>: dónde estás hoy y cuánto falta para tu meta.' },
+      { at: 'm-res', say: 'Toca <b>Ver mi resumen</b>: se abren tres pantallas con tus salidas, tu mejor semana y tu equipo. Pasa con <b>Siguiente</b> o deslizando.' },
+      { at: 'm-team', say: 'Aquí ves los <b>kilómetros del equipo</b> en el mes y qué tan cerca van de la meta.' },
+      { at: 'm-badges', say: 'Las <b>insignias</b> premian tu constancia: las que están apagadas aún no las consigues.' }
+    ]
+  },
+  ajustes: {
+    t: 'Ajustes', ic: 'ajustes', sub: 'Hazla tuya',
+    mock: () => tmTop() + '<div class="tmc row g10"><span class="tmav">D</span><div class="col g6" style="flex:1">' + tmL(60) + tmL(40) + '</div></div><div class="tmc row g8" id="m-tone"><span class="tmtone" style="background:#c2410c"></span><span class="tmtone" style="background:#2563eb" data-on="1"></span><span class="tmtone" style="background:#15803d"></span><span class="tmtone" style="background:#475569"></span></div><div class="tmc row between" id="m-rem-row"><span class="tml" style="width:55%"></span>' + tmSw('m-rem', 2) + '</div><div class="tmc row between" id="m-share-row"><span class="tml" style="width:62%"></span>' + tmSw('m-share', 3) + '</div>' + tmNav(TNAV()),
+    steps: [
+      { at: 'm-nav-ajustes', say: 'Toca <b>Ajustes</b> en el menú de abajo.' },
+      { at: 'm-tone', say: 'Elige un <b>tono visual</b> con un toque. Se guarda en tu teléfono.' },
+      { at: 'm-rem', say: 'Activa el <b>recordatorio diario</b> y escoge la hora que prefieras.' },
+      { at: 'm-share', say: 'Decide con un interruptor si <b>compartes tus km con el equipo</b>. Tu coach siempre ve tus check-ins.' }
+    ]
+  },
+  cabina: {
+    t: 'Cabina', ic: 'cabina', sub: 'Panel del coach', coach: true,
+    mock: () => tmTop('Coach') + '<div class="tmbtn" id="m-pend" style="background:var(--accent-soft);color:var(--accent);border:1.5px solid var(--accent)">3 por responder</div><div class="tmc col g6" id="m-qr"><span class="tml" style="width:65%"></span><div class="row g6"><span class="tmopt">Enviar</span><span class="tmopt">Editar</span></div></div><div class="tmc row g8" id="m-ath"><span class="tmav">C</span><div class="col g6" style="flex:1">' + tmL(55) + tmL(35) + '</div></div><div class="tmc row between" id="m-as"><span class="tml" style="width:55%"></span><span class="tmchip2">Ver como</span></div>' + tmNav(TNAV()),
+    steps: [
+      { at: 'm-mode', say: 'El interruptor de arriba cambia entre tu <b>vista de coach</b> y tu <b>vista de atleta</b>.' },
+      { at: 'm-pend', say: '<b>N por responder</b> te lleva al primer atleta que espera respuesta.' },
+      { at: 'm-qr', say: 'Las <b>respuestas rápidas</b> se envían con un toque. Tienes 5 segundos para <b>Deshacer</b>; el lápiz las abre para editarlas.' },
+      { at: 'm-ath', say: 'Toca un atleta para ver su detalle, cargar su plan e historial o aceptar solicitudes.' },
+      { at: 'm-as', say: '<b>Ver la app como</b>: mira exactamente lo que ve ese atleta en Hoy, Datos y Ruta.' }
+    ]
+  },
+  guia: {
+    t: 'Guía', ic: 'guia', sub: 'Aprende y escríbenos',
+    mock: () => tmTop() + '<div class="tmc col g6" id="m-slide"><div class="tml" style="width:45%;height:12px"></div>' + tmL(90) + tmL(80) + tmL(60) + '</div><div class="tmdots"><i></i><i></i><i></i><i></i></div><div class="tmc col g6" id="m-fb"><div class="row g6"><span class="tmopt">Consulta</span><span class="tmopt" data-on="2">Idea</span><span class="tmopt">Comentario</span></div><div class="tmarea"></div><div class="tmbtn" style="min-height:26px">Enviar</div></div>' + tmNav(TNAV()),
+    steps: [
+      { at: 'm-nav-guia', say: 'Toca <b>Guía</b> en el menú de abajo.' },
+      { at: 'm-slide', swipe: true, say: '<b>Desliza hacia el lado</b> para recorrer cada explicación: aptitud, fatiga, bienestar, racha y más.' },
+      { at: 'm-fb', say: 'Al final puedes enviar una <b>consulta, idea o comentario</b>: elige el tipo, escribe y toca Enviar. Tu coach lo recibe.' }
+    ]
+  }
+};
+const tutIc = (id) => '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (NAVIC[id] || '') + '</svg>';
+const tutIds = () => ['hoy', 'datos', 'ruta', 'ajustes'].filter((k) => !isCoach() || k !== 'hoy' || true).concat(isCoach() ? ['cabina'] : []).concat(['guia']);
+let TS = null;
+const tutReduced = () => !!(PREF.calm || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches));
+function tutDraw() {
+  const T = TUT[TS.id], el = document.getElementById('tut'), n = T.steps.length;
+  el.innerHTML = '<div class="tuthead"><div class="col"><div class="eyebrow">Tutorial · ' + esc(T.t) + '</div><div class="muted" style="font-size:13px">' + esc(T.sub) + '</div></div><button type="button" class="x" data-a="tutClose" style="color:var(--text)">Cerrar</button></div>'
+    + '<div class="tutbody"><div class="tstage" id="tstage"><div class="tph" id="tph">' + T.mock() + '</div><span class="tfing" id="tfing" aria-hidden="true"><i></i></span></div>'
+    + '<div class="tcap" id="tcap" role="status" aria-live="polite"></div>'
+    + '<div class="row g8" id="tdots" style="justify-content:center" aria-hidden="true">' + T.steps.map((s, i) => '<i class="tdot" data-a="tutGo" data-v="' + i + '"></i>').join('') + '</div>'
+    + '<div class="row g10 tctl"><button type="button" class="tbtn" data-a="tutPrev" aria-label="Paso anterior">Anterior</button><button type="button" class="tbtn main" data-a="tutPlay" id="tplay"></button><button type="button" class="tbtn" data-a="tutNext" aria-label="Paso siguiente">Siguiente</button></div>'
+    + '<details class="tdet"><summary>Ver los pasos en texto</summary><ol>' + T.steps.map((s) => '<li>' + s.say + '</li>').join('') + '</ol></details>'
+    + (TS.id !== 'guia' ? '<div class="row g8" style="flex-wrap:wrap;justify-content:center"><span class="muted" style="font-size:13px;align-self:center">Otros tutoriales:</span>' + tutIds().filter((k) => k !== TS.id).map((k) => '<button type="button" class="tchip" data-a="tutOpen" data-v="' + k + '">' + esc(TUT[k].t) + '</button>').join('') + '</div>' : '') + '</div>';
+}
+function tutGo(i) {
+  if (!TS) return;
+  const T = TUT[TS.id], n = T.steps.length; i = ((i % n) + n) % n; TS.i = i; clearTimeout(TS.timer);
+  const st = T.steps[i], stage = document.getElementById('tstage'), tg = document.getElementById(st.at), f = document.getElementById('tfing');
+  if (!stage || !tg) return;
+  document.querySelectorAll('#tph [data-on]').forEach((x) => x.classList.toggle('on', i >= Number(x.dataset.on)));
+  document.querySelectorAll('#tph .tl').forEach((x) => x.classList.remove('tl'));
+  tg.classList.add('tl');
+  const sr = stage.getBoundingClientRect(), r = tg.getBoundingClientRect();
+  const cx = r.left - sr.left + r.width / 2, cy = r.top - sr.top + Math.min(r.height / 2, 30);
+  f.classList.remove('tap'); f.style.transition = 'none';
+  if (st.swipe && !tutReduced()) { f.style.left = (cx + r.width * 0.32) + 'px'; f.style.top = cy + 'px'; void f.offsetWidth; f.style.transition = ''; setTimeout(() => { if (TS && TS.i === i) { f.style.left = (cx - r.width * 0.32) + 'px'; } }, 450); }
+  else { f.style.transition = tutReduced() ? 'none' : ''; f.style.left = cx + 'px'; f.style.top = cy + 'px'; }
+  setTimeout(() => { if (TS && TS.i === i) f.classList.add('tap'); }, tutReduced() ? 0 : 950);
+  document.getElementById('tcap').innerHTML = '<span class="tnum">' + (i + 1) + '</span><span>' + st.say + '</span>';
+  document.querySelectorAll('#tdots .tdot').forEach((d, k) => { d.classList.toggle('cur', k === i); });
+  const pl = document.getElementById('tplay'); if (pl) pl.textContent = TS.play ? 'Pausar' : 'Reproducir';
+  if (TS.play) TS.timer = setTimeout(() => tutGo(i + 1), 4800);
+}
+function tutOpen(id) {
+  if (!TUT[id]) return; tutClose();
+  const el = document.createElement('div'); el.id = 'tut'; el.className = 'tut'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Tutorial de ' + TUT[id].t);
+  document.body.appendChild(el); TS = { id, i: 0, play: !tutReduced(), timer: null }; tutDraw(); tutGo(0);
+  const x = el.querySelector('.x'); if (x) x.focus();
+}
+function tutClose() { if (TS) clearTimeout(TS.timer); TS = null; const el = document.getElementById('tut'); if (el) el.remove(); }
+document.addEventListener('keydown', (e) => { if (!TS) return; if (e.key === 'Escape') tutClose(); else if (e.key === 'ArrowRight') tutGo(TS.i + 1); else if (e.key === 'ArrowLeft') tutGo(TS.i - 1); });
+
+/* ---------- Comentarios: consultas, ideas y comentarios ---------- */
+const FBK = [['consulta', 'Consulta'], ['idea', 'Idea'], ['comentario', 'Comentario']];
+function fbForm() {
+  const k = UI.fbKind || 'comentario', txt = UI.fbDraft || '';
+  return '<section class="card col g12" id="fbbox" aria-label="Consultas, ideas y comentarios"><div class="eyebrow">Consultas, ideas y comentarios</div><p class="soft" style="font-size:15px">¿No entiendes algo, se te ocurrió una mejora o quieres contarnos cómo te va con la app? Escríbelo aquí y tu coach lo recibe.</p>'
+    + '<div class="chips" role="group" aria-label="Tipo de mensaje">' + FBK.map((x) => '<button type="button" class="chip" data-a="fbKind" data-v="' + x[0] + '" aria-pressed="' + (k === x[0]) + '">' + x[1] + '</button>').join('') + '</div>'
+    + '<textarea id="fbText" maxlength="1000" rows="4" placeholder="Escribe tu mensaje…" aria-label="Mensaje">' + esc(txt) + '</textarea>'
+    + '<div class="row between"><span class="muted" style="font-size:13px" id="fbCount">' + txt.length + ' / 1000</span>' + (UI.fbOk ? '<span style="color:var(--good);font-weight:600;font-size:14px">Enviado, ¡gracias!</span>' : '') + '</div>'
+    + '<button type="button" class="btn primary" data-a="fbSend" id="fbSend"' + ((txt.trim() && !UI.busy) ? '' : ' disabled') + '><span>Enviar</span></button></section>';
+}
+function fbInbox() {
+  const L = ST.fbk || [], unread = L.filter((x) => !x.read).length;
+  if (!L.length) return '<section class="card col g10" aria-label="Comentarios recibidos"><div class="eyebrow">Ideas y consultas</div><p class="soft" style="font-size:15px">Aún no hay mensajes. Cuando alguien escriba desde Guía aparecerá aquí.</p></section>';
+  return '<section class="col g10" id="fbinbox" aria-label="Comentarios recibidos"><div class="eyebrow">Ideas y consultas' + (unread ? ' · <span style="color:var(--accent)">' + unread + ' nueva' + (unread === 1 ? '' : 's') + '</span>' : '') + '</div>' + L.slice(0, 12).map((x) => {
+    const d = new Date(x.ts || 0).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }), kn = (FBK.find((q) => q[0] === x.kind) || [0, 'Mensaje'])[1];
+    return '<div class="card col g8" style="' + (x.read ? 'opacity:.7' : 'border:1.5px solid var(--accent)') + '"><div class="row between g8"><span style="font-weight:600">' + esc(x.name || 'Atleta') + (x.team ? ' · ' + esc(String(x.team).toUpperCase()) : '') + '</span><span class="muted" style="font-size:13px">' + esc(kn) + ' · ' + d + '</span></div><p class="soft" style="font-size:15px;white-space:pre-wrap">' + esc(x.text) + '</p><div class="row g8"><button type="button" class="chip" data-a="fbMark" data-v="' + esc(x.id) + '">' + (x.read ? 'Marcar como nuevo' : 'Marcar como leído') + '</button><button type="button" class="chip" data-a="fbDel" data-v="' + esc(x.id) + '">Borrar</button></div></div>';
+  }).join('') + '</section>';
 }
 
 /* ---------- Vista: Ajustes ---------- */
@@ -756,6 +962,7 @@ function viewAjustes() {
     out += '<section class="card col g12" aria-label="Meta del equipo"><div class="eyebrow">Meta e hito del equipo</div><div class="seggroup" role="group" aria-label="Equipo">' + Object.keys(TEAMS).map((t) => '<button type="button" data-a="metaTeam" data-v="' + t + '" aria-pressed="' + (team === t) + '">' + TEAMS[t] + '</button>').join('') + '</div><label for="metaGoal" class="soft">Meta del mes (km)</label><input class="field" id="metaGoal" type="number" inputmode="numeric" min="0" value="' + esc(d.goal) + '"><label for="metaHito" class="soft">Hito de la semana (opcional)</label><textarea id="metaHito" placeholder="Por ejemplo: Camila hizo su rodaje más largo">' + esc(d.hito) + '</textarea><button type="button" class="btn primary" data-a="saveMeta" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar para ' + TEAMS[team] + '</button></section>';
   }
   if (p.team && !isCoach()) out += '<section class="card col g12" aria-label="Compartir kilómetros"><div class="eyebrow">Tu equipo</div><div class="setlist">' + setRow('Compartir mis km con el equipo', sharesKm() ? 'Tu nombre y tus km del mes suman a la meta de ' + TEAMS[p.team] : 'Tus km no aparecen ni suman a la meta del equipo', sharesKm(), 'shareKm') + '</div></section>';
+  out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
   out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
   out += '<details class="card" aria-label="Instalar"><summary style="font-weight:600;min-height:32px;cursor:pointer">Instalar en el teléfono</summary><p class="soft" style="font-size:15px;margin-top:8px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></details>';
   if (DEMO) out += '<section class="card col g10" aria-label="Datos de demostración"><div class="eyebrow">Modo demostración</div><button type="button" class="chip" data-a="resetDemo" style="align-self:flex-start">Restablecer datos de demostración</button></section>';
@@ -833,7 +1040,7 @@ function feedbackHtml() {
   out += ckActions();
   return out + '<div class="col g8"><a href="#ruta" data-a="closeFb" class="btn primary"><span>Ver mi ruta</span>' + arrow() + '</a><button type="button" class="btn ghost" data-a="closeFb">Volver a Hoy</button></div></div></div>';
 }
-const overlayHtml = () => (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : ''));
+const overlayHtml = () => (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : '')));
 
 /* ---------- Historia: tu camino recorrido ---------- */
 function bestWeekMin(a) {
@@ -856,7 +1063,7 @@ function bestWeekOutings(days) {
 }
 function storyHtml() {
   if (UI.story == null) return '';
-  const a = meA(), od = outingDays(a), nOut = od.length, total = a.checkins.length, bw = bestWeekMin(a), bwo = bestWeekOutings(od), t = myTeam() ? teamTotals(myTeam()) : null;
+  const a = meA(), od = outingDays(a), nOut = od.length, total = a.checkins.length, bw = bestWeekMin(a), bwo = bestWeekOutings(od), t = myTeam() ? teamTotals(myTeam()) : (isCoach() ? teamsTotal() : null);
   const first = od.length ? od[0] : null, spanDays = first ? Math.max(1, diffDays(first, off(0)) + 1) : 0;
   const s0 = nOut
     ? { big: String(nOut), unit: nOut === 1 ? 'salida registrada' : 'salidas registradas', line: 'En ' + spanDays + ' días de historia' + (total ? ' y ' + total + (total === 1 ? ' check-in' : ' check-ins') : '') + '. Tu constancia es lo que más construye.' }
@@ -914,7 +1121,8 @@ function render() {
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
   const h = overlayHtml(), keep = ov.scrollTop;
   ov.innerHTML = h; ov.hidden = !h; if (h) ov.scrollTop = keep;
-  story.innerHTML = (UI.asId && isCoach() && UI.story != null) ? (asRun(storyHtml) || '') : storyHtml();
+  tourMaybeOpen();
+  story.innerHTML = UI.tour != null ? tourHtml() : ((UI.asId && isCoach() && UI.story != null) ? (asRun(storyHtml) || '') : storyHtml());
 }
 function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes') UI.asId = null; render(); }
 let msgTimer = null;
@@ -941,6 +1149,7 @@ function setupData() {
     dataUnsubs.push(be.listenTeamMeta(t, (m) => { ST.teamMeta[t] = m || {}; soft(); }));
   });
   if (p.role === 'coach') {
+    dataUnsubs.push(be.listenFeedback((rows) => { ST.fbk = rows; soft(); }));
     dataUnsubs.push(be.listenAthletes(ST.user.uid, (rows) => {
       ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
       const ids = ST.athletes.map((r) => r.id);
@@ -953,7 +1162,7 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e)));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
@@ -1061,9 +1270,32 @@ const ACT = {
   send() { if (!UI.busy) finishFlow(); },
   feedback() { UI.feedback = { checkin: on(meA(), off(0)), newBadges: [] }; render(); },
   closeFb() { UI.feedback = null; render(); },
+  inbox() { UI.inboxSeen = isCoach() ? 0 : seenAt(); UI.inbox = true; if (!isCoach()) { const mx = Math.max(Date.now(), ...(ST.myNotes || []).map((n) => Number(n.at) || 0)); try { localStorage.setItem(seenKey(), String(mx)); } catch (e) { /* sin almacenamiento */ } } render(); },
+  inboxClose() { UI.inbox = false; render(); },
+  inboxGo(v) { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; UI.sel = v; UI.reply = { id: v, text: '' }; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('replyBox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
+  inboxFb() { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('fbinbox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   story(v) { UI.story = Number(v) || 0; render(); },
   storyNext() { UI.story = UI.story >= 2 ? null : UI.story + 1; render(); },
   storyClose() { UI.story = null; render(); },
+  tour() { UI.tour = 0; render(); },
+  tourNext() { if (UI.tour >= tourSlides().length - 1) tourDone(); else { UI.tour += 1; render(); } },
+  tourBack() { if (UI.tour > 0) { UI.tour -= 1; render(); } },
+  tourClose() { tourDone(); },
+  tutOpen(v) { tutOpen(v); },
+  tutClose() { tutClose(); },
+  tutNext() { if (TS) { TS.play = false; tutGo(TS.i + 1); } },
+  tutPrev() { if (TS) { TS.play = false; tutGo(TS.i - 1); } },
+  tutGo(v) { if (TS) { TS.play = false; tutGo(Number(v) || 0); } },
+  tutPlay() { if (TS) { TS.play = !TS.play; tutGo(TS.i); } },
+  fbKind(v) { UI.fbKind = v; UI.fbOk = false; render(); },
+  async fbSend() {
+    const text = (UI.fbDraft || '').trim(); if (!text || UI.busy || !ST.user) return;
+    UI.busy = true; render();
+    try { await be.sendFeedback({ uid: ST.user.uid, name: String((ST.profile && ST.profile.name) || 'Atleta').slice(0, 80), team: String((ST.profile && ST.profile.team) || ''), kind: UI.fbKind || 'comentario', text: text.slice(0, 1000), ts: Date.now(), read: false }); UI.fbDraft = ''; UI.fbOk = true; } catch (e) { UI.busy = false; say(friendly(e)); return; }
+    UI.busy = false; render();
+  },
+  async fbMark(v) { const x = (ST.fbk || []).find((f) => f.id === v); try { await be.markFeedback(v, !(x && x.read)); } catch (e) { say(friendly(e)); } },
+  async fbDel(v) { try { await be.removeFeedback(v); } catch (e) { say(friendly(e)); } },
   sel(v) { UI.sel = v; UI.reply = { id: v, text: '' }; UI.planDraft = null; UI.histDraft = null; UI.histOpen = false; render(); },
   preset(v) { const a = athleteObjs().find((x) => x.id === UI.sel); if (!a) return; UI.reply = { id: a.id, text: cabinaPresets(statusOf(a), a)[Number(v)] }; render(); const t = document.getElementById('replyText'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } },
   async sendReply() {
@@ -1106,6 +1338,9 @@ function guiaSync() {
   const step = tr.children[1] ? tr.children[1].offsetLeft - tr.children[0].offsetLeft : tr.clientWidth, i = Math.round(tr.scrollLeft / Math.max(step, 1));
   document.querySelectorAll('#gdots .gdot').forEach((d, k) => { if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
 }
+let tourX = null;
+document.addEventListener('touchstart', (e) => { tourX = (UI.tour != null && e.target.closest && e.target.closest('#tourbox') && e.touches[0]) ? e.touches[0].clientX : null; }, { passive: true });
+document.addEventListener('touchend', (e) => { if (tourX == null || UI.tour == null) return; const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : tourX) - tourX; tourX = null; if (dx < -50) ACT.tourNext(); else if (dx > 50) ACT.tourBack(); }, { passive: true });
 document.addEventListener('pointermove', fcMove);
 document.addEventListener('pointermove', wbMove);
 document.addEventListener('pointerdown', wbMove);
@@ -1114,6 +1349,7 @@ document.addEventListener('scroll', (e) => { if (e.target && e.target.id === 'gt
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-a]'); if (!t) return; const fn = ACT[t.dataset.a]; if (fn) fn(t.dataset.v, t); });
 document.addEventListener('input', (e) => {
   const id = e.target.id;
+  if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id === 'comment') UI.draft.comment = e.target.value;
   if (id === 'prevText') UI.draft.prevText = e.target.value;
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Enviar'; } const cn = document.getElementById('replyCount'); if (cn) cn.textContent = e.target.value.length + ' / 600'; }
