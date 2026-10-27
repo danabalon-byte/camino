@@ -265,7 +265,7 @@ const NAVIC = {
 };
 const TABLBL = { guia: 'Guía' };
 const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
-const tabs = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'guia', 'ajustes'] : ['cabina', 'guia', 'ajustes']) : ['hoy', 'datos', 'ruta', 'guia', 'ajustes']) : ['hoy', 'datos', 'ruta', 'guia', 'ajustes']).map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id] }));
+const tabs = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']).map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id] }));
 const navHtml = () => '<div class="inner">' + tabs().map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id ? ' aria-current="page"' : '') + '><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + t.ic + '</svg><span>' + t.label + '</span></a>').join('') + '</div>';
 /* Logo segun el fondo: ciclista blanco sobre fondos oscuros, negro sobre fondos claros. */
 function logoSrc() {
@@ -420,6 +420,7 @@ function viewCabina() {
   const a = list.find((x) => x.id === UI.sel), st = statusOf(a), l = latest(a), n = lastNote(a), col = st.k === 'ok' ? 'var(--good)' : (st.k === 'warn' ? 'var(--warn)' : 'var(--muted)'), lab = st.k === 'ok' ? 'Al día' : (st.k === 'warn' ? 'Atención' : 'Sin check-in');
   if (UI.reply.id !== a.id) UI.reply = { id: a.id, text: '' };
   out += '<section class="card col g14" aria-label="Detalle del atleta"><div class="row between g8" style="align-items:baseline"><h2 class="h2">' + esc(a.name) + '</h2><span style="font-weight:600;font-size:14px;color:' + col + '">' + lab + '</span></div>';
+  out += '<button type="button" class="btn" data-a="verComo" data-v="' + esc(a.id) + '" style="width:100%;min-height:52px;justify-content:space-between;border:1.5px solid var(--accent2);color:var(--accent2);background:transparent"><span style="font-weight:600">Ver la app como ' + esc(a.first) + '</span><span aria-hidden="true">' + arrow() + '</span></button>';
   out += st.reasons.length ? '<ul style="margin:0;padding-left:18px" class="soft">' + st.reasons.map((r) => '<li>' + esc(r) + '</li>').join('') + '</ul>' : '<p class="soft">Todo en orden. Su bienestar acompaña bien a la carga.</p>';
   if (l && l.pain) out += '<div class="row g8 wrap"><span class="muted" style="font-size:13px">Molestia reportada:</span><span class="tag out">Zona: ' + esc(String(l.pain.zone || '').toLowerCase()) + ' (' + esc(String(l.pain.side || '').toLowerCase()) + ')</span><span class="tag out">Intensidad: ' + esc(String(l.pain.level || '').toLowerCase()) + '</span></div>';
   if (l) {
@@ -534,7 +535,7 @@ function formaChart(ds, o) {
   const tbl = '<details style="margin-top:8px"><summary class="muted" style="font-size:12px;cursor:pointer;min-height:32px">Ver tabla</summary><div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:6px"><thead><tr class="muted"><th align="left">Día</th><th align="right">Aptitud</th><th align="right">Fatiga</th><th align="right">Forma</th></tr></thead><tbody>' + rows.slice(-14).reverse().map((r) => '<tr style="border-top:1px solid var(--line)"><td>' + fcLbl(r.d) + '</td><td align="right">' + fcNum(r.ctl) + '</td><td align="right">' + fcNum(r.atl) + '</td><td align="right">' + fcSgn(r.ctl - r.atl) + '</td></tr>').join('') + '</tbody></table></div></details>';
   const rng = '<div class="row g6 wrap" role="group" aria-label="Periodo" style="margin-top:6px">' + [[30, '30 días'], [60, '60 días'], [90, '90 días']].map((x) => '<button type="button" class="chip" data-a="fcRange" data-v="' + x[0] + '" aria-pressed="' + ((o.range || 60) === x[0]) + '" style="min-height:36px;padding:0 12px;font-size:13px">' + x[1] + '</button>').join('') + '</div>';
   const legend = '<div class="row g16 wrap soft" style="font-size:13px;margin-top:6px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent2)"></i>Aptitud (CTL)</span><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Fatiga (ATL)</span>' + (two ? '<span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--text)"></i>Forma (TSB)</span>' : '') + '</div>';
-  return '<div class="fcw" data-fc="' + String(JSON.stringify(data)).replace(/"/g, '&quot;') + '" data-l="' + L + '" data-pw="' + PW + '" data-n="' + N + '" data-d0="' + d0 + '" data-nr="' + rows.length + '">' + (o.noRange ? '' : rng) + (o.canProj ? '<button type="button" class="fcsw" role="switch" aria-checked="' + !!o.projOn + '" data-a="fcProj"><span class="fcsw-t"><i></i></span><span>Proyección del plan</span></button>' : '') + head + s + legend + note + (o.noTable ? '' : tbl) + '</div>';
+  return '<div class="fcw" data-fc="' + String(JSON.stringify(data)).replace(/"/g, '&quot;') + '" data-l="' + L + '" data-pw="' + PW + '" data-n="' + N + '" data-d0="' + d0 + '" data-nr="' + rows.length + '">' + (o.noRange ? '' : rng) + '' + head + s + legend + note + (o.canProj ? '<div style="margin-top:4px"><button type="button" class="fcsw" role="switch" aria-checked="' + !!o.projOn + '" data-a="fcProj"><span class="fcsw-t"><i></i></span><span>Proyección del plan</span></button></div>' : '') + (o.noTable ? '' : tbl) + '</div>';
 }
 /* Lectura al tocar o pasar el dedo por el grafico */
 function fcMove(e) {
@@ -710,19 +711,31 @@ function viewGuia() {
 }
 
 /* ---------- Vista: Ajustes ---------- */
+/* Fila de ajuste con interruptor: titulo y ayuda a la izquierda, interruptor a la derecha. */
+const setRow = (title, sub, on, act, val) => '<button type="button" class="setrow" role="switch" aria-checked="' + !!on + '" data-a="' + act + '"' + (val != null ? ' data-v="' + val + '"' : '') + '><span class="col grow g4" style="min-width:0"><span style="font-weight:600;font-size:16px">' + title + '</span>' + (sub ? '<span class="muted" style="font-size:13px;font-weight:500">' + sub + '</span>' : '') + '</span><span class="fcsw-t" aria-hidden="true"><i></i></span></button>';
+const initial = (n) => esc(String(n || '?').trim().charAt(0).toUpperCase() || '?');
 function viewAjustes() {
-  const p = ST.profile || {};
-  let out = '<div class="inner"><div class="stack">' + head(ST.user ? ST.user.name : '', 'Ajustes') + msgBanner();
-  out += '<section class="card col g8" aria-label="Cuenta"><div class="eyebrow">Tu cuenta</div><p class="soft">' + esc(p.name || '') + ' · ' + (isCoach() ? 'Coach' : 'Atleta') + (p.team ? ' · equipo ' + TEAMS[p.team] : '') + (p.pending ? ' · pendiente de asignación' : '') + '</p><button type="button" class="chip" data-a="logout" style="align-self:flex-start">Cerrar sesión</button></section>';
-  out += '<section class="card col g10" aria-label="Tono visual"><div class="eyebrow">Tono visual</div>' + TONES.map((t) => '<button type="button" class="swatch" data-a="tone" data-v="' + t.id + '" aria-pressed="' + (PREF.tone === t.id) + '"><span class="sw">' + t.sw.map((c) => '<i style="background:' + c + '"></i>').join('') + '</span><span class="col grow"><span>' + t.name + '</span><span class="muted" style="font-size:13px;font-weight:500">' + t.sub + '</span></span></button>').join('') + '</section>';
-  out += '<section class="card col g10" aria-label="Recordatorio"><div class="eyebrow">Recordatorio del check-in</div><label for="reminder" class="soft">Hora que prefieres</label><div><input type="time" id="reminder" value="' + esc(p.reminder || '19:30') + '"></div><p class="muted" style="font-size:14px">Se guarda en tu perfil. Los avisos llegarán en una próxima versión, con la app instalada.</p></section>';
+  const p = ST.profile || {}, remOn = !!p.reminder, rem = p.reminder || PREF.lastRem || '19:30';
+  let out = '<div class="inner"><div class="stack">' + head('Preferencias', 'Ajustes') + msgBanner();
+  // perfil
+  out += '<section class="card col g14" aria-label="Cuenta"><div class="row g14" style="align-items:center"><span class="avatar" aria-hidden="true">' + initial(p.name) + '</span><div class="col grow g4" style="min-width:0"><span style="font-weight:700;font-size:20px;overflow-wrap:anywhere">' + esc(p.name || '') + '</span><span class="muted" style="font-size:13px;overflow-wrap:anywhere">' + esc(p.email || (ST.user && ST.user.email) || '') + '</span></div></div><div class="row g8 wrap"><span class="tag out" style="color:var(--soft);border-color:var(--line)">' + (isCoach() ? 'Coach' : 'Atleta') + '</span>' + (p.team ? '<span class="tag out" style="color:var(--soft);border-color:var(--line)">Equipo ' + TEAMS[p.team] + '</span>' : '') + (p.pending ? '<span class="tag out" style="color:var(--warn);border-color:var(--warn)">Pendiente de asignación</span>' : '') + '</div></section>';
+  // apariencia
+  out += '<section class="card col g12" aria-label="Apariencia"><div class="eyebrow">Apariencia</div><div class="tones" role="group" aria-label="Tono visual">' + TONES.map((t) => '<button type="button" class="tone" data-a="tone" data-v="' + t.id + '" aria-pressed="' + (PREF.tone === t.id) + '"><span class="sw">' + t.sw.map((c) => '<i style="background:' + c + '"></i>').join('') + '</span><span class="col g4" style="text-align:left"><span style="font-weight:600">' + t.name + '</span><span class="muted" style="font-size:12px;font-weight:500">' + t.sub + '</span></span></button>').join('') + '</div>'
+    + '<div class="setlist">' + setRow('Reducir animaciones', 'Quita transiciones y movimientos', !!PREF.calm, 'pref', 'calm') + '</div></section>';
+  // avisos
+  out += '<section class="card col g12" aria-label="Avisos"><div class="eyebrow">Check-in y avisos</div><div class="setlist">' + setRow('Recordatorio diario', remOn ? 'Todos los días a las ' + esc(rem) : 'Desactivado', remOn, 'remToggle')
+    + (remOn ? '<div class="col g10" style="padding:4px 0 12px"><div class="chips" role="group" aria-label="Hora del recordatorio">' + ['07:00', '12:00', '19:30', '21:00'].map((h) => '<button type="button" class="chip" data-a="remSet" data-v="' + h + '" aria-pressed="' + (rem === h) + '" style="min-height:40px">' + h + '</button>').join('') + '</div><div class="row g10" style="align-items:center"><label for="reminder" class="muted" style="font-size:13px">Otra hora</label><input type="time" id="reminder" value="' + esc(rem) + '"></div><p class="muted" style="font-size:12px">La hora queda guardada en tu perfil. Los avisos llegarán en una próxima versión, con la app instalada.</p></div>' : '')
+    + setRow('Vibración al enviar', 'Un toque suave al terminar tu check-in', PREF.haptic !== false, 'pref', 'haptic') + '</div></section>';
+  // grafico
+  out += '<section class="card col g12" aria-label="Datos y gráficos"><div class="eyebrow">Datos y gráficos</div><div class="setlist">' + setRow('Proyección del plan', 'Muestra en el gráfico de forma cómo llegarías a tu meta', fcProjOn(), 'fcProj') + '</div></section>';
   if (isCoach()) {
     const team = UI.metaTeam, m = ST.teamMeta[team] || {}, d = UI.metaDraft && UI.metaDraft.team === team ? UI.metaDraft : { team, goal: m.goal || KM_GOAL_DEFAULT, hito: m.hito || '' };
     out += '<section class="card col g12" aria-label="Meta del equipo"><div class="eyebrow">Meta e hito del equipo</div><div class="seggroup" role="group" aria-label="Equipo">' + Object.keys(TEAMS).map((t) => '<button type="button" data-a="metaTeam" data-v="' + t + '" aria-pressed="' + (team === t) + '">' + TEAMS[t] + '</button>').join('') + '</div><label for="metaGoal" class="soft">Meta del mes (km)</label><input class="field" id="metaGoal" type="number" inputmode="numeric" min="0" value="' + esc(d.goal) + '"><label for="metaHito" class="soft">Hito de la semana (opcional)</label><textarea id="metaHito" placeholder="Por ejemplo: Camila hizo su rodaje más largo">' + esc(d.hito) + '</textarea><button type="button" class="btn primary" data-a="saveMeta" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar para ' + TEAMS[team] + '</button></section>';
   }
-  out += '<section class="card col g8" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><p class="soft" style="font-size:15px">Tu coach ve tus check-ins, tus molestias y tus notas. Tu equipo ve solo los kilómetros, las insignias y los hitos. Nadie más ve tu bienestar ni tus molestias.</p></section>';
-  out += '<section class="card col g8" aria-label="Instalar"><div class="eyebrow">Instalar en el teléfono</div><p class="soft" style="font-size:15px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></section>';
+  out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
+  out += '<details class="card" aria-label="Instalar"><summary style="font-weight:600;min-height:32px;cursor:pointer">Instalar en el teléfono</summary><p class="soft" style="font-size:15px;margin-top:8px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></details>';
   if (DEMO) out += '<section class="card col g10" aria-label="Datos de demostración"><div class="eyebrow">Modo demostración</div><button type="button" class="chip" data-a="resetDemo" style="align-self:flex-start">Restablecer datos de demostración</button></section>';
+  out += '<button type="button" class="btn ghost" data-a="logout" style="justify-content:center;border:1.5px solid var(--line)">Cerrar sesión</button>';
   return out + '</div></div>';
 }
 
@@ -841,6 +854,7 @@ function storyHtml() {
 }
 
 /* ---------- Render ---------- */
+function applyPrefs() { const r = document.documentElement; if (PREF.calm) r.setAttribute('data-calm', ''); else r.removeAttribute('data-calm'); }
 function applyTone() { const r = document.documentElement; if (PREF.tone === 'auto') r.removeAttribute('data-tone'); else r.setAttribute('data-tone', PREF.tone); }
 const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes };
 let softPending = false;
@@ -945,10 +959,18 @@ async function finishFlow() {
   if (t) { be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(act && act.km ? act.km : 0), updatedAt: Date.now() }).catch(() => {}); }
   const projected = meA(), after = badges(projected).filter((b) => b.earned), fresh = after.filter((b) => before.indexOf(b.id) < 0);
   UI.feedback = { checkin: c, newBadges: fresh }; UI.flow = null; UI.draft = { comment: '', prevText: '' };
-  try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
+  try { if (PREF.haptic !== false && navigator.vibrate) navigator.vibrate(30); } catch (e) {}
   render();
 }
 const ACT = {
+  pref(v) { PREF[v] = v === 'haptic' ? !(PREF.haptic !== false) : !PREF[v]; savePref(); applyPrefs(); render(); },
+  remToggle() {
+    if (!ST.user) return; const on = !!(ST.profile && ST.profile.reminder);
+    if (on) { PREF.lastRem = ST.profile.reminder; savePref(); }
+    const v = on ? '' : (PREF.lastRem || '19:30'); ST.profile = Object.assign({}, ST.profile, { reminder: v }); render();
+    be.saveProfile(ST.user.uid, { reminder: v }).catch(() => {});
+  },
+  remSet(v) { if (!ST.user) return; PREF.lastRem = v; savePref(); ST.profile = Object.assign({}, ST.profile, { reminder: v }); render(); be.saveProfile(ST.user.uid, { reminder: v }).catch(() => {}); },
   mode(v) {
     UI.mode = v === 'atleta' ? 'atleta' : 'coach'; try { localStorage.setItem('camino.mode', UI.mode); } catch (e) { /* sin almacenamiento */ }
     UI.asId = null; UI.story = null; const t = '#' + (UI.mode === 'coach' ? 'cabina' : 'hoy'); if (location.hash === t) render(); else location.hash = t;
@@ -1073,6 +1095,7 @@ document.addEventListener('focusout', () => { setTimeout(() => { const t = docum
 
 /* ---------- Arranque ---------- */
 applyTone();
+applyPrefs();
 try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { render(); }); } catch (e) { /* navegador sin matchMedia */ }
 be.setErrorHandler((where, err) => say(friendly(err)));
 render();
