@@ -269,9 +269,9 @@ function logoSrc() {
   try {
     const v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
     const m = /^#([0-9a-f]{6})$/i.exec(v);
-    if (m) { const n = parseInt(m[1], 16), l = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255; return l < 0.45 ? 'icons/logo-blanco.svg' : 'icons/logo-negro.svg'; }
+    if (m) { const n = parseInt(m[1], 16), l = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255; return l < 0.45 ? './logo-blanco.svg' : './logo-negro.svg'; }
   } catch (e) { /* sin estilos: usa el logo negro */ }
-  return 'icons/logo-negro.svg';
+  return './logo-negro.svg';
 }
 function topHtml() {
   let pills = '';
