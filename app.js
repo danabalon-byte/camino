@@ -264,6 +264,7 @@ const NAVIC = {
   ajustes: '<circle cx="12" cy="12" r="3"></circle><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"></path>'
 };
 const TABLBL = { guia: 'Guía' };
+const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
 const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
 const tabs = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']).map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id] }));
 const navHtml = () => '<div class="inner">' + tabs().map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id ? ' aria-current="page"' : '') + '><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + t.ic + '</svg><span>' + t.label + '</span></a>').join('') + '</div>';
@@ -489,7 +490,7 @@ function formaChart(ds, o) {
   const topWanted = Math.max(p95 * 1.2, lastR.ctl * 1.6, 20), clip = realMax > topWanted * 1.15;
   const hasProj = proj.length > 0, pmax = hasProj ? Math.max.apply(null, proj.map((r) => Math.max(r.ctl, r.atl))) : 0;
   const need = Math.max(clip ? topWanted : realMax, pmax, 10), step = fcNice(need), top = Math.ceil(need * 1.05 / step) * step;
-  const T1 = 10, H1 = 118, Y1 = (v) => T1 + H1 - v / top * H1, B1 = T1 + H1;
+  const T1 = 20, H1 = 118, Y1 = (v) => T1 + H1 - v / top * H1, B1 = T1 + H1;
   const two = o.panels !== 1, T2 = B1 + 34, H2 = 62;
   const tsbOf = (r) => r.ctl - r.atl, tv = all.map(tsbOf), tmin = Math.min.apply(null, tv.concat([-30])), tmax = Math.max.apply(null, tv.concat([20]));
   const lo = Math.floor(tmin / 10) * 10, hi = Math.ceil(tmax / 10) * 10, Y2 = (v) => T2 + H2 - (v - lo) / (hi - lo) * H2, Z2 = Y2(0);
@@ -506,7 +507,7 @@ function formaChart(ds, o) {
   if (hasProj) { const base = [lastR].concat(proj); s += '<path d="' + fcPath(pts(base, 'ctl')) + '" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 4"></path><path d="' + fcPath(pts(base, 'atl')) + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 4"></path>'; }
   s += '</g>';
   // pico recortado
-  if (clip) { let pi = 0; rows.forEach((r, i) => { if (Math.max(r.ctl, r.atl) > Math.max(rows[pi].ctl, rows[pi].atl)) pi = i; }); const px = Math.min(Math.max(X(rows[pi].d), L + 22), W - R - 22); s += '<text x="' + px.toFixed(1) + '" y="' + (T1 + 9) + '" text-anchor="middle" font-size="10" fill="var(--accent)">▲ pico ' + Math.round(realMax) + '</text>'; }
+  if (clip) { let pi = 0; rows.forEach((r, i) => { if (Math.max(r.ctl, r.atl) > Math.max(rows[pi].ctl, rows[pi].atl)) pi = i; }); const px = Math.min(Math.max(X(rows[pi].d), L + 22), W - R - 22); s += '<text x="' + px.toFixed(1) + '" y="' + (T1 - 5) + '" text-anchor="middle" font-size="10" fill="var(--accent)">▲ pico ' + Math.round(realMax) + '</text>'; }
   // punto final
   s += '<circle cx="' + cPts[cPts.length - 1][0].toFixed(1) + '" cy="' + cPts[cPts.length - 1][1].toFixed(1) + '" r="4" fill="var(--accent2)" stroke="var(--surface)" stroke-width="2"></circle><circle cx="' + aPts[aPts.length - 1][0].toFixed(1) + '" cy="' + aPts[aPts.length - 1][1].toFixed(1) + '" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"></circle>';
   // meta
@@ -691,7 +692,7 @@ function parsePlan(text) {
 
 
 /* ---------- Vista: Guía (como se llenan los datos) ---------- */
-const GUIA = [
+const GUIA_BASE = [
   { k: 'Hoy', t: 'Tu estado de hoy', ic: 'hoy', p: ['El círculo es un puntaje de 0 a 100 que sale de tu último check-in: ánimo, calidad del sueño, sensación de piernas y estrés. Se promedian y se muestra como semáforo.', '<b>70 o más</b>: listo para rodar. <b>50 a 69</b>: ve con calma. <b>Menos de 50</b>: hoy toca cuidarte y avisar a tu coach.', 'Si hoy no hiciste check-in, usa el de ayer o el último que tengas, y lo dice debajo.'] },
   { k: 'Check-in', t: 'Cómo se llena el check-in', ic: 'sueno', p: ['Lo llenas tú en Hoy, en 1 minuto. Hay tres tipos: <b>actividad</b> (saliste a entrenar), <b>bienestar</b> (cómo amaneciste) y <b>descanso</b>.', 'Si registras una molestia, tu coach la ve de inmediato y puede escribirte una nota. Esa nota aparece en Hoy.', 'Los check-ins son privados: solo los ven tú y tu coach. El equipo nunca ve tu bienestar ni tus molestias.'] },
   { k: 'Aptitud', t: 'Aptitud: lo que has construido', ic: 'datos', p: ['La aptitud (CTL) es tu base de entrenamiento. Es un promedio ponderado de tu carga de los últimos 42 días aproximadamente.', 'Sube lento, con semanas constantes, y baja lento si paras. Una sola salida larga casi no la mueve.', 'Más aptitud significa que tu cuerpo tolera más trabajo. Es la línea que más importa mirar en el largo plazo.'] },
@@ -701,10 +702,26 @@ const GUIA = [
   { k: 'Semana', t: 'Tu semana', ic: 'semana', p: ['Cada columna es un día. El contorno punteado es lo que dice tu plan y el relleno es lo que ya hiciste.', 'Una sesión cuenta como hecha cuando haces un check-in de tipo <b>actividad</b> ese día.', 'El plan lo carga tu coach. Si no ves sesiones, es que aún no te carga ese bloque.'] },
   { k: 'Racha', t: 'Racha e insignias', ic: 'racha', p: ['<b>Racha</b>: días seguidos con check-in, de cualquier tipo. Si hoy aún no lo haces, cuenta desde ayer. Si saltas un día, vuelve a 0.', '<b>7 días seguidos</b>: siete días consecutivos con check-in. <b>Sueño parejo</b>: 5 noches de los últimos 7 con buen sueño. <b>Semana completa</b>: cumplir todas las sesiones del plan de esta semana. <b>Cinco actividades</b>: 5 actividades registradas en 14 días.', 'La barra de progreso de cada insignia dice cuánto te falta. Las que logras quedan encendidas.'] },
   { k: 'Camino', t: 'Tu camino recorrido', ic: 'ruta', p: ['En Ruta, "Ver mi resumen" muestra tres pantallas: tus <b>salidas registradas</b>, tu <b>mejor semana</b> y lo que ha hecho tu <b>equipo</b> este mes.', 'Las salidas salen del historial de intervals.icu y de tus check-ins de actividad. La mejor semana usa los minutos registrados, y si no hay minutos, usa la cantidad de salidas.', 'Mientras más constante seas con los check-ins, más completo queda el resumen.'] },
-  { k: 'Equipo', t: 'Meta del equipo', ic: 'cabina', p: ['Cuando tu coach te asigna a GRNT o ZN, en Ruta ves los kilómetros del equipo y la meta del mes.', 'Esos kilómetros salen de lo que cada atleta anota en su check-in de actividad, no de intervals.icu. Por eso, si no anotas km, no suman.', 'El equipo ve solo kilómetros, metas e hitos. Nunca bienestar, molestias ni notas.'] }
+  { k: 'Equipo', t: 'Meta del equipo', ic: 'cabina', p: ['Cuando tu coach te asigna a GRNT o ZN, en Ruta ves los kilómetros del equipo y la meta del mes.', 'Esos kilómetros salen de lo que cada atleta anota en su check-in de actividad, no de intervals.icu. Por eso, si no anotas km, no suman. Si prefieres no aparecer, apaga <b>Compartir mis km con el equipo</b> en Ajustes.', 'El equipo ve solo kilómetros, metas e hitos. Nunca bienestar, molestias ni notas.'] }
 ];
+
+const GUIA_NUEVAS = {
+  proy: { k: 'Proyección', t: 'Proyección del plan', ic: 'cinco', p: ['En Datos, el interruptor <b>Proyección del plan</b> (verde) añade al gráfico una zona punteada hasta tu meta.', 'Se calcula con las cargas de cada sesión de tu plan, usando el mismo modelo de aptitud (42 días) y fatiga (7 días). Por eso es una <b>estimación</b>: si el plan no trae cargas, la línea queda plana.', 'La frase de abajo te dice cómo llegarías a la meta: positiva significa piernas frescas ese día. También puedes activarlo en Ajustes.'] },
+  alerta: { k: 'Alerta', t: 'La línea roja de −25', ic: 'racha', p: ['En el panel de forma, la línea roja marca −25. Por debajo de ese valor tu coach recibe una alerta de carga muy alta.', 'No es un error ni un castigo: ocurre después de bloques largos o eventos grandes, como un brevet. Lo importante es que venga seguido de descanso.', 'Si te ves cerca de la línea, avisa cómo te sientes en tu check-in.'] },
+  salidas: { k: 'Salidas', t: 'Salidas por semana', ic: 'semana', p: ['Cada barra es una semana, de lunes a domingo, y cuenta los <b>días con actividad</b>. Toca una barra para leer su detalle arriba.', 'La barra naranja es la semana en curso, que aún está incompleta. El contorno punteado es lo que marcaba tu plan, y la línea fina es tu promedio.', 'Los datos vienen de intervals.icu y se actualizan cada hora.'] },
+  corregir: { k: 'Corregir', t: 'Corregir o borrar un check-in', ic: 'sueno', p: ['Si te equivocaste, en Hoy toca <b>Corregir check-in</b>: se abre con tus respuestas y al enviar reemplaza el de hoy.', '<b>Borrar check-in</b> lo elimina de tu historial, de tu racha y de los kilómetros del equipo de ese día. Pide confirmación antes de borrar.', 'Solo se puede corregir o borrar el check-in de hoy.'] },
+  coach: { k: 'Coach', t: 'Responder y gestionar', ic: 'cabina', p: ['En Cabina, <b>N por responder</b> te lleva al primer atleta pendiente. Las respuestas rápidas se envían con un toque y tienes 5 segundos para <b>Deshacer</b>. El lápiz las abre para editarlas.', '<b>Ver la app como…</b> muestra Hoy, Datos y Ruta tal como los ve ese atleta, en solo lectura.', 'En <b>Gestionar</b> ves el estado de su plan e historial. El historial se sincroniza solo cada hora; cargarlo a mano es el respaldo.', 'El interruptor Coach / Atleta de arriba cambia entre esta vista y la tuya como atleta.'] }
+};
+function guiaSlides() {
+  const B = GUIA_BASE.slice(), N = GUIA_NUEVAS, at = (k) => B.findIndex((x) => x.k === k);
+  B.splice(at('Forma') + 1, 0, N.proy, N.alerta);
+  B.splice(at('Semana') + 1, 0, N.salidas);
+  B.splice(at('Check-in') + 1, 0, N.corregir);
+  if (isCoach()) B.push(N.coach);
+  return B;
+}
 function viewGuia() {
-  const n = GUIA.length;
+  const GUIA = guiaSlides(), n = GUIA.length;
   const slides = GUIA.map((g, i) => '<article class="gslide" aria-roledescription="diapositiva" aria-label="' + (i + 1) + ' de ' + n + '"><div class="card col g12" style="min-height:100%"><div class="row g12" style="align-items:center"><span class="gic">' + (NAVIC[g.ic] ? '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + NAVIC[g.ic] + '</svg>' : icon(g.ic, 26, 'var(--accent)')) + '</span><div class="eyebrow">' + esc(g.k) + ' · ' + (i + 1) + ' de ' + n + '</div></div><h2 class="h2">' + esc(g.t) + '</h2>' + g.p.map((x) => '<p class="soft">' + x + '</p>').join('') + '</div></article>').join('');
   const dots = GUIA.map((g, i) => '<button type="button" class="gdot" data-a="guiaGo" data-v="' + i + '" aria-label="Ir a ' + esc(g.k) + '"' + (i === 0 ? ' aria-current="true"' : '') + '></button>').join('');
   return '<div class="inner"><div class="stack">' + head('Cómo funciona Camino', 'Guía') + '<p class="muted" style="font-size:14px">Desliza hacia el lado para ver cómo se llena cada dato.</p><div class="gdots" id="gdots" role="group" aria-label="Diapositivas">' + dots + '</div><div class="gtrack" id="gtrack" tabindex="0">' + slides + '</div></div></div>';
@@ -732,6 +749,7 @@ function viewAjustes() {
     const team = UI.metaTeam, m = ST.teamMeta[team] || {}, d = UI.metaDraft && UI.metaDraft.team === team ? UI.metaDraft : { team, goal: m.goal || KM_GOAL_DEFAULT, hito: m.hito || '' };
     out += '<section class="card col g12" aria-label="Meta del equipo"><div class="eyebrow">Meta e hito del equipo</div><div class="seggroup" role="group" aria-label="Equipo">' + Object.keys(TEAMS).map((t) => '<button type="button" data-a="metaTeam" data-v="' + t + '" aria-pressed="' + (team === t) + '">' + TEAMS[t] + '</button>').join('') + '</div><label for="metaGoal" class="soft">Meta del mes (km)</label><input class="field" id="metaGoal" type="number" inputmode="numeric" min="0" value="' + esc(d.goal) + '"><label for="metaHito" class="soft">Hito de la semana (opcional)</label><textarea id="metaHito" placeholder="Por ejemplo: Camila hizo su rodaje más largo">' + esc(d.hito) + '</textarea><button type="button" class="btn primary" data-a="saveMeta" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar para ' + TEAMS[team] + '</button></section>';
   }
+  if (p.team && !isCoach()) out += '<section class="card col g12" aria-label="Compartir kilómetros"><div class="eyebrow">Tu equipo</div><div class="setlist">' + setRow('Compartir mis km con el equipo', sharesKm() ? 'Tu nombre y tus km del mes suman a la meta de ' + TEAMS[p.team] : 'Tus km no aparecen ni suman a la meta del equipo', sharesKm(), 'shareKm') + '</div></section>';
   out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
   out += '<details class="card" aria-label="Instalar"><summary style="font-weight:600;min-height:32px;cursor:pointer">Instalar en el teléfono</summary><p class="soft" style="font-size:15px;margin-top:8px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></details>';
   if (DEMO) out += '<section class="card col g10" aria-label="Datos de demostración"><div class="eyebrow">Modo demostración</div><button type="button" class="chip" data-a="resetDemo" style="align-self:flex-start">Restablecer datos de demostración</button></section>';
@@ -956,13 +974,21 @@ async function finishFlow() {
   } catch (e) { UI.busy = false; say(friendly(e)); return; }
   UI.busy = false; UI.justSaved = c;
   const t = myTeam();
-  if (t) { be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(act && act.km ? act.km : 0), updatedAt: Date.now() }).catch(() => {}); }
+  if (t && sharesKm()) { be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(act && act.km ? act.km : 0), updatedAt: Date.now() }).catch(() => {}); }
   const projected = meA(), after = badges(projected).filter((b) => b.earned), fresh = after.filter((b) => before.indexOf(b.id) < 0);
   UI.feedback = { checkin: c, newBadges: fresh }; UI.flow = null; UI.draft = { comment: '', prevText: '' };
   try { if (PREF.haptic !== false && navigator.vibrate) navigator.vibrate(30); } catch (e) {}
   render();
 }
 const ACT = {
+  async shareKm() {
+    if (!ST.user || !ST.profile || UI.busy) return; const uid = ST.user.uid, t = myTeam(), on = !sharesKm();
+    ST.profile = Object.assign({}, ST.profile, { shareKm: on }); render();
+    try {
+      await be.saveProfile(uid, { shareKm: on });
+      if (t) { if (on) await be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(0), updatedAt: Date.now() }); else await be.removeKm(t, uid); }
+    } catch (e) { ST.profile = Object.assign({}, ST.profile, { shareKm: !on }); say(friendly(e)); }
+  },
   pref(v) { PREF[v] = v === 'haptic' ? !(PREF.haptic !== false) : !PREF[v]; savePref(); applyPrefs(); render(); },
   remToggle() {
     if (!ST.user) return; const on = !!(ST.profile && ST.profile.reminder);
@@ -1011,10 +1037,10 @@ const ACT = {
     UI.busy = false; UI.confirmDel = false; UI.feedback = null; UI.justSaved = null;
     ST.myCk = ST.myCk.filter((c) => c.date !== off(0));
     const t = myTeam();
-    if (t) { be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(0), updatedAt: Date.now() }).catch(() => {}); }
+    if (t && sharesKm()) { be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(0), updatedAt: Date.now() }).catch(() => {}); }
     say('Check-in borrado. Puedes hacer uno nuevo cuando quieras.', 'ok');
   },
-  guiaGo: (v) => { const tr = document.getElementById('gtrack'); if (tr) tr.scrollTo({ left: (+v) * tr.clientWidth, behavior: 'smooth' }); },
+  guiaGo: (v) => { const tr = document.getElementById('gtrack'); if (tr && tr.children[1]) { const step = tr.children[1].offsetLeft - tr.children[0].offsetLeft; tr.scrollTo({ left: (+v) * step, behavior: 'smooth' }); } },
   async login(v) { UI.busy = true; UI.msg = ''; render(); try { await be.signIn(v); } catch (e) { say(friendly(e)); } UI.busy = false; render(); },
   async logout() { await be.signOut(); },
   start() { UI.flow = { kind: null, step: 'tipo', i: 0, d: {} }; UI.draft = { comment: '', prevText: '' }; render(); },
@@ -1071,7 +1097,7 @@ const ACT = {
 };
 function guiaSync() {
   const tr = document.getElementById('gtrack'); if (!tr) return;
-  const i = Math.round(tr.scrollLeft / Math.max(tr.clientWidth, 1));
+  const step = tr.children[1] ? tr.children[1].offsetLeft - tr.children[0].offsetLeft : tr.clientWidth, i = Math.round(tr.scrollLeft / Math.max(step, 1));
   document.querySelectorAll('#gdots .gdot').forEach((d, k) => { if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
 }
 document.addEventListener('pointermove', fcMove);

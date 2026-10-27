@@ -87,6 +87,7 @@ const be = {
   listenTeamKm(team, cb) {
     return onSnapshot(collection(db, 'teams', team, 'km'), (s) => cb(rows(s)), fail('km del equipo'));
   },
+  removeKm(team, uid) { return deleteDoc(doc(db, 'teams', team, 'km', uid)); },
   saveKm(team, uid, data) { return setDoc(doc(db, 'teams', team, 'km', uid), clean(data)); },
   listenTeamMeta(team, cb) {
     return onSnapshot(doc(db, 'teams', team, 'meta', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('meta del equipo'));

@@ -78,6 +78,7 @@ const be = {
   listenHistory(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].history ? JSON.parse(JSON.stringify(store.users[uid].history)) : null)); },
   async saveHistory(uid, data) { store.users[uid].history = data; notify(); },
   listenTeamKm(team, cb) { return live(() => cb(Object.entries(store.km[team] || {}).map(([id, v]) => ({ id, ...v })))); },
+  async removeKm(team, uid) { if (store.km[team]) delete store.km[team][uid]; notify(); },
   async saveKm(team, uid, data) { (store.km[team] = store.km[team] || {})[uid] = data; notify(); },
   listenTeamMeta(team, cb) { return live(() => cb(store.meta[team] ? { ...store.meta[team] } : null)); },
   async saveTeamMeta(team, data) { store.meta[team] = { ...(store.meta[team] || {}), ...data }; notify(); },
