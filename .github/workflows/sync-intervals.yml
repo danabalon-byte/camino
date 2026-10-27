@@ -1,0 +1,68 @@
+name: Sincronizar forma desde intervals.icu
+
+on:
+  schedule:
+    - cron: '17 * * * *'   # cada hora, minuto 17 (UTC)
+  workflow_dispatch:        # también se puede lanzar a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-intervals
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Instalar firebase-admin
+        run: npm install firebase-admin@12 --no-audit --no-fund --silent
+      - name: Crear script
+        run: |
+          cat > sync.mjs <<'JS'
+          // Sincroniza forma (CTL/ATL) y fechas de salidas desde intervals.icu hacia Firestore (users/{uid}/history/current).
+          // Se ejecuta en GitHub Actions. Los registros de Actions son públicos: aquí NO se imprimen correos, IDs ni datos de atletas.
+          import admin from 'firebase-admin';
+
+          const DRY = process.env.DRY === '1';
+          const key = process.env.ICU_API_KEY, map = JSON.parse(process.env.ICU_MAP || '{}');
+          if (!key) throw new Error('Falta ICU_API_KEY');
+          if (!DRY) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SA)) });
+          const db = DRY ? null : admin.firestore();
+
+          const DAYS = 84, auth = 'Basic ' + Buffer.from('API_KEY:' + key).toString('base64');
+          const ymd = (d) => d.toISOString().slice(0, 10);
+          const now = new Date(Date.now() - 3 * 3600 * 1000); // hora de Chile (aprox.)
+          const newest = ymd(now), oldest = ymd(new Date(now.getTime() - DAYS * 86400 * 1000));
+          const get = async (url) => { const r = await fetch(url, { headers: { Authorization: auth } }); if (!r.ok) throw new Error('intervals.icu respondió ' + r.status); return r.json(); };
+
+          let ok = 0, skipped = 0, failed = 0, i = 0;
+          for (const [email, icu] of Object.entries(map)) {
+            i++;
+            try {
+              const base = 'https://intervals.icu/api/v1/athlete/' + encodeURIComponent(icu);
+              const [well, acts] = await Promise.all([get(base + '/wellness?oldest=' + oldest + '&newest=' + newest), get(base + '/activities?oldest=' + oldest + '&newest=' + newest)]);
+              const days = well.filter((x) => x && x.id && typeof x.ctl === 'number' && typeof x.atl === 'number').map((x) => ({ d: x.id, ctl: Math.round(x.ctl * 10) / 10, atl: Math.round(x.atl * 10) / 10 })).sort((a, b) => (a.d < b.d ? -1 : 1)).slice(-120);
+              const actDates = acts.map((x) => String(x.start_date_local || '').slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-200);
+              if (!days.length) { skipped++; console.log('Atleta ' + i + ': sin datos de forma, se omite'); continue; }
+              if (DRY) { console.log('Atleta ' + i + ' (simulación): ' + days.length + ' días, ' + actDates.length + ' salidas'); ok++; continue; }
+              const snap = await db.collection('users').where('email', '==', email.trim().toLowerCase()).limit(1).get();
+              if (snap.empty) { skipped++; console.log('Atleta ' + i + ': aún no ha entrado a Camino, se omite'); continue; }
+              await db.doc('users/' + snap.docs[0].id + '/history/current').set({ days, acts: actDates, updatedAt: Date.now() });
+              ok++; console.log('Atleta ' + i + ': ' + days.length + ' días y ' + actDates.length + ' salidas actualizados');
+            } catch (e) { failed++; console.log('Atleta ' + i + ': error (' + String(e.message).slice(0, 80) + ')'); }
+          }
+          console.log('Resumen: ' + ok + ' actualizados, ' + skipped + ' omitidos, ' + failed + ' con error');
+          if (failed) process.exit(1);
+          JS
+      - name: Sincronizar
+        env:
+          ICU_API_KEY: ${{ secrets.ICU_API_KEY }}
+          ICU_MAP: ${{ secrets.ICU_MAP }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: node sync.mjs
