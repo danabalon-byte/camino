@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isCoach() { return signedIn() && me().get('role', '') == 'coach'; }
+    function isCoachOf(athleteUid) {
+      return isCoach()
+        && get(/databases/$(database)/documents/users/$(athleteUid)).data.get('coachId', '') == request.auth.uid;
+    }
+
+    // Perfiles
+    // - Cada persona lee y edita el suyo (sin poder cambiar role, coachId, team ni pending).
+    // - Al crearse, un atleta queda "pending" hasta que el coach lo acepte en GRNT o ZN.
+    // - El rol "coach" solo se asigna a mano en la consola de Firebase.
+    match /users/{uid} {
+      allow read: if signedIn() && (
+        request.auth.uid == uid
+        || (isCoach() && (resource.data.get('coachId', '') == request.auth.uid || resource.data.get('pending', false) == true))
+      );
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'pending', 'reminder', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 80
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == 'athlete'
+        && request.resource.data.pending == true;
+      allow update: if signedIn() && (
+        (request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'pending', 'reminder', 'createdAt', 'coachId', 'team'])
+          && request.resource.data.get('email', null) == resource.data.get('email', null)
+          && request.resource.data.get('role', null) == resource.data.get('role', null)
+          && request.resource.data.get('coachId', null) == resource.data.get('coachId', null)
+          && request.resource.data.get('team', null) == resource.data.get('team', null)
+          && request.resource.data.get('pending', null) == resource.data.get('pending', null))
+        ||
+        (isCoach() && resource.data.get('pending', false) == true
+          && request.resource.data.pending == false
+          && request.resource.data.coachId == request.auth.uid
+          && request.resource.data.team in ['grnt', 'zn']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coachId', 'team', 'pending']))
+      );
+      allow delete: if false;
+    }
+
+    // Check-ins: el atleta escribe y lee los suyos; su coach solo lee.
+    match /users/{uid}/checkins/{date} {
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'ts'])
+        && date == request.resource.data.date
+        && request.resource.data.type in ['actividad', 'bienestar', 'descanso']
+        && request.resource.data.mood is int && request.resource.data.mood >= 1 && request.resource.data.mood <= 5
+        && request.resource.data.ts is number
+        && (request.resource.data.comment is string && request.resource.data.comment.size() <= 1000)
+        && (request.resource.data.get('rpe', null) == null || (request.resource.data.rpe is int && request.resource.data.rpe >= 1 && request.resource.data.rpe <= 10))
+        && (request.resource.data.get('sleepH', null) == null || (request.resource.data.sleepH is int && request.resource.data.sleepH >= 0 && request.resource.data.sleepH <= 4))
+        && (request.resource.data.get('sleepQ', null) == null || (request.resource.data.sleepQ is int && request.resource.data.sleepQ >= 1 && request.resource.data.sleepQ <= 4))
+        && (request.resource.data.get('legs', null) == null || (request.resource.data.legs is int && request.resource.data.legs >= 0 && request.resource.data.legs <= 2))
+        && (request.resource.data.get('stress', null) == null || (request.resource.data.stress is int && request.resource.data.stress >= 0 && request.resource.data.stress <= 2))
+        && (request.resource.data.get('heat', null) == null || (request.resource.data.heat is int && request.resource.data.heat >= 0 && request.resource.data.heat <= 3))
+        && (request.resource.data.get('pain', null) == null
+            || (request.resource.data.pain.keys().hasOnly(['zone', 'side', 'level'])
+                && request.resource.data.pain.zone is string && request.resource.data.pain.zone.size() <= 80
+                && request.resource.data.pain.side in ['Izquierdo', 'Derecho', 'Ambos']
+                && request.resource.data.pain.level in ['Leve', 'Moderada', 'Fuerte']));
+      allow delete: if false;
+    }
+
+    // Notas del coach: las crea solo su coach; el atleta las lee.
+    match /users/{uid}/notes/{id} {
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
+      allow create: if isCoachOf(uid)
+        && request.resource.data.keys().hasOnly(['text', 'at', 'from'])
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.at is number
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 600;
+      allow update, delete: if false;
+    }
+
+    // Equipos (grnt, zn): solo km, metas e hitos. Nunca bienestar ni molestias.
+    match /teams/{teamId}/km/{uid} {
+      allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId);
+      allow write: if signedIn() && request.auth.uid == uid
+        && me().get('team', '') == teamId
+        && request.resource.data.keys().hasOnly(['name', 'month', 'km', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 80
+        && request.resource.data.month.matches('^[0-9]{4}-[0-9]{2}$')
+        && request.resource.data.km is number && request.resource.data.km >= 0 && request.resource.data.km < 5000;
+    }
+    match /teams/{teamId}/meta/{doc} {
+      allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId);
+      allow write: if isCoach();
+    }
+  }
+}
