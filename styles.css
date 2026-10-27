@@ -282,3 +282,8 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 /* ---------- Campana de mensajes ---------- */
 .bell{position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--text);flex:none}
 .bellb{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--bg)}
+
+/* ---------- Gráfico ampliado ---------- */
+.fzbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;font-size:13px;font-weight:600}
+.fzin{padding-top:12px;padding-bottom:20px}
+@media (orientation:landscape) and (max-height:520px){.fzin{width:100%;max-width:none;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}

@@ -523,14 +523,14 @@ function formaChart(ds, o) {
   let rows = ds.slice(); if (o.range && rows.length > o.range) rows = rows.slice(-o.range);
   const proj = o.proj || [], all = rows.concat(proj);
   const d0 = rows[0].d, N = fcDiff(d0, all[all.length - 1].d) + 1;
-  const W = 340, L = 30, R = 10, PW = W - L - R, X = (s) => L + fcDiff(d0, s) * PW / Math.max(N - 1, 1);
+  const W = o.W || 340, L = 30, R = 10, PW = W - L - R, X = (s) => L + fcDiff(d0, s) * PW / Math.max(N - 1, 1);
   const vals = rows.map((r) => Math.max(r.ctl, r.atl)).sort((a, b) => a - b), p95 = vals[Math.floor(vals.length * 0.95)] || 10;
   const lastR = rows[rows.length - 1], realMax = vals[vals.length - 1];
   const topWanted = Math.max(p95 * 1.2, lastR.ctl * 1.6, 20), clip = realMax > topWanted * 1.15;
   const hasProj = proj.length > 0, pmax = hasProj ? Math.max.apply(null, proj.map((r) => Math.max(r.ctl, r.atl))) : 0;
   const need = Math.max(clip ? topWanted : realMax, pmax, 10), step = fcNice(need), top = Math.ceil(need * 1.05 / step) * step;
-  const T1 = 20, H1 = 118, Y1 = (v) => T1 + H1 - v / top * H1, B1 = T1 + H1;
-  const two = o.panels !== 1, T2 = B1 + 34, H2 = 62;
+  const T1 = 20, H1 = o.H1 || 118, Y1 = (v) => T1 + H1 - v / top * H1, B1 = T1 + H1;
+  const two = o.panels !== 1, T2 = B1 + 34, H2 = o.H2 || 62;
   const tsbOf = (r) => r.ctl - r.atl, tv = all.map(tsbOf), tmin = Math.min.apply(null, tv.concat([-30])), tmax = Math.max.apply(null, tv.concat([20]));
   const lo = Math.floor(tmin / 10) * 10, hi = Math.ceil(tmax / 10) * 10, Y2 = (v) => T2 + H2 - (v - lo) / (hi - lo) * H2, Z2 = Y2(0);
   const H = two ? T2 + H2 + 22 : B1 + 22, axisY = two ? T2 + H2 + 14 : B1 + 14;
@@ -575,7 +575,7 @@ function formaChart(ds, o) {
   const tbl = '<details style="margin-top:8px"><summary class="muted" style="font-size:12px;cursor:pointer;min-height:32px">Ver tabla</summary><div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:6px"><thead><tr class="muted"><th align="left">Día</th><th align="right">Aptitud</th><th align="right">Fatiga</th><th align="right">Forma</th></tr></thead><tbody>' + rows.slice(-14).reverse().map((r) => '<tr style="border-top:1px solid var(--line)"><td>' + fcLbl(r.d) + '</td><td align="right">' + fcNum(r.ctl) + '</td><td align="right">' + fcNum(r.atl) + '</td><td align="right">' + fcSgn(r.ctl - r.atl) + '</td></tr>').join('') + '</tbody></table></div></details>';
   const rng = '<div class="row g6 wrap" role="group" aria-label="Periodo" style="margin-top:6px">' + [[30, '30 días'], [60, '60 días'], [90, '90 días']].map((x) => '<button type="button" class="chip" data-a="fcRange" data-v="' + x[0] + '" aria-pressed="' + ((o.range || 60) === x[0]) + '" style="min-height:36px;padding:0 12px;font-size:13px">' + x[1] + '</button>').join('') + '</div>';
   const legend = '<div class="row g16 wrap soft" style="font-size:13px;margin-top:6px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent2)"></i>Aptitud (CTL)</span><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Fatiga (ATL)</span>' + (two ? '<span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--text)"></i>Forma (TSB)</span>' : '') + '</div>';
-  return '<div class="fcw" data-fc="' + String(JSON.stringify(data)).replace(/"/g, '&quot;') + '" data-l="' + L + '" data-pw="' + PW + '" data-n="' + N + '" data-d0="' + d0 + '" data-nr="' + rows.length + '">' + (o.noRange ? '' : rng) + '' + head + s + legend + note + (o.canProj ? '<div style="margin-top:4px"><button type="button" class="fcsw" role="switch" aria-checked="' + !!o.projOn + '" data-a="fcProj"><span class="fcsw-t"><i></i></span><span>Proyección del plan</span></button></div>' : '') + (o.noTable ? '' : tbl) + '</div>';
+  return '<div class="fcw" data-fc="' + String(JSON.stringify(data)).replace(/"/g, '&quot;') + '" data-l="' + L + '" data-pw="' + PW + '" data-n="' + N + '" data-d0="' + d0 + '" data-nr="' + rows.length + '">' + (o.noRange ? '' : rng) + '' + head + s + legend + (o.noNote ? '' : note) + (o.canProj ? '<div style="margin-top:4px"><button type="button" class="fcsw" role="switch" aria-checked="' + !!o.projOn + '" data-a="fcProj"><span class="fcsw-t"><i></i></span><span>Proyección del plan</span></button></div>' : '') + (o.noTable ? '' : tbl) + '</div>';
 }
 /* Lectura al tocar o pasar el dedo por el grafico */
 function fcMove(e) {
@@ -587,6 +587,41 @@ function fcMove(e) {
   const xx = L + i0 * PW / Math.max(N - 1, 1), ln = w.querySelector('.fc-x'); ln.setAttribute('x1', xx); ln.setAttribute('x2', xx); ln.setAttribute('opacity', '.5');
   w.querySelector('.fc-rd').textContent = fcLbl(row[0]); w.querySelector('.fc-rc').textContent = fcNum(row[1]); w.querySelector('.fc-ra').textContent = fcNum(row[2]); w.querySelector('.fc-rt').textContent = fcSgn(row[1] - row[2]);
 }
+
+
+/* ---------- Gráfico ampliado (pantalla completa; también al girar el teléfono) ---------- */
+let FZ = { fi: null, plan: null };
+const zoomBtn = () => '<button type="button" class="chip fzbtn" data-a="fcZoom" aria-label="Ampliar el gráfico a pantalla completa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg><span>Ampliar</span></button>';
+const fzLand = () => window.innerWidth > window.innerHeight;
+function fzHtml() {
+  if (!UI.fz || !FZ.fi) return '';
+  const land = fzLand(), size = land ? { W: 640, H1: 96, H2: 48, noNote: true } : { W: 340, H1: 210, H2: 100 };
+  return '<div class="inner fzin"><div class="row between"><div class="eyebrow">Aptitud y fatiga · ' + FZ.fi.ds.length + ' días</div><button type="button" class="x" data-a="fcZoomClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>'
+    + (land ? '' : '<p class="muted" style="font-size:13px">Gira el teléfono para verlo más ancho.</p>')
+    + formaChart(FZ.fi.ds, Object.assign({}, fcOpts(FZ.plan, FZ.fi), size, { noTable: true })) + '</div>';
+}
+async function fzOpen(auto) {
+  UI.fz = true; UI.fzAuto = !!auto; render();
+  if (auto || !(window.matchMedia && matchMedia('(pointer:coarse)').matches)) return;
+  try { if (document.documentElement.requestFullscreen && !document.fullscreenElement) await document.documentElement.requestFullscreen(); if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch (e) { /* no disponible en este navegador */ }
+}
+function fzClose() {
+  UI.fz = false; UI.fzAuto = false; render();
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) { /* sin soporte */ }
+}
+let fzT = null;
+function fzCheck() {
+  clearTimeout(fzT);
+  fzT = setTimeout(() => {
+    const land = fzLand(), phone = window.matchMedia && matchMedia('(max-height:520px)').matches;
+    if (land && phone && !UI.fz && UI.view === 'datos' && FZ.fi && PREF.rotZoom !== false && !UI.flow && !UI.feedback && !UI.inbox && !TS && ST.user) fzOpen(true);
+    else if (!land && UI.fz && UI.fzAuto) { UI.fz = false; UI.fzAuto = false; render(); }
+    else if (UI.fz) render();
+  }, 150);
+}
+window.addEventListener('resize', fzCheck);
+window.addEventListener('orientationchange', fzCheck);
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && UI.fz && !UI.fzAuto && fzLand()) { /* el usuario salió de pantalla completa */ } });
 
 /* Proyeccion hasta la meta del plan (o hasta la ultima sesion), maximo 60 dias. */
 function fcProjFor(plan, last) {
@@ -637,7 +672,8 @@ function histBlock(a) {
   const h = ST.athHist[a.id], fi = formaInfo(h);
   if (!fi) return '<div><div class="eyebrow">Forma y carga</div><p class="muted" style="font-size:13px;margin-top:6px">Aún sin historial. Se sincroniza solo desde intervals.icu o puedes cargarlo en “Gestionar a ' + esc(a.first) + '”.</p></div>';
   const tsb = fi.tsb, lectura = tsb <= -25 ? 'muy cargado: cuida la recuperación' : (tsb <= -10 ? 'cargado, en zona de trabajo' : (tsb <= 5 ? 'equilibrado' : (tsb <= 20 ? 'fresco' : 'muy fresco')));
-  return '<div><div class="eyebrow">Forma y carga · ' + fi.ds.length + ' días</div>' + formaChart(fi.ds, fcOpts(ST.athPlan[a.id], fi))
+  FZ = { fi: fi, plan: ST.athPlan[a.id] };
+  return '<div><div class="row between"><div class="eyebrow">Forma y carga · ' + fi.ds.length + ' días</div>' + zoomBtn() + '</div>' + formaChart(fi.ds, fcOpts(ST.athPlan[a.id], fi))
     + '<p class="soft" style="font-size:15px;margin-top:8px">Forma (TSB) ' + (tsb > 0 ? '+' : '') + tsb + ' al ' + esc(fi.last.d) + ': ' + lectura + '.</p>'
     + '<div class="eyebrow" style="margin-top:14px">Salidas por semana · últimas 8</div>' + weekBars(h, ST.athPlan[a.id])
     + '<div class="muted" style="font-size:12px;margin-top:6px">Datos de intervals.icu' + (h.updatedAt ? ' · cargado ' + relTime(h.updatedAt) : '') + '. De Strava llegan solo las fechas de las salidas, sin duración ni potencia.</div></div>';
@@ -660,7 +696,8 @@ function viewDatos() {
   if (!fi) out += '<section class="card" aria-label="Forma y carga"><div class="eyebrow">Forma y carga</div><p class="soft" style="margin-top:8px">Tu coach cargará aquí tu historial de forma, fatiga y salidas. Mientras tanto, tus check-ins ya cuentan.</p></section>';
   else {
     out += formaCard(fi, false);
-    out += '<section class="card" aria-label="Curva de forma"><div class="eyebrow">Aptitud y fatiga · ' + fi.ds.length + ' días</div>' + formaChart(fi.ds, fcOpts(ST.myPlan, fi))
+    FZ = { fi: fi, plan: ST.myPlan };
+    out += '<section class="card" aria-label="Curva de forma"><div class="row between"><div class="eyebrow">Aptitud y fatiga · ' + fi.ds.length + ' días</div>' + zoomBtn() + '</div>' + formaChart(fi.ds, fcOpts(ST.myPlan, fi))
       + '<p class="muted" style="font-size:13px;margin-top:10px"><b>Aptitud</b>: la base que has construido entrenando. <b>Fatiga</b>: el cansancio de tus últimos días. <b>Forma</b>: aptitud menos fatiga; positiva significa piernas frescas, negativa significa que estás cargando trabajo.</p></section>';
     out += '<section class="card" aria-label="Salidas por semana"><div class="eyebrow">Salidas por semana · últimas 8</div>' + weekBars(ST.myHist, ST.myPlan) + '<p class="muted" style="font-size:12px;margin-top:8px">Cuenta los días con actividad. La barra naranja es la semana en curso y el contorno punteado, lo que marcaba tu plan. Datos de intervals.icu' + (ST.myHist.updatedAt ? ', cargados ' + relTime(ST.myHist.updatedAt) : '') + '.</p></section>';
   }
@@ -754,6 +791,7 @@ const GUIA_BASE = [
 
 const GUIA_NUEVAS = {
   proy: { k: 'Proyección', t: 'Proyección del plan', ic: 'cinco', p: ['En Datos, el interruptor <b>Proyección del plan</b> (verde) añade al gráfico una zona punteada hasta tu meta.', 'Se calcula con las cargas de cada sesión de tu plan, usando el mismo modelo de aptitud (42 días) y fatiga (7 días). Por eso es una <b>estimación</b>: si el plan no trae cargas, la línea queda plana.', 'La frase de abajo te dice cómo llegarías a la meta: positiva significa piernas frescas ese día. También puedes activarlo en Ajustes.'] },
+  ampliar: { k: 'Ampliar', t: 'Ver el gráfico más grande', ic: 'datos', p: ['En Datos, toca <b>Ampliar</b> (arriba a la derecha del gráfico) para verlo a pantalla completa. Los rangos de 30, 60 y 90 días, la lectura al arrastrar el dedo y la proyección funcionan igual.', '<b>Gira el teléfono</b> a horizontal estando en Datos y el gráfico se abre solo, más ancho. Al volver a vertical se cierra. Si no te gusta, apaga <b>Ampliar el gráfico al girar</b> en Ajustes.', 'En algunos teléfonos, como los iPhone, la pantalla no se puede bloquear en horizontal: gira el teléfono tú mismo. Para salir, toca <b>Cerrar</b>.'] },
   alerta: { k: 'Alerta', t: 'La línea roja de −25', ic: 'racha', p: ['En el panel de forma, la línea roja marca −25. Por debajo de ese valor tu coach recibe una alerta de carga muy alta.', 'No es un error ni un castigo: ocurre después de bloques largos o eventos grandes, como un brevet. Lo importante es que venga seguido de descanso.', 'Si te ves cerca de la línea, avisa cómo te sientes en tu check-in.'] },
   salidas: { k: 'Salidas', t: 'Salidas por semana', ic: 'semana', p: ['Cada barra es una semana, de lunes a domingo, y cuenta los <b>días con actividad</b>. Toca una barra para leer su detalle arriba.', 'La barra naranja es la semana en curso, que aún está incompleta. El contorno punteado es lo que marcaba tu plan, y la línea fina es tu promedio.', 'Los datos vienen de intervals.icu y se actualizan cada hora.'] },
   corregir: { k: 'Corregir', t: 'Corregir o borrar un check-in', ic: 'sueno', p: ['Si te equivocaste, en Hoy toca <b>Corregir check-in</b>: se abre con tus respuestas y al enviar reemplaza el de hoy.', '<b>Borrar check-in</b> lo elimina de tu historial, de tu racha y de los kilómetros del equipo de ese día. Pide confirmación antes de borrar.', 'Solo se puede corregir o borrar el check-in de hoy.'] },
@@ -761,7 +799,7 @@ const GUIA_NUEVAS = {
 };
 function guiaSlides() {
   const B = GUIA_BASE.slice(), N = GUIA_NUEVAS, at = (k) => B.findIndex((x) => x.k === k);
-  B.splice(at('Forma') + 1, 0, N.proy, N.alerta);
+  B.splice(at('Forma') + 1, 0, N.ampliar, N.proy, N.alerta);
   B.splice(at('Semana') + 1, 0, N.salidas);
   B.splice(at('Check-in') + 1, 0, N.corregir);
   if (isCoach()) B.push(N.coach);
@@ -826,12 +864,13 @@ const TUT = {
   },
   datos: {
     t: 'Datos', ic: 'datos', sub: 'Aptitud, fatiga y forma',
-    mock: () => tmTop() + '<div class="tmc col g6" id="m-forma"><div class="tm3"><b style="color:var(--good)">+12</b><b style="color:var(--accent2)">47</b><b style="color:var(--accent)">35</b></div><div class="tmgauge"><i></i></div></div><div class="row g6" id="m-rng"><span class="tmchip2">30 d</span><span class="tmchip2">60 d</span><span class="tmchip2" data-on="2">90 d</span></div><div class="tmc" id="m-chart"><svg viewBox="0 0 200 70" width="100%" height="70" aria-hidden="true"><path d="M0 50 C30 48 40 20 70 30 S110 52 140 34 S180 20 200 28" fill="none" stroke="var(--accent)" stroke-width="2.5"/><path d="M0 56 C40 54 80 46 120 44 S170 40 200 38" fill="none" stroke="var(--accent2)" stroke-width="2.5"/></svg></div><div class="row between tmc" id="m-sw-row"><span class="tml" style="width:50%"></span>' + tmSw('m-sw', 4) + '</div><div class="tmc" id="m-bars"><div class="tmwk"><i style="height:30%"></i><i style="height:70%"></i><i style="height:50%"></i><i style="height:90%"></i><i style="height:40%"></i></div></div>' + tmNav(TNAV()),
+    mock: () => tmTop() + '<div class="tmc col g6" id="m-forma"><div class="tm3"><b style="color:var(--good)">+12</b><b style="color:var(--accent2)">47</b><b style="color:var(--accent)">35</b></div><div class="tmgauge"><i></i></div></div><div class="row g6" id="m-rng"><span class="tmchip2">30 d</span><span class="tmchip2">60 d</span><span class="tmchip2" data-on="2">90 d</span></div><div class="row between"><span class="tml" style="width:40%"></span><span class="tmchip2" id="m-zoom">Ampliar</span></div><div class="tmc" id="m-chart"><svg viewBox="0 0 200 70" width="100%" height="70" aria-hidden="true"><path d="M0 50 C30 48 40 20 70 30 S110 52 140 34 S180 20 200 28" fill="none" stroke="var(--accent)" stroke-width="2.5"/><path d="M0 56 C40 54 80 46 120 44 S170 40 200 38" fill="none" stroke="var(--accent2)" stroke-width="2.5"/></svg></div><div class="row between tmc" id="m-sw-row"><span class="tml" style="width:50%"></span>' + tmSw('m-sw', 5) + '</div><div class="tmc" id="m-bars"><div class="tmwk"><i style="height:30%"></i><i style="height:70%"></i><i style="height:50%"></i><i style="height:90%"></i><i style="height:40%"></i></div></div>' + tmNav(TNAV()),
     steps: [
       { at: 'm-nav-datos', say: 'Toca <b>Datos</b> en el menú de abajo.' },
       { at: 'm-forma', say: '<b>Tu forma</b> junto a tu aptitud (azul) y tu fatiga (naranja). El medidor te dice si vienes cargado o fresco.' },
       { at: 'm-rng', say: 'Cambia el rango del gráfico: <b>30, 60 o 90 días</b>.' },
       { at: 'm-chart', swipe: true, say: '<b>Arrastra el dedo</b> sobre el gráfico para leer el valor de cada día.' },
+      { at: 'm-zoom', say: 'Toca <b>Ampliar</b> para ver el gráfico a pantalla completa. También se abre solo si <b>giras el teléfono</b> a horizontal.' },
       { at: 'm-sw', say: 'Activa <b>Proyección del plan</b> para ver cómo llegarías a tu meta con las cargas de tu plan.' },
       { at: 'm-bars', say: '<b>Salidas por semana</b>: toca una barra para ver el detalle de esa semana.' }
     ]
@@ -950,7 +989,7 @@ function viewAjustes() {
   out += '<section class="card col g14" aria-label="Cuenta"><div class="row g14" style="align-items:center"><span class="avatar" aria-hidden="true">' + initial(p.name) + '</span><div class="col grow g4" style="min-width:0"><span style="font-weight:700;font-size:20px;overflow-wrap:anywhere">' + esc(p.name || '') + '</span><span class="muted" style="font-size:13px;overflow-wrap:anywhere">' + esc(p.email || (ST.user && ST.user.email) || '') + '</span></div></div><div class="row g8 wrap"><span class="tag out" style="color:var(--soft);border-color:var(--line)">' + (isCoach() ? 'Coach' : 'Atleta') + '</span>' + (p.team ? '<span class="tag out" style="color:var(--soft);border-color:var(--line)">Equipo ' + TEAMS[p.team] + '</span>' : '') + (p.pending ? '<span class="tag out" style="color:var(--warn);border-color:var(--warn)">Pendiente de asignación</span>' : '') + '</div></section>';
   // apariencia
   out += '<section class="card col g12" aria-label="Apariencia"><div class="eyebrow">Apariencia</div><div class="tones" role="group" aria-label="Tono visual">' + TONES.map((t) => '<button type="button" class="tone" data-a="tone" data-v="' + t.id + '" aria-pressed="' + (PREF.tone === t.id) + '"><span class="sw">' + t.sw.map((c) => '<i style="background:' + c + '"></i>').join('') + '</span><span class="col g4" style="text-align:left"><span style="font-weight:600">' + t.name + '</span><span class="muted" style="font-size:12px;font-weight:500">' + t.sub + '</span></span></button>').join('') + '</div>'
-    + '<div class="setlist">' + setRow('Reducir animaciones', 'Quita transiciones y movimientos', !!PREF.calm, 'pref', 'calm') + '</div></section>';
+    + '<div class="setlist">' + setRow('Ampliar el gráfico al girar', 'Con el teléfono en horizontal, en Datos, el gráfico de forma se abre a pantalla completa', PREF.rotZoom !== false, 'pref', 'rotZoom') + setRow('Reducir animaciones', 'Quita transiciones y movimientos', !!PREF.calm, 'pref', 'calm') + '</div></section>';
   // avisos
   out += '<section class="card col g12" aria-label="Avisos"><div class="eyebrow">Check-in y avisos</div><div class="setlist">' + setRow('Recordatorio diario', remOn ? 'Todos los días a las ' + esc(rem) : 'Desactivado', remOn, 'remToggle')
     + (remOn ? '<div class="col g10" style="padding:4px 0 12px"><div class="chips" role="group" aria-label="Hora del recordatorio">' + ['07:00', '12:00', '19:30', '21:00'].map((h) => '<button type="button" class="chip" data-a="remSet" data-v="' + h + '" aria-pressed="' + (rem === h) + '" style="min-height:40px">' + h + '</button>').join('') + '</div><div class="row g10" style="align-items:center"><label for="reminder" class="muted" style="font-size:13px">Otra hora</label><input type="time" id="reminder" value="' + esc(rem) + '"></div><p class="muted" style="font-size:12px">La hora queda guardada en tu perfil. Los avisos llegarán en una próxima versión, con la app instalada.</p></div>' : '')
@@ -1040,7 +1079,7 @@ function feedbackHtml() {
   out += ckActions();
   return out + '<div class="col g8"><a href="#ruta" data-a="closeFb" class="btn primary"><span>Ver mi ruta</span>' + arrow() + '</a><button type="button" class="btn ghost" data-a="closeFb">Volver a Hoy</button></div></div></div>';
 }
-const overlayHtml = () => (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : '')));
+const overlayHtml = () => (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : ''))));
 
 /* ---------- Historia: tu camino recorrido ---------- */
 function bestWeekMin(a) {
@@ -1204,7 +1243,7 @@ const ACT = {
       if (t) { if (on) await be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(0), updatedAt: Date.now() }); else await be.removeKm(t, uid); }
     } catch (e) { ST.profile = Object.assign({}, ST.profile, { shareKm: !on }); say(friendly(e)); }
   },
-  pref(v) { PREF[v] = v === 'haptic' ? !(PREF.haptic !== false) : !PREF[v]; savePref(); applyPrefs(); render(); },
+  pref(v) { PREF[v] = (v === 'haptic' || v === 'rotZoom') ? !(PREF[v] !== false) : !PREF[v]; savePref(); applyPrefs(); render(); },
   remToggle() {
     if (!ST.user) return; const on = !!(ST.profile && ST.profile.reminder);
     if (on) { PREF.lastRem = ST.profile.reminder; savePref(); }
@@ -1235,6 +1274,8 @@ const ACT = {
   qrUndo() { if (UI.undo) { clearTimeout(UI.undo.timer); UI.undo = null; render(); } },
   fcProj() { UI.fp = !fcProjOn(); try { localStorage.setItem('camino.fproj', UI.fp ? '1' : '0'); } catch (e) { /* sin almacenamiento */ } render(); },
   fcRange(v) { UI.fr = +v; render(); },
+  fcZoom() { fzOpen(false); },
+  fcZoomClose() { fzClose(); },
   editCk() {
     const c = on(meA(), off(0)); if (!c) return;
     const d = { mood: c.mood, sleepH: c.sleepH == null ? undefined : c.sleepH, sleepQ: c.sleepQ || undefined, legs: c.legs == null ? undefined : c.legs, stress: c.stress == null ? undefined : c.stress, rpe: c.rpe || undefined, heat: c.heat == null ? undefined : c.heat, hard: c.hard || undefined, prev: c.prev || undefined };
