@@ -287,3 +287,11 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .fzbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;font-size:13px;font-weight:600}
 .fzin{padding-top:12px;padding-bottom:20px}
 @media (orientation:landscape) and (max-height:520px){.fzin{width:100%;max-width:none;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+
+/* ---------- Logos de equipo ---------- */
+.tlogo{display:block;flex:none;object-fit:contain}
+.tlogo.tinv{filter:invert(1)}
+.tlogo.tw{filter:invert(1)}
+
+/* ---------- Compartir demostración ---------- */
+.demolink{padding:12px 14px;border-radius:14px;border:1.5px dashed var(--line);background:var(--surface2);font-size:14px;word-break:break-all;user-select:all;-webkit-user-select:all}

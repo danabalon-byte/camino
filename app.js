@@ -314,15 +314,25 @@ function inboxHtml() {
   }
   return out + '</div></div>';
 }
+/* Logos de equipo: SVG negro sobre transparente; en fondos oscuros se invierte a blanco, y sobre color se usa blanco. Para sumar otro equipo, agrega su entrada aqui. */
+const demoLink = () => location.origin + location.pathname + '?demo=1';
+const TEAM_LOGO = { grnt: { name: 'GRANITO', full: './grnt-logo.svg', fullR: 780.16 / 664.3, mark: './grnt-mark.svg', markR: 678.1 / 507.11 } };
+const bgDark = () => logoSrc() === './logo-blanco.svg';
+function teamLogo(team, kind, h, onColor) {
+  const L = TEAM_LOGO[team]; if (!L) return '';
+  const r = kind === 'full' ? L.fullR : L.markR, src = kind === 'full' ? L.full : L.mark, cls = 'tlogo' + (onColor ? ' tw' : (bgDark() ? ' tinv' : ''));
+  return '<img class="' + cls + '" src="' + src + '" alt="Equipo ' + L.name + '" height="' + h + '" width="' + Math.round(h * r) + '" style="height:' + h + 'px;width:auto">';
+}
 function topHtml() {
   let pills = '';
   if (DEMO) pills += '<span class="pill">Demo</span>';
   if (ST.profile) {
     const t = myTeam();
-    if (t) pills += '<span class="pill">' + TEAMS[t] + '</span>';
+    if (t && !TEAM_LOGO[t]) pills += '<span class="pill">' + TEAMS[t] + '</span>';
     if (isCoach()) { const cm = coachMode(); pills += '<div class="modesw" role="group" aria-label="Cambiar de vista"><button type="button" data-a="mode" data-v="coach" aria-pressed="' + cm + '">Coach</button><button type="button" data-a="mode" data-v="atleta" aria-pressed="' + !cm + '">Atleta</button></div>'; }
     else pills += '<span class="pill role">Atleta</span>';
     pills += bellHtml();
+    if (t && TEAM_LOGO[t] && UI.view !== 'ruta') pills += teamLogo(t, 'mark', 30);
   }
   return '<div class="inner"><span class="brand row g8"><img class="brand-logo" src="' + logoSrc() + '" alt="" width="30" height="30">Camino</span><span class="row g8">' + pills + '</span></div>';
 }
@@ -389,7 +399,7 @@ function viewHoy() {
 /* ---------- Vista: Ruta ---------- */
 function teamCard(team, label) {
   const tt = teamTotals(team), pct = Math.min(100, Math.round(tt.km / tt.goal * 100));
-  return '<section class="card" aria-label="Meta del equipo"><div class="row between"><div class="eyebrow">Meta del mes · ' + label + '</div><div class="muted" style="font-size:13px">' + tt.members + (tt.members === 1 ? ' atleta' : ' atletas') + '</div></div>'
+  return '<section class="card" aria-label="Meta del equipo"><div class="row between g12" style="align-items:center"><div class="col g4"><div class="eyebrow">Meta del mes · ' + label + '</div><div class="muted" style="font-size:13px">' + tt.members + (tt.members === 1 ? ' atleta' : ' atletas') + '</div></div>' + teamLogo(team, 'full', 56) + '</div>'
     + '<div class="row g8" style="align-items:baseline;margin-top:10px"><span class="num" style="font-size:56px;color:var(--good)">' + tt.km.toLocaleString('es-CL') + '</span><span class="muted">de ' + tt.goal.toLocaleString('es-CL') + ' km</span></div><div class="bar" style="margin-top:12px" aria-hidden="true"><i style="width:' + pct + '%;background:var(--good)"></i></div><p class="soft" style="margin-top:12px;font-size:14px">Van al ' + pct + '%. Cada salida suma, también las suaves.</p>'
     + (tt.hito ? '<div class="eyebrow" style="margin-top:14px">Hito de la semana</div><p style="margin-top:6px">' + esc(tt.hito) + '</p>' : '') + '</section>';
 }
@@ -829,7 +839,7 @@ function tourSlides() {
 function tourHtml() {
   if (UI.tour == null) return '';
   const sl = tourSlides(), i = Math.min(UI.tour, sl.length - 1), s = sl[i], last = i === sl.length - 1;
-  const ico = '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (NAVIC[s.ic] || '') + '</svg>';
+  const ico = (i === 0 && myTeam() && TEAM_LOGO[myTeam()]) ? teamLogo(myTeam(), 'full', 120, true) : '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (NAVIC[s.ic] || '') + '</svg>';
   return '<div class="story tour ' + s.c + '" role="dialog" aria-label="Recorrido de bienvenida" id="tourbox"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, k) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (k <= i ? 1 : .3) + '"></i>').join('') + '</div><div class="row between" style="margin-top:6px"><button type="button" class="x" data-a="tourBack"' + (i === 0 ? ' style="visibility:hidden"' : '') + '>Atrás</button><button type="button" class="x" data-a="tourClose">Saltar</button></div><div class="col g14" style="flex:1;justify-content:center"><div>' + ico + '</div><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + esc(s.k) + ' · ' + (i + 1) + ' de ' + sl.length + '</div><div style="font-family:var(--font-d);font-weight:700;font-size:clamp(36px,11vw,52px);line-height:1.05">' + esc(s.t) + '</div><p style="font-size:19px;line-height:1.45">' + esc(s.p) + '</p></div><button type="button" class="sbtn" data-a="tourNext">' + (last ? (s.btn || 'Empezar') : 'Siguiente') + '</button></div></div>';
 }
 const tourKey = () => 'camino.tour.' + (ST.user ? ST.user.uid : '');
@@ -1001,6 +1011,10 @@ function viewAjustes() {
     out += '<section class="card col g12" aria-label="Meta del equipo"><div class="eyebrow">Meta e hito del equipo</div><div class="seggroup" role="group" aria-label="Equipo">' + Object.keys(TEAMS).map((t) => '<button type="button" data-a="metaTeam" data-v="' + t + '" aria-pressed="' + (team === t) + '">' + TEAMS[t] + '</button>').join('') + '</div><label for="metaGoal" class="soft">Meta del mes (km)</label><input class="field" id="metaGoal" type="number" inputmode="numeric" min="0" value="' + esc(d.goal) + '"><label for="metaHito" class="soft">Hito de la semana (opcional)</label><textarea id="metaHito" placeholder="Por ejemplo: Camila hizo su rodaje más largo">' + esc(d.hito) + '</textarea><button type="button" class="btn primary" data-a="saveMeta" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar para ' + TEAMS[team] + '</button></section>';
   }
   if (p.team && !isCoach()) out += '<section class="card col g12" aria-label="Compartir kilómetros"><div class="eyebrow">Tu equipo</div><div class="setlist">' + setRow('Compartir mis km con el equipo', sharesKm() ? 'Tu nombre y tus km del mes suman a la meta de ' + TEAMS[p.team] : 'Tus km no aparecen ni suman a la meta del equipo', sharesKm(), 'shareKm') + '</div></section>';
+  if (isCoach() && !DEMO) {
+    const dl = demoLink();
+    out += '<section class="card col g12" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p><div class="demolink" id="demolink" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" style="flex:1;min-width:150px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button>' + (navigator.share ? '<button type="button" class="btn" data-a="shareDemo" style="flex:1;min-width:150px;background:var(--surface2);justify-content:center;white-space:nowrap"><span>Compartir…</span></button>' : '') + '<a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:150px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>Abrir demo</span></a></div></section>';
+  }
   out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
   out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
   out += '<details class="card" aria-label="Instalar"><summary style="font-weight:600;min-height:32px;cursor:pointer">Instalar en el teléfono</summary><p class="soft" style="font-size:15px;margin-top:8px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></details>';
@@ -1120,7 +1134,7 @@ function storyHtml() {
     Object.assign({ c: 's2', k: 'Tu equipo', btn: 'Terminar' }, s2)
   ];
   const s = sl[UI.story];
-  return '<div class="story ' + s.c + '" role="dialog" aria-label="Tu camino recorrido"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, i) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (i <= UI.story ? 1 : .3) + '"></i>').join('') + '</div><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="x" data-a="storyClose">Cerrar</button></div><div class="col g10" style="flex:1;justify-content:center"><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + s.k + '</div><div class="bigv">' + esc(s.big) + '</div><div style="font-family:var(--font-d);font-weight:600;font-size:34px;line-height:1.1">' + s.unit + '</div><p style="font-size:19px;margin-top:12px;line-height:1.45">' + esc(s.line) + '</p></div><button type="button" class="sbtn" data-a="storyNext">' + s.btn + '</button></div></div>';
+  return '<div class="story ' + s.c + '" role="dialog" aria-label="Tu camino recorrido"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, i) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (i <= UI.story ? 1 : .3) + '"></i>').join('') + '</div><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="x" data-a="storyClose">Cerrar</button></div><div class="col g10" style="flex:1;justify-content:center">' + (s.c === 's2' && myTeam() ? '<div>' + teamLogo(myTeam(), 'full', 110, true) + '</div>' : '') + '<div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + s.k + '</div><div class="bigv">' + esc(s.big) + '</div><div style="font-family:var(--font-d);font-weight:600;font-size:34px;line-height:1.1">' + s.unit + '</div><p style="font-size:19px;margin-top:12px;line-height:1.45">' + esc(s.line) + '</p></div><button type="button" class="sbtn" data-a="storyNext">' + s.btn + '</button></div></div>';
 }
 
 /* ---------- Render ---------- */
@@ -1311,6 +1325,12 @@ const ACT = {
   send() { if (!UI.busy) finishFlow(); },
   feedback() { UI.feedback = { checkin: on(meA(), off(0)), newBadges: [] }; render(); },
   closeFb() { UI.feedback = null; render(); },
+  async copyDemo() {
+    const dl = demoLink(); let ok = false;
+    try { await navigator.clipboard.writeText(dl); ok = true; } catch (e) { try { const el = document.getElementById('demolink'), r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
+    say(ok ? 'Enlace de la demostración copiado. Pégalo donde quieras compartirlo.' : 'No pude copiarlo solo: mantén presionado el enlace y cópialo.', ok ? 'ok' : 'err');
+  },
+  async shareDemo() { try { await navigator.share({ title: 'Camino · demostración', text: 'Prueba Camino con datos ficticios, sin iniciar sesión:', url: demoLink() }); } catch (e) { /* cancelado */ } },
   inbox() { UI.inboxSeen = isCoach() ? 0 : seenAt(); UI.inbox = true; if (!isCoach()) { const mx = Math.max(Date.now(), ...(ST.myNotes || []).map((n) => Number(n.at) || 0)); try { localStorage.setItem(seenKey(), String(mx)); } catch (e) { /* sin almacenamiento */ } } render(); },
   inboxClose() { UI.inbox = false; render(); },
   inboxGo(v) { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; UI.sel = v; UI.reply = { id: v, text: '' }; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('replyBox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
