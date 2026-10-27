@@ -2,7 +2,7 @@
 // Atleta: Hoy (check-in), Ruta (plan, equipo, insignias). Coach: Cabina (atletas, solicitudes, notas).
 // Los datos viven en Firestore (backend-firebase.js). Con ?demo=1 usa datos ficticios (backend-demo.js).
 
-const DEMO = new URLSearchParams(location.search).has('demo');
+const DEMO_Q = new URLSearchParams(location.search), DEMO = DEMO_Q.has('demo'), DEMO_ROLE = ({ atleta: 'athlete', athlete: 'athlete', coach: 'coach' })[DEMO_Q.get('demo')] || null;
 const be = DEMO ? (await import('./backend-demo.js')).default : (await import('./backend-firebase.js')).default;
 
 /* ---------- Constantes ---------- */
@@ -315,7 +315,7 @@ function inboxHtml() {
   return out + '</div></div>';
 }
 /* Logos de equipo: SVG negro sobre transparente; en fondos oscuros se invierte a blanco, y sobre color se usa blanco. Para sumar otro equipo, agrega su entrada aqui. */
-const demoLink = () => location.origin + location.pathname + '?demo=1';
+const demoLink = (r) => location.origin + location.pathname + '?demo=' + (r === 'coach' ? 'coach' : 'atleta');
 const TEAM_LOGO = { grnt: { name: 'GRANITO', full: './grnt-logo.svg', fullR: 780.16 / 664.3, mark: './grnt-mark.svg', markR: 678.1 / 507.11 } };
 const bgDark = () => logoSrc() === './logo-blanco.svg';
 function teamLogo(team, kind, h, onColor) {
@@ -1012,14 +1012,14 @@ function viewAjustes() {
   }
   if (p.team && !isCoach()) out += '<section class="card col g12" aria-label="Compartir kilómetros"><div class="eyebrow">Tu equipo</div><div class="setlist">' + setRow('Compartir mis km con el equipo', sharesKm() ? 'Tu nombre y tus km del mes suman a la meta de ' + TEAMS[p.team] : 'Tus km no aparecen ni suman a la meta del equipo', sharesKm(), 'shareKm') + '</div></section>';
   if (isCoach() && !DEMO) {
-    const dl = demoLink();
-    out += '<section class="card col g12" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p><div class="demolink" id="demolink" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" style="flex:1;min-width:150px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button>' + (navigator.share ? '<button type="button" class="btn" data-a="shareDemo" style="flex:1;min-width:150px;background:var(--surface2);justify-content:center;white-space:nowrap"><span>Compartir…</span></button>' : '') + '<a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:150px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>Abrir demo</span></a></div></section>';
+    const dRow = (r, ttl, sub) => { const dl = demoLink(r); return '<div class="col g8"><div><b>' + ttl + '</b><div class="muted" style="font-size:13px">' + sub + '</div></div><div class="demolink" id="demolink-' + r + '" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" data-v="' + r + '" style="flex:1;min-width:130px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button><a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:130px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>Abrir demo</span></a></div></div>'; };
+    out += '<section class="card col g14" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
   }
   out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
   out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
   out += '<details class="card" aria-label="Instalar"><summary style="font-weight:600;min-height:32px;cursor:pointer">Instalar en el teléfono</summary><p class="soft" style="font-size:15px;margin-top:8px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></details>';
   if (DEMO) out += '<section class="card col g10" aria-label="Datos de demostración"><div class="eyebrow">Modo demostración</div><button type="button" class="chip" data-a="resetDemo" style="align-self:flex-start">Restablecer datos de demostración</button></section>';
-  out += '<button type="button" class="btn ghost" data-a="logout" style="justify-content:center;border:1.5px solid var(--line)">Cerrar sesión</button>';
+  if (!DEMO_ROLE) out += '<button type="button" class="btn ghost" data-a="logout" style="justify-content:center;border:1.5px solid var(--line)">Cerrar sesión</button>';
   return out + '</div></div>';
 }
 
@@ -1325,12 +1325,11 @@ const ACT = {
   send() { if (!UI.busy) finishFlow(); },
   feedback() { UI.feedback = { checkin: on(meA(), off(0)), newBadges: [] }; render(); },
   closeFb() { UI.feedback = null; render(); },
-  async copyDemo() {
-    const dl = demoLink(); let ok = false;
-    try { await navigator.clipboard.writeText(dl); ok = true; } catch (e) { try { const el = document.getElementById('demolink'), r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
-    say(ok ? 'Enlace de la demostración copiado. Pégalo donde quieras compartirlo.' : 'No pude copiarlo solo: mantén presionado el enlace y cópialo.', ok ? 'ok' : 'err');
+  async copyDemo(v) {
+    const dl = demoLink(v); let ok = false;
+    try { await navigator.clipboard.writeText(dl); ok = true; } catch (e) { try { const el = document.getElementById('demolink-' + v), r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
+    say(ok ? 'Enlace de la demo de ' + (v === 'coach' ? 'coach' : 'atleta') + ' copiado. Pégalo donde quieras compartirlo.' : 'No pude copiarlo solo: mantén presionado el enlace y cópialo.', ok ? 'ok' : 'err');
   },
-  async shareDemo() { try { await navigator.share({ title: 'Camino · demostración', text: 'Prueba Camino con datos ficticios, sin iniciar sesión:', url: demoLink() }); } catch (e) { /* cancelado */ } },
   inbox() { UI.inboxSeen = isCoach() ? 0 : seenAt(); UI.inbox = true; if (!isCoach()) { const mx = Math.max(Date.now(), ...(ST.myNotes || []).map((n) => Number(n.at) || 0)); try { localStorage.setItem(seenKey(), String(mx)); } catch (e) { /* sin almacenamiento */ } } render(); },
   inboxClose() { UI.inbox = false; render(); },
   inboxGo(v) { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; UI.sel = v; UI.reply = { id: v, text: '' }; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('replyBox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
@@ -1392,7 +1391,7 @@ const ACT = {
     try { await be.saveTeamMeta(team, { goal: goal > 0 ? goal : KM_GOAL_DEFAULT, hito: String(hito || '').slice(0, 200) }); UI.metaDraft = null; say('Guardado para ' + TEAMS[team] + '.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
-  resetDemo() { try { localStorage.removeItem('camino-demo-v1'); sessionStorage.removeItem('camino-demo-user'); } catch (e) {} location.reload(); }
+  resetDemo() { try { localStorage.removeItem('camino-demo-v2'); sessionStorage.removeItem('camino-demo-user'); } catch (e) {} location.reload(); }
 };
 function guiaSync() {
   const tr = document.getElementById('gtrack'); if (!tr) return;

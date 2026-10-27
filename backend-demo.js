@@ -79,7 +79,8 @@ function seed() {
     { id: 'n0', text: 'Buen trabajo con el rodillo suave. Mañana mantenemos zona 2 y vemos cómo responden las piernas.', at: tsOf(off(-1), 21, 40), from: 'demoCoach' },
     { id: 'n1', text: 'Ojo con la molestia de rodilla: si vuelve, avísame antes de la próxima salida larga.', at: tsOf(off(-8), 20, 15), from: 'demoCoach' },
     { id: 'n2', text: 'Semana de construcción lista. Tu aptitud va subiendo de forma pareja, ¡sigue así!', at: tsOf(off(-14), 19, 30), from: 'demoCoach' }] };
-  users.demoCoach = { profile: { id: 'demoCoach', name: 'Coach (demo)', role: 'coach', team: null, pending: false, reminder: '19:30' }, checkins: [], notes: [] };
+  const hC = mkHistory(0.95, 100, 36, 31);
+  users.demoCoach = { profile: { id: 'demoCoach', name: 'Coach (demo)', role: 'coach', team: null, pending: false, reminder: '19:30' }, checkins: mkRichCheckins(hC, 40), history: hC, plan: mkPlan(0.95, 'Travesía de montaña', '160 km · 3.000 m D+ · tu propio objetivo', 63), notes: [] };
   const ath = (id, name, team, arr, last, pain, lvl, plan) => { users[id] = { profile: { id, name, role: 'athlete', team, coachId: 'demoCoach', pending: false }, checkins: mkCheckins(arr, last, pain), notes: [], history: mkHistory(lvl || 0.9, 100, 30, 28) }; if (plan) users[id].plan = mkPlan(lvl || 0.9, plan[0], plan[1], plan[2]); };
   ath('camila', 'Camila R.', 'grnt', [4, 4, 3, 4, 4, 5, 4], { sleepH: 3, sleepQ: 2, legs: 1, stress: 0, rpe: 6, comment: 'Salida suave con el grupo, todo bien.', ts: tsOf(off(0), 8, 10) }, null, 1.05, ['Vuelta al Lago', '90 km · 1.200 m D+', 35]);
   ath('joaquin', 'Joaquín P.', 'zn', [4, 4, 3, 3, 2, 2, 2], { sleepH: 1, sleepQ: 3, legs: 0, stress: 2, rpe: 7, comment: 'Me molesta un poco el muslo al pedalear fuerte.', ts: tsOf(off(0), 7, 45) }, { zone: 'Muslo', side: 'Derecho', level: 'Leve' }, 1.5, ['Cuesta Barriga', '40 km · 1.100 m D+', 28]);
@@ -108,6 +109,10 @@ const be = {
     authCb = cb;
     let saved = null;
     try { saved = sessionStorage.getItem('camino-demo-user'); } catch (e) {}
+    // Enlaces directos: ?demo=atleta entra solo como atleta y ?demo=coach solo como coach (sin pantalla de ingreso)
+    const q = new URLSearchParams(location.search).get('demo');
+    const forced = (q === 'coach') ? 'demoCoach' : ((q === 'atleta' || q === 'athlete') ? 'demoAtleta' : null);
+    if (forced) { saved = forced; try { sessionStorage.setItem('camino-demo-user', forced); } catch (e) {} }
     setTimeout(() => cb(saved && store.users[saved] ? { uid: saved, name: store.users[saved].profile.name } : null), 0);
     return () => { authCb = null; };
   },
