@@ -72,6 +72,8 @@ const be = {
   listenCheckins(uid, cb) { return live(() => cb([...store.users[uid].checkins].sort(byDateDesc).map(c => ({ ...c })))); },
   async saveCheckin(uid, c) { const u = store.users[uid]; u.checkins = u.checkins.filter(x => x.date !== c.date); u.checkins.push({ id: c.date, ...c }); notify(); },
   listenNotes(uid, cb) { return live(() => cb(store.users[uid].notes.map(n => ({ ...n })))); },
+  listenPlan(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].plan ? JSON.parse(JSON.stringify(store.users[uid].plan)) : null)); },
+  async savePlan(uid, data) { store.users[uid].plan = data; notify(); },
   listenTeamKm(team, cb) { return live(() => cb(Object.entries(store.km[team] || {}).map(([id, v]) => ({ id, ...v })))); },
   async saveKm(team, uid, data) { (store.km[team] = store.km[team] || {})[uid] = data; notify(); },
   listenTeamMeta(team, cb) { return live(() => cb(store.meta[team] ? { ...store.meta[team] } : null)); },

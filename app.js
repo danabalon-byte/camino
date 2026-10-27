@@ -67,8 +67,8 @@ try { const r = localStorage.getItem(PREFKEY); if (r) PREF = Object.assign(PREF,
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { ready: false, user: null, profile: null, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
-const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, msg: '', msgKind: 'err' };
+const ST = { ready: false, user: null, profile: null, myPlan: null, athPlan: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
 const isCoach = () => !!(ST.profile && ST.profile.role === 'coach');
@@ -86,7 +86,15 @@ function athleteObjs() {
 /* ---------- Cálculos ---------- */
 const latest = (a) => { let l = null; a.checkins.forEach((c) => { if (!l || c.date > l.date || (c.date === l.date && c.ts > l.ts)) l = c; }); return l; };
 const on = (a, date) => { for (let i = 0; i < a.checkins.length; i++) if (a.checkins[i].date === date) return a.checkins[i]; return null; };
-const planFor = (date) => PLAN[parse(date).getDay()];
+// Plan del atleta: lo carga su coach en Firestore (users/{uid}/plan/current). En modo demo, sin plan cargado, se usa el ejemplo.
+const planFor = (date) => {
+  const pl = ST.myPlan;
+  if (pl && pl.sessions) return pl.sessions[date] || null;
+  return DEMO && !pl ? PLAN[parse(date).getDay()] : null;
+};
+const dayNote = (date) => { const p = planFor(date), pl = ST.myPlan; return (p && p.note) || (pl && pl.notes && pl.notes[date]) || ''; };
+const minText = (m) => (m >= 120 ? (Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + m % 60 + ' min' : '')) : m + ' min');
+const planDesc = (p) => p.name + (p.min ? ' · ' + minText(p.min) : '') + (p.km ? ' · ' + p.km + ' km' : '');
 function score(c) {
   const p = [];
   if (c.mood) p.push((c.mood - 1) / 4);
@@ -171,9 +179,31 @@ function insightFor(c) {
   if (c.mood === 3) return 'Anotado. Tu semana sigue estable y vas al día con el plan.';
   return 'Qué buena señal. Si el plan lo permite, es un buen día para rodar con ganas.';
 }
+function goalData() {
+  const pl = ST.myPlan;
+  if (pl && pl.goal && pl.goal.date) return { name: String(pl.goal.name || 'Tu meta'), date: pl.goal.date, dateText: String(pl.goal.dateText || pl.goal.date), detail: String(pl.goal.detail || '') };
+  if (DEMO && !pl) return { name: 'Vuelta Santuario Lo Vasquez', date: GOAL, dateText: '8 de diciembre', detail: 'salida con el equipo' };
+  return null;
+}
 function goalInfo() {
-  const days = diffDays(off(0), GOAL), weeks = Math.max(0, Math.ceil(days / 7));
-  return { days, weeks, done: days < 0, phase: days < 0 ? 'meta' : (weeks > 2 ? 'construccion' : 'afinamiento') };
+  const gd = goalData(); if (!gd) return null;
+  const days = diffDays(off(0), gd.date), weeks = Math.max(0, Math.ceil(days / 7));
+  return Object.assign({}, gd, { days, weeks, done: days < 0, phase: days < 0 ? 'meta' : (weeks > 2 ? 'construccion' : 'afinamiento') });
+}
+function phaseList(g) {
+  const pl = ST.myPlan;
+  if (pl && Array.isArray(pl.phases) && pl.phases.length) {
+    let nowSet = false;
+    const list = pl.phases.map((p) => { let st = 'done'; if (!(g.done || (p.to && p.to < off(0)))) { st = nowSet ? 'next' : 'now'; nowSet = true; } return { n: String(p.n || ''), s: String(p.s || ''), st }; });
+    list.push({ n: g.name, s: g.dateText + (g.detail ? ' · ' + g.detail : ''), st: g.done ? 'done' : 'goal' });
+    return list;
+  }
+  return [
+    { n: 'Base', s: '8 semanas · completada', st: 'done' },
+    { n: 'Construcción', s: g.phase === 'construccion' ? 'Quedan ' + Math.max(g.weeks - 2, 1) + ' semanas · más volumen, con descansos planificados' : 'Completada', st: g.phase === 'construccion' ? 'now' : 'done' },
+    { n: 'Afinamiento', s: g.phase === 'afinamiento' ? 'Quedan ' + Math.max(g.weeks, 1) + ' semanas · menos volumen y piernas frescas' : (g.phase === 'meta' ? 'Completado' : '2 semanas · menos volumen y piernas frescas'), st: g.phase === 'afinamiento' ? 'now' : (g.phase === 'meta' ? 'done' : 'next') },
+    { n: g.name, s: g.dateText + (g.detail ? ' · ' + g.detail : ''), st: g.phase === 'meta' ? 'done' : 'goal' }
+  ];
 }
 const monthKey = () => off(0).slice(0, 7);
 function teamTotals(team) {
@@ -272,22 +302,27 @@ function viewHoy() {
     + '<div class="col g6 grow"><div class="eyebrow">Estado de hoy</div><div class="h2" style="color:' + b.color + '">' + b.label + '</div>'
     + (l ? '<p class="soft" style="font-size:14px">' + esc(summaryText(l, b)) + '</p><p class="muted" style="font-size:12px">' + basis + '</p>' : '<p class="soft" style="font-size:14px">Haz tu primer check-in para ver tu estado.</p>') + '</div></section>';
 
-  let segs = ''; const total = Math.min(Math.max(g.weeks, 1), 10);
-  if (!g.done) for (let i = 0; i < total; i++) { const fromEnd = total - 1 - i, col = i === 0 ? 'var(--accent)' : (fromEnd < 2 ? 'var(--accent2)' : 'var(--track)'); segs += '<i style="background:' + col + '"></i>'; }
-  const phaseName = g.phase === 'construccion' ? 'Construcción' : (g.phase === 'afinamiento' ? 'Afinamiento' : 'Meta cumplida');
-  out += '<section class="card" aria-label="Próxima meta"><div class="eyebrow">Próxima meta</div>' + (g.done ? '<div class="h2" style="margin-top:8px">Vuelta Santuario Lo Vasquez: ¡lo lograron!</div>'
-    : '<div class="row g16" style="align-items:flex-end;margin-top:8px"><div class="row g6" style="align-items:baseline;flex:none"><span class="num" style="font-size:68px;color:var(--accent)">' + g.days + '</span><span class="muted">' + (g.days === 1 ? 'día' : 'días') + '</span></div><div class="col" style="padding-bottom:4px;min-width:0"><div style="font-weight:600;line-height:1.3">Vuelta Santuario Lo Vasquez</div><div class="muted" style="font-size:13px">8 de diciembre · ' + g.weeks + (g.weeks === 1 ? ' semana' : ' semanas') + '</div></div></div><div class="seg" style="margin-top:16px" aria-hidden="true">' + segs + '</div><div class="muted" style="font-size:12px;margin-top:6px">Bloque actual: ' + phaseName + (g.phase === 'construccion' ? ' · luego Afinamiento' : '') + '</div>') + '</section>';
+  let segs = ''; const total = Math.min(Math.max(g ? g.weeks : 1, 1), 10);
+  if (g && !g.done) for (let i = 0; i < total; i++) { const fromEnd = total - 1 - i, col = i === 0 ? 'var(--accent)' : (fromEnd < 2 ? 'var(--accent2)' : 'var(--track)'); segs += '<i style="background:' + col + '"></i>'; }
+  if (!g) out += '<section class="card" aria-label="Próxima meta"><div class="eyebrow">Próxima meta</div><p class="soft" style="margin-top:8px">Tu coach cargará aquí tu próxima meta y tu plan de entrenamiento.</p></section>';
+  else {
+    const pls = phaseList(g), curP = pls.filter((x) => x.st === 'now')[0], nxtP = pls.filter((x) => x.st === 'next')[0];
+    out += '<section class="card" aria-label="Próxima meta"><div class="eyebrow">Próxima meta</div>' + (g.done ? '<div class="h2" style="margin-top:8px">' + esc(g.name) + ': ¡lo lograron!</div>'
+      : '<div class="row g16" style="align-items:flex-end;margin-top:8px"><div class="row g6" style="align-items:baseline;flex:none"><span class="num" style="font-size:68px;color:var(--accent)">' + g.days + '</span><span class="muted">' + (g.days === 1 ? 'día' : 'días') + '</span></div><div class="col" style="padding-bottom:4px;min-width:0"><div style="font-weight:600;line-height:1.3">' + esc(g.name) + '</div><div class="muted" style="font-size:13px">' + esc(g.dateText) + ' · ' + (g.days <= 7 ? 'esta semana' : g.weeks + ' semanas') + '</div></div></div><div class="seg" style="margin-top:16px" aria-hidden="true">' + segs + '</div><div class="muted" style="font-size:12px;margin-top:6px">Bloque actual: ' + esc(curP ? curP.n : 'Meta cumplida') + (nxtP ? ' · luego ' + esc(nxtP.n) : '') + '</div>') + '</section>';
+  }
 
   const wk = weekInfo(a); let cols = '';
   wk.days.forEach((d) => {
-    const ph = d.p ? Math.max(8, Math.round(d.p.min / 180 * 64)) : 4, dh = d.done && d.p ? ph : 0, bd = d.p ? (d.today ? '1.5px dashed var(--accent)' : '1.5px dashed var(--muted)') : '1.5px solid var(--line)';
+    const ph = d.p ? Math.min(64, Math.max(8, Math.round((d.p.min || 30) / 180 * 64))) : 4, dh = d.done && d.p ? ph : 0, bd = d.p ? (d.today ? '1.5px dashed var(--accent)' : '1.5px dashed var(--muted)') : '1.5px solid var(--line)';
     cols += '<div class="col" style="flex:1;align-items:center;gap:6px"><div style="position:relative;width:100%;height:64px" aria-hidden="true"><div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px;height:' + ph + 'px;border:' + bd + '"></div><div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px;background:var(--accent);height:' + dh + 'px"></div></div><span style="font-size:12px;font-weight:600;color:' + (d.today ? 'var(--accent)' : 'var(--muted)') + '">' + WDL[d.wd] + '</span></div>';
   });
   const pToday = planFor(off(0)); let wkLine;
   if (todayC && todayC.type === 'actividad') wkLine = 'Hoy registraste ' + (todayC.activity ? todayC.activity.name.toLowerCase() : 'tu actividad') + '. Vas al día con el plan.';
-  else if (pToday) wkLine = 'Hoy: ' + pToday.name.toLowerCase() + ' de ' + (pToday.min >= 120 ? (Math.floor(pToday.min / 60) + ' h' + (pToday.min % 60 ? ' ' + pToday.min % 60 + ' min' : '')) : pToday.min + ' min') + '. Llevas ' + wk.done + ' de ' + wk.planned + ' sesiones de la semana.';
+  else if (pToday) wkLine = 'Hoy: ' + pToday.name + (pToday.min ? ' de ' + minText(pToday.min) : '') + '. Llevas ' + wk.done + ' de ' + wk.planned + ' sesiones de la semana.';
   else wkLine = 'Hoy es día de descanso. Llevas ' + wk.done + ' de ' + wk.planned + ' sesiones de la semana.';
-  out += '<section class="card" aria-label="Tu semana"><div class="row between"><div class="eyebrow">Tu semana</div><div class="muted" style="font-size:13px">Plan de ejemplo y lo hecho</div></div><div class="row g8" style="align-items:flex-start;margin-top:14px">' + cols + '</div><p class="soft" style="margin-top:14px;font-size:15px">' + esc(wkLine) + '</p></section>';
+  const nTxt = dayNote(off(0));
+  if (nTxt && !(todayC && todayC.type === 'actividad')) wkLine += ' ' + nTxt;
+  out += '<section class="card" aria-label="Tu semana"><div class="row between"><div class="eyebrow">Tu semana</div><div class="muted" style="font-size:13px">' + (DEMO && !ST.myPlan ? 'Plan de ejemplo y lo hecho' : 'Tu plan y lo hecho') + '</div></div><div class="row g8" style="align-items:flex-start;margin-top:14px">' + cols + '</div><p class="soft" style="margin-top:14px;font-size:15px">' + esc(wkLine) + '</p></section>';
 
   const n = lastNote(a);
   if (n) out += '<section class="card" aria-label="Nota de tu coach"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p></section>';
@@ -305,20 +340,18 @@ function teamCard(team, label) {
 }
 function viewRuta() {
   const a = meA(), g = goalInfo();
-  let out = '<div class="inner"><div class="stack">' + head('Hacia la Vuelta Santuario Lo Vasquez', 'Tu ruta') + msgBanner();
-  const ph = [
-    { n: 'Base', s: '8 semanas · completada', st: 'done' },
-    { n: 'Construcción', s: g.phase === 'construccion' ? 'Quedan ' + Math.max(g.weeks - 2, 1) + ' semanas · más volumen, con descansos planificados' : 'Completada', st: g.phase === 'construccion' ? 'now' : 'done' },
-    { n: 'Afinamiento', s: g.phase === 'afinamiento' ? 'Quedan ' + Math.max(g.weeks, 1) + ' semanas · menos volumen y piernas frescas' : (g.phase === 'meta' ? 'Completado' : '2 semanas · menos volumen y piernas frescas'), st: g.phase === 'afinamiento' ? 'now' : (g.phase === 'meta' ? 'done' : 'next') },
-    { n: 'Vuelta Santuario Lo Vasquez', s: '8 de diciembre · salida con el equipo', st: g.phase === 'meta' ? 'done' : 'goal' }
-  ];
-  out += '<section class="card" aria-label="Fases del plan" style="padding-bottom:8px"><div class="eyebrow" style="margin-bottom:14px">Fases del plan</div>';
-  ph.forEach((p, i) => {
-    const nodeBd = p.st === 'done' || p.st === 'now' ? 'var(--accent)' : (p.st === 'goal' ? 'var(--good)' : 'var(--muted)'), nodeBg = p.st === 'done' ? 'var(--accent)' : 'var(--bg)';
-    const inner = p.st === 'done' ? check('var(--on-accent)', 14) : (p.st === 'now' ? '<i style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:block"></i>' : '');
-    out += '<div class="row g14" style="align-items:stretch"><div class="col" style="align-items:center;width:24px;flex:none"><div class="row" style="width:24px;height:24px;border-radius:50%;border:2px solid ' + nodeBd + ';background:' + nodeBg + ';justify-content:center;flex:none">' + inner + '</div>' + (i < ph.length - 1 ? '<div style="width:2px;flex:1;min-height:18px;background:' + (p.st === 'done' ? 'var(--accent)' : 'var(--line)') + '"></div>' : '') + '</div><div style="padding-bottom:18px;min-width:0"><div class="row g8 wrap"><span class="h3" style="color:' + (p.st === 'goal' ? 'var(--good)' : 'var(--text)') + '">' + p.n + '</span>' + (p.st === 'now' ? '<span class="tag">Estás aquí</span>' : '') + '</div><div class="muted" style="font-size:14px">' + p.s + '</div></div></div>';
-  });
-  out += '</section>';
+  let out = '<div class="inner"><div class="stack">' + head(g ? 'Hacia ' + g.name : 'Tu camino', 'Tu ruta') + msgBanner();
+  if (!g) out += '<section class="card" aria-label="Fases del plan"><div class="eyebrow">Fases del plan</div><p class="soft" style="margin-top:8px">Tu coach aún no carga tu plan. Cuando lo haga, verás aquí cada fase hasta tu meta.</p></section>';
+  else {
+    const ph = phaseList(g);
+    out += '<section class="card" aria-label="Fases del plan" style="padding-bottom:8px"><div class="eyebrow" style="margin-bottom:14px">Fases del plan</div>';
+    ph.forEach((p, i) => {
+      const nodeBd = p.st === 'done' || p.st === 'now' ? 'var(--accent)' : (p.st === 'goal' ? 'var(--good)' : 'var(--muted)'), nodeBg = p.st === 'done' ? 'var(--accent)' : 'var(--bg)';
+      const inner = p.st === 'done' ? check('var(--on-accent)', 14) : (p.st === 'now' ? '<i style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:block"></i>' : '');
+      out += '<div class="row g14" style="align-items:stretch"><div class="col" style="align-items:center;width:24px;flex:none"><div class="row" style="width:24px;height:24px;border-radius:50%;border:2px solid ' + nodeBd + ';background:' + nodeBg + ';justify-content:center;flex:none">' + inner + '</div>' + (i < ph.length - 1 ? '<div style="width:2px;flex:1;min-height:18px;background:' + (p.st === 'done' ? 'var(--accent)' : 'var(--line)') + '"></div>' : '') + '</div><div style="padding-bottom:18px;min-width:0"><div class="row g8 wrap"><span class="h3" style="color:' + (p.st === 'goal' ? 'var(--good)' : 'var(--text)') + '">' + esc(p.n) + '</span>' + (p.st === 'now' ? '<span class="tag">Estás aquí</span>' : '') + '</div><div class="muted" style="font-size:14px">' + esc(p.s) + '</div></div></div>';
+    });
+    out += '</section>';
+  }
   out += '<section class="card col g12" aria-label="Resumen de tu bloque" style="background:var(--accent);color:var(--on-accent)"><div class="eyebrow" style="color:var(--on-accent)">Tu camino recorrido</div><div class="h2" style="font-size:34px">Mira lo que has construido</div><button type="button" data-a="story" data-v="0" class="btn" style="width:auto;min-height:48px;font-size:16px;background:var(--on-accent);color:var(--accent);align-self:flex-start">Ver mi resumen</button></section>';
   if (isCoach()) out += teamCard('grnt', 'GRNT') + teamCard('zn', 'ZN');
   else if (myTeam()) out += teamCard(myTeam(), TEAMS[myTeam()]);
@@ -365,7 +398,32 @@ function viewCabina() {
   out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div><div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Bienestar</span></div><div class="muted" style="font-size:12px;margin-top:4px">La curva de forma (TSB) llegará con la conexión a intervals.icu.</div></div>';
   if (n && l && n.at >= l.ts) out += '<div class="row g12" style="background:var(--good-soft);border:1.5px solid var(--good);border-radius:16px;padding:14px 16px;align-items:flex-start"><span style="flex:none;margin-top:2px">' + check('var(--good)', 22) + '</span><span class="soft" style="font-size:15px">Nota enviada ' + relTime(n.at) + ': “' + esc(n.text) + '”</span></div>';
   out += '<div class="col g10"><div style="font-weight:600">' + (needsReply(a) ? 'Responder con un toque' : 'Dejar una nota') + '</div><div class="chips">' + cabinaPresets(st).map((p, i) => '<button type="button" class="chip" data-a="preset" data-v="' + i + '">' + esc(p) + '</button>').join('') + '</div><label for="replyText" class="muted" style="font-size:13px">Mensaje para ' + esc(a.first) + '</label><textarea id="replyText" placeholder="Escribe o elige una respuesta">' + esc(UI.reply.text) + '</textarea><button type="button" class="btn primary" data-a="sendReply" style="justify-content:center" ' + (UI.reply.text.trim() && !UI.busy ? '' : 'disabled') + '>' + (UI.reply.text.trim() ? 'Enviar a ' + esc(a.first) : 'Escribe o elige una respuesta') + '</button></div></section>';
+  out += planEditor(a);
   return out + '</div></div>';
+}
+
+const PLAN_TEMPLATE = { goal: { name: 'Nombre de la meta', date: 'AAAA-MM-DD', dateText: '1 de noviembre', detail: 'lugar · distancia' }, phases: [{ n: 'Base', s: 'Semanas 1 a 4 · completada', to: 'AAAA-MM-DD' }], sessions: { 'AAAA-MM-DD': { name: 'Rodillo Z2', min: 45, km: 0, load: 35, note: 'Opcional' } }, notes: { 'AAAA-MM-DD': 'Mensaje para ese día' } };
+const planToText = (pl) => { const o = pl ? { goal: pl.goal, phases: pl.phases, sessions: pl.sessions, notes: pl.notes } : PLAN_TEMPLATE; try { return JSON.stringify(o, null, 1); } catch (e) { return ''; } };
+function planEditor(a) {
+  const pl = ST.athPlan[a.id];
+  let out = '<section class="card col g12" aria-label="Plan del atleta"><div class="row between g8" style="align-items:baseline"><div class="eyebrow">Plan de ' + esc(a.first) + '</div><span class="muted" style="font-size:13px">' + (pl ? 'Cargado' : 'Sin plan') + '</span></div>';
+  if (!UI.planOpen) return out + '<button type="button" class="chip" data-a="planToggle" style="align-self:flex-start">' + (pl ? 'Ver o editar plan' : 'Cargar plan') + '</button></section>';
+  if (!UI.planDraft || UI.planDraft.id !== a.id) UI.planDraft = { id: a.id, text: planToText(pl) };
+  return out + '<div class="info" role="note">' + infoIcon() + '<span>Pega el plan en formato JSON: meta, fases, sesiones por fecha y notas por día. El atleta lo ve en Hoy y en Ruta.</span></div><label for="planText" class="muted" style="font-size:13px">Plan en JSON</label><textarea id="planText" spellcheck="false" style="min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px">' + esc(UI.planDraft.text) + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="savePlan" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar plan de ' + esc(a.first) + '</button><button type="button" class="chip" data-a="planToggle">Cerrar</button></div></section>';
+}
+function parsePlan(text) {
+  let o; try { o = JSON.parse(text); } catch (e) { return { err: 'El texto no es un JSON válido. Revisa comillas y comas.' }; }
+  const D = /^\d{4}-\d{2}-\d{2}$/, str = (v, n) => typeof v === 'string' && v.length <= n;
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return { err: 'El plan debe ser un objeto con meta, fases y sesiones.' };
+  const out = {};
+  if (o.goal != null) { const g = o.goal; if (!g || !str(g.name, 80) || !D.test(g.date || '') || !str(g.dateText || '', 40) || !str(g.detail || '', 120)) return { err: 'La meta necesita name y date con formato AAAA-MM-DD.' }; out.goal = { name: g.name, date: g.date, dateText: g.dateText || '', detail: g.detail || '' }; }
+  out.phases = [];
+  if (o.phases != null) { if (!Array.isArray(o.phases) || o.phases.length > 12) return { err: 'Las fases deben ser una lista de hasta 12.' }; for (const p of o.phases) { if (!p || !str(p.n, 60) || !str(p.s || '', 160) || (p.to != null && !D.test(p.to))) return { err: 'Cada fase necesita n, s y to con formato AAAA-MM-DD.' }; out.phases.push({ n: p.n, s: p.s || '', to: p.to || null }); } }
+  out.sessions = {};
+  if (o.sessions != null) { const ks = Object.keys(o.sessions); if (ks.length > 120) return { err: 'Hay demasiadas sesiones (máximo 120).' }; for (const k of ks) { const x = o.sessions[k]; if (!D.test(k) || !x || !str(x.name, 80) || !str(x.note || '', 400) || (x.min != null && !(x.min >= 0 && x.min <= 1000)) || (x.km != null && !(x.km >= 0 && x.km <= 1000)) || (x.load != null && !(x.load >= 0 && x.load <= 2000))) return { err: 'Revisa la sesión del ' + k + ': fecha AAAA-MM-DD, nombre y números válidos.' }; out.sessions[k] = { name: x.name, min: x.min == null ? null : Number(x.min), km: x.km == null ? 0 : Number(x.km), load: x.load == null ? null : Number(x.load), note: x.note || '' }; } }
+  out.notes = {};
+  if (o.notes != null) { for (const k of Object.keys(o.notes)) { if (!D.test(k) || !str(o.notes[k], 300)) return { err: 'Revisa la nota del ' + k + '.' }; out.notes[k] = o.notes[k]; } }
+  return { plan: out };
 }
 
 /* ---------- Vista: Ajustes ---------- */
@@ -392,7 +450,7 @@ function flowHtml() {
   if (f.step === 'tipo') {
     const p = planFor(off(0)), todayDone = on(meA(), off(0)) && on(meA(), off(0)).type === 'actividad';
     out += '<div class="row between"><button type="button" class="link" data-a="close">Cerrar</button><span class="muted" style="font-size:13px">Check-in</span></div><div class="col g8"><h2 class="title">¿Qué quieres registrar hoy?</h2><p class="muted">Elige una opción para empezar.</p></div>';
-    let opts = [{ k: 'actividad', t: 'Terminé una actividad', s: p ? 'Del plan de hoy: ' + p.name + ' · ' + p.min + ' min · ' + p.km + ' km' : 'Registra una salida que hiciste' }, { k: 'bienestar', t: 'Solo cómo me siento', s: 'Sin actividad hoy' }, { k: 'descanso', t: 'Día de descanso', s: 'También cuenta para tu constancia' }];
+    let opts = [{ k: 'actividad', t: 'Terminé una actividad', s: p ? 'Del plan de hoy: ' + planDesc(p) : 'Registra una salida que hiciste' }, { k: 'bienestar', t: 'Solo cómo me siento', s: 'Sin actividad hoy' }, { k: 'descanso', t: 'Día de descanso', s: 'También cuenta para tu constancia' }];
     if (!p || todayDone) opts = [opts[1], opts[0], opts[2]];
     out += '<div class="col g10">' + opts.map((o) => '<button type="button" class="opt" data-a="kind" data-v="' + o.k + '" aria-pressed="false"><span><span>' + o.t + '</span><span class="sub">' + esc(o.s) + '</span></span></button>').join('') + '</div>';
   } else {
@@ -411,7 +469,7 @@ function flowHtml() {
     }
     if (cur === 'act') {
       const act = d.activity;
-      out += '<div class="col g8"><h2 class="title">Tu actividad</h2>' + (act && act.min ? '<div class="card tight row g12" style="background:var(--surface2)"><span class="col grow"><span class="eyebrow">Del plan de hoy</span><span style="font-weight:600">' + esc(act.name) + '</span><span class="muted" style="font-size:14px">' + act.min + ' min · ' + act.km + ' km</span></span>' + check('var(--good)', 22) + '</div>' : '<p class="muted">Cuéntanos cómo fue.</p>') + '</div>'
+      out += '<div class="col g8"><h2 class="title">Tu actividad</h2>' + (act && act.min ? '<div class="card tight row g12" style="background:var(--surface2)"><span class="col grow"><span class="eyebrow">Del plan de hoy</span><span style="font-weight:600">' + esc(act.name) + '</span><span class="muted" style="font-size:14px">' + esc(planDesc({ name: '', min: act.min, km: act.km }).replace(/^ · /, '')) + '</span></span>' + check('var(--good)', 22) + '</div>' : '<p class="muted">Cuéntanos cómo fue.</p>') + '</div>'
         + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 = muy fácil, 10 = máximo)</span></div><div class="grid5" role="group" aria-label="Esfuerzo percibido">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => '<button type="button" class="chip" data-a="set" data-g="rpe" data-v="' + v + '" aria-pressed="' + (d.rpe === v) + '" style="min-height:52px">' + v + '</button>').join('') + '</div></div>'
         + '<div class="col g10"><div style="font-weight:600">¿Cómo sentiste el clima?</div>' + chips('heat', HEAT, d.heat, 'Clima') + '</div>'
         + '<div class="col g10"><div style="font-weight:600">¿Hubo un tramo bastante más duro que el resto?</div>' + chips('hard', ['No', 'Sí'], d.hard, 'Tramo duro', (i) => (i ? 'si' : 'no')) + '</div>'
@@ -516,7 +574,7 @@ function setupData() {
       ST.athletes = rows.filter((r) => r.id !== ST.user.uid);
       const ids = ST.athletes.map((r) => r.id);
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
-      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); })]; });
+      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); })]; });
       soft();
     }));
     dataUnsubs.push(be.listenPending((rows) => { ST.pending = rows; soft(); }));
@@ -524,12 +582,13 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.myPlan = null; UI.planDraft = null; UI.planOpen = false; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e)));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
   ownUnsubs.push(be.listenCheckins(user.uid, (rows) => { ST.myCk = rows; if (UI.justSaved && rows.some((c) => c.date === UI.justSaved.date)) UI.justSaved = null; soft(); }, 120));
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));
+  ownUnsubs.push(be.listenPlan(user.uid, (pl) => { ST.myPlan = pl; soft(); }));
 }
 
 /* ---------- Acciones ---------- */
@@ -560,7 +619,7 @@ const ACT = {
   async logout() { await be.signOut(); },
   start() { UI.flow = { kind: null, step: 'tipo', i: 0, d: {} }; UI.draft = { comment: '', prevText: '' }; render(); },
   close() { UI.flow = null; UI.draft = { comment: '', prevText: '' }; render(); },
-  kind(v) { const p = planFor(off(0)), d = {}; if (v === 'actividad') d.activity = p ? { name: p.name, min: p.min, km: p.km, load: p.load } : { name: 'Actividad libre', min: null, km: 0, load: null }; UI.flow = { kind: v, step: 'run', i: 0, d }; render(); },
+  kind(v) { const p = planFor(off(0)), d = {}; if (v === 'actividad') d.activity = p ? { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load } : { name: 'Actividad libre', min: null, km: 0, load: null }; UI.flow = { kind: v, step: 'run', i: 0, d }; render(); },
   mood(v) { UI.flow.d.mood = Number(v); UI.flow.i++; render(); },
   set(v, t) { const g = t.dataset.g, val = NUMERIC[g] ? Number(v) : v; UI.flow.d[g] = (UI.flow.d[g] === val) ? undefined : val; render(); },
   multi(v, t) { const g = t.dataset.g, z = UI.flow.d[g] || [], i = z.indexOf(v); if (i >= 0) z.splice(i, 1); else z.push(v); UI.flow.d[g] = z; render(); },
@@ -573,12 +632,20 @@ const ACT = {
   story(v) { UI.story = Number(v) || 0; render(); },
   storyNext() { UI.story = UI.story >= 2 ? null : UI.story + 1; render(); },
   storyClose() { UI.story = null; render(); },
-  sel(v) { UI.sel = v; UI.reply = { id: v, text: '' }; render(); },
+  sel(v) { UI.sel = v; UI.reply = { id: v, text: '' }; UI.planDraft = null; render(); },
   preset(v) { const a = athleteObjs().find((x) => x.id === UI.sel); if (!a) return; UI.reply = { id: a.id, text: cabinaPresets(statusOf(a))[Number(v)] }; render(); },
   async sendReply() {
     const a = athleteObjs().find((x) => x.id === UI.sel), txt = (UI.reply.text || '').trim(); if (!a || !txt || UI.busy) return;
     UI.busy = true; render();
     try { await be.sendNote(a.id, { text: txt.slice(0, 600), at: Date.now(), from: ST.user.uid }); UI.reply = { id: a.id, text: '' }; } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  planToggle() { UI.planOpen = !UI.planOpen; UI.planDraft = null; render(); },
+  async savePlan() {
+    const a = athleteObjs().find((x) => x.id === UI.sel); if (!a || UI.busy) return;
+    const r = parsePlan(UI.planDraft ? UI.planDraft.text : ''); if (r.err) { say(r.err); return; }
+    UI.busy = true; render();
+    try { await be.savePlan(a.id, Object.assign(r.plan, { updatedAt: Date.now() })); UI.planDraft = null; say('Plan guardado para ' + a.first + '.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
   async accept(v, t) { try { await be.acceptAthlete(v, ST.user.uid, t.dataset.t); } catch (e) { say(friendly(e)); } },
@@ -598,6 +665,7 @@ document.addEventListener('input', (e) => {
   if (id === 'comment') UI.draft.comment = e.target.value;
   if (id === 'prevText') UI.draft.prevText = e.target.value;
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Escribe o elige una respuesta'; } }
+  if (id === 'planText') UI.planDraft = { id: UI.sel, text: e.target.value };
   if (id === 'reminder' && ST.user) { be.saveProfile(ST.user.uid, { reminder: e.target.value }).catch(() => {}); }
   if (id === 'metaGoal' || id === 'metaHito') { const cur = UI.metaDraft && UI.metaDraft.team === UI.metaTeam ? UI.metaDraft : { team: UI.metaTeam, goal: (ST.teamMeta[UI.metaTeam] || {}).goal || KM_GOAL_DEFAULT, hito: (ST.teamMeta[UI.metaTeam] || {}).hito || '' }; if (id === 'metaGoal') cur.goal = e.target.value; else cur.hito = e.target.value; UI.metaDraft = cur; }
 });

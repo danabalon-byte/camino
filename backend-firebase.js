@@ -72,6 +72,12 @@ const be = {
     return onSnapshot(q, (s) => cb(rows(s).reverse()), fail('notas'));
   },
 
+  // Plan del atleta (lo escribe su coach, lo lee el atleta)
+  listenPlan(uid, cb) {
+    return onSnapshot(doc(db, 'users', uid, 'plan', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('plan'));
+  },
+  savePlan(uid, data) { return setDoc(doc(db, 'users', uid, 'plan', 'current'), clean(data)); },
+
   // Equipo: kilómetros por persona (solo nombre, mes y km) y meta/hito que fija el coach
   listenTeamKm(team, cb) {
     return onSnapshot(collection(db, 'teams', team, 'km'), (s) => cb(rows(s)), fail('km del equipo'));
