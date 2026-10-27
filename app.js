@@ -128,8 +128,8 @@ function streak(a) {
   for (let i = start; i > -500; i--) { if (set[off(i)]) n++; else break; }
   return { n, today: !!set[off(0)] };
 }
-function weekInfo(a) {
-  const t = parse(off(0)), mon = (t.getDay() + 6) % 7, days = []; let planned = 0, done = 0;
+function weekInfo(a, shift) {
+  const t = parse(off(0)); t.setDate(t.getDate() + 7 * (shift || 0)); const mon = (t.getDay() + 6) % 7, days = []; let planned = 0, done = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(t); d.setDate(t.getDate() - mon + i); d.setHours(12, 0, 0, 0);
     const date = ymd(d), p = planFor(date), c = on(a, date), isDone = !!(c && c.type === 'actividad');
@@ -378,7 +378,7 @@ function viewHoy() {
   const wk = weekInfo(a); let cols = '';
   wk.days.forEach((d) => {
     const ph = d.p ? Math.min(64, Math.max(8, Math.round((d.p.min || 30) / 180 * 64))) : 4, dh = d.done && d.p ? ph : 0, bd = d.p ? (d.today ? '1.5px dashed var(--accent)' : '1.5px dashed var(--muted)') : '1.5px solid var(--line)';
-    cols += '<div class="col" style="flex:1;align-items:center;gap:6px"><div style="position:relative;width:100%;height:64px" aria-hidden="true"><div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px;height:' + ph + 'px;border:' + bd + '"></div><div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px;background:var(--accent);height:' + dh + 'px"></div></div><span style="font-size:12px;font-weight:600;color:' + (d.today ? 'var(--accent)' : 'var(--muted)') + '">' + WDL[d.wd] + '</span></div>';
+    cols += '<div class="col" data-a="wkOpen" data-v="' + d.date + '" style="flex:1;align-items:center;gap:6px"><div style="position:relative;width:100%;height:64px" aria-hidden="true"><div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px;height:' + ph + 'px;border:' + bd + '"></div><div style="position:absolute;left:0;right:0;bottom:0;border-radius:8px;background:var(--accent);height:' + dh + 'px"></div></div><span style="font-size:12px;font-weight:600;color:' + (d.today ? 'var(--accent)' : 'var(--muted)') + '">' + WDL[d.wd] + '</span></div>';
   });
   const pToday = planFor(off(0)); let wkLine;
   if (todayC && todayC.type === 'actividad') wkLine = 'Hoy registraste ' + (todayC.activity ? todayC.activity.name.toLowerCase() : 'tu actividad') + '. Vas al día con el plan.';
@@ -386,7 +386,7 @@ function viewHoy() {
   else wkLine = 'Hoy es día de descanso. Llevas ' + wk.done + ' de ' + wk.planned + ' sesiones de la semana.';
   const nTxt = dayNote(off(0));
   if (nTxt && !(todayC && todayC.type === 'actividad')) wkLine += ' ' + nTxt;
-  out += '<section class="card" aria-label="Tu semana"><div class="row between"><div class="eyebrow">Tu semana</div><div class="muted" style="font-size:13px">' + (DEMO && !ST.myPlan ? 'Plan de ejemplo y lo hecho' : 'Tu plan y lo hecho') + '</div></div><div class="row g8" style="align-items:flex-start;margin-top:14px">' + cols + '</div><p class="soft" style="margin-top:14px;font-size:15px">' + esc(wkLine) + '</p></section>';
+  out += '<section class="card wkcard" role="button" tabindex="0" data-a="wkOpen" aria-label="Tu semana: toca para ver el detalle del plan"><div class="row between"><div class="eyebrow">Tu semana</div><div class="muted" style="font-size:13px">' + (DEMO && !ST.myPlan ? 'Plan de ejemplo y lo hecho' : 'Tu plan y lo hecho') + '</div></div><div class="row g8" style="align-items:flex-start;margin-top:14px">' + cols + '</div><p class="soft" style="margin-top:14px;font-size:15px">' + esc(wkLine) + '</p><div class="wkmore">Ver el detalle de la semana <span aria-hidden="true">›</span></div></section>';
 
   const n = lastNote(a);
   if (n) out += '<section class="card" aria-label="Nota de tu coach"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p></section>';
@@ -793,7 +793,7 @@ const GUIA_BASE = [
   { k: 'Forma', t: 'Forma: aptitud menos fatiga', ic: 'cinco', p: ['La forma (TSB) es la resta: aptitud menos fatiga. Es el número grande que ves en "Tu forma".', '<b>Positiva</b>: piernas frescas, buen momento para una prueba o carrera. <b>Cerca de cero</b>: equilibrio. <b>Negativa</b>: estás cargando trabajo, que es normal en bloques de construcción.', 'Si baja de -25, tu coach lo marca como alerta. Antes de una meta, el plan busca que llegues con forma positiva.'] },
   { k: 'Datos', t: 'De dónde salen los números', ic: 'datos', p: ['Aptitud, fatiga y salidas vienen de intervals.icu, donde se conectan tus actividades de Strava o Garmin. Un proceso automático las trae <b>cada hora</b> a Camino.', 'Las salidas por semana cuentan los días con actividad registrada. Los kilómetros y minutos no se traen desde Strava por una limitación de la conexión.', 'Tu bienestar, racha e insignias vienen solo de tus check-ins en Camino, no de intervals.icu.'] },
   { k: 'Sensores', t: 'Equípate para medir tu esfuerzo', ic: 'datos', p: ['Para medir tu esfuerzo y planificar con precisión conviene salir con <b>tres sensores</b>: de <b>frecuencia cardíaca</b> (banda pectoral o de brazo), de <b>cadencia</b> y de <b>velocidad</b>.', 'La frecuencia cardíaca y la cadencia permiten estimar la carga de tus salidas y leer tu fatiga. Un sensor óptico de muñeca falla más en intervalos, frío y terreno irregular; una banda de brazo o pectoral es más fiable.', 'Si ya tienes alguno guardado, revisa primero la pila. Y recuerda: sin medidor de potencia no se calculan vatios, pero la carga estimada por frecuencia cardíaca mejora mucho con buenos sensores.'] },
-  { k: 'Semana', t: 'Tu semana', ic: 'semana', p: ['Cada columna es un día. El contorno punteado es lo que dice tu plan y el relleno es lo que ya hiciste.', 'Una sesión cuenta como hecha cuando haces un check-in de tipo <b>actividad</b> ese día.', 'El plan lo carga tu coach. Si no ves sesiones, es que aún no te carga ese bloque.'] },
+  { k: 'Semana', t: 'Tu semana', ic: 'semana', p: ['Cada columna es un día. El contorno punteado es lo que dice tu plan y el relleno es lo que ya hiciste.', 'Una sesión cuenta como hecha cuando haces un check-in de tipo <b>actividad</b> ese día.', '<b>Toca la tarjeta</b> (o una columna) para abrir el detalle: cada día con lo planificado, lo que hiciste y las notas de tu coach, más el resumen de sesiones, tiempo y kilómetros. Con las flechas de abajo ves semanas anteriores y la próxima.', 'El plan lo carga tu coach. Si no ves sesiones, es que aún no te carga ese bloque.'] },
   { k: 'Racha', t: 'Racha e insignias', ic: 'racha', p: ['<b>Racha</b>: días seguidos con check-in, de cualquier tipo. Si hoy aún no lo haces, cuenta desde ayer. Si saltas un día, vuelve a 0.', '<b>7 días seguidos</b>: siete días consecutivos con check-in. <b>Sueño parejo</b>: 5 noches de los últimos 7 con buen sueño. <b>Semana completa</b>: cumplir todas las sesiones del plan de esta semana. <b>Cinco actividades</b>: 5 actividades registradas en 14 días.', 'La barra de progreso de cada insignia dice cuánto te falta. Las que logras quedan encendidas.'] },
   { k: 'Camino', t: 'Tu camino recorrido', ic: 'ruta', p: ['En Ruta, "Ver mi resumen" muestra tres pantallas: tus <b>salidas registradas</b>, tu <b>mejor semana</b> y lo que ha hecho tu <b>equipo</b> este mes.', 'Las salidas salen del historial de intervals.icu y de tus check-ins de actividad. La mejor semana usa los minutos registrados, y si no hay minutos, usa la cantidad de salidas.', 'Mientras más constante seas con los check-ins, más completo queda el resumen.'] },
   { k: 'Equipo', t: 'Meta del equipo', ic: 'cabina', p: ['"Equipo" es el <b>grupo de atletas</b> al que te asigna tu coach (GRNT o ZN). No se refiere a tu bicicleta ni a tus kilómetros personales.', 'La lámina "Tu equipo" suma los <b>kilómetros del grupo en el mes</b> y los compara con la meta mensual. Ejemplo: "1.240 km juntos este mes. Entre 4 atletas ya van al 62%".', 'Esos kilómetros salen de lo que cada atleta anota en su check-in de actividad, no de intervals.icu. Si no anotas km, no suman. Si prefieres no aparecer, apaga <b>Compartir mis km con el equipo</b> en Ajustes.', 'El equipo ve solo kilómetros, metas e hitos. Nunca bienestar, molestias ni notas. Si eres coach, esa lámina suma los dos equipos.'] }
@@ -867,7 +867,7 @@ const TUT = {
       { at: 'm-score', say: 'Este círculo es tu puntaje de hoy, de 0 a 100. Se calcula con tu último check-in: en verde estás listo para rodar.' },
       { at: 'm-btn', say: 'Toca <b>Hacer check-in</b>. Son pocas preguntas y toma 1 minuto.' },
       { at: 'm-chips', say: 'Responde tocando una opción en cada pregunta. Al final toca <b>Enviar</b>.' },
-      { at: 'm-week', say: '<b>Tu semana</b>: el contorno es lo que dice tu plan y el relleno lo que ya hiciste.' },
+      { at: 'm-week', say: '<b>Tu semana</b>: el contorno es lo que dice tu plan y el relleno lo que ya hiciste. <b>Tócala</b> para ver el detalle de cada día y la próxima semana.' },
       { at: 'm-streak', say: 'La <b>racha</b> cuenta tus días seguidos con check-in. Si saltas un día, vuelve a 0.' },
       { at: 'm-edit', say: '¿Te equivocaste? Toca <b>Corregir check-in</b> para cambiarlo, o bórralo desde ahí.' }
     ]
@@ -967,7 +967,7 @@ function tutOpen(id) {
   const x = el.querySelector('.x'); if (x) x.focus();
 }
 function tutClose() { if (TS) clearTimeout(TS.timer); TS = null; const el = document.getElementById('tut'); if (el) el.remove(); }
-document.addEventListener('keydown', (e) => { if (!TS) return; if (e.key === 'Escape') tutClose(); else if (e.key === 'ArrowRight') tutGo(TS.i + 1); else if (e.key === 'ArrowLeft') tutGo(TS.i - 1); });
+document.addEventListener('keydown', (e) => { if (UI.wk && e.key === 'Escape') { UI.wk = null; render(); return; } const rb = e.target && e.target.closest && e.target.closest('[role=button][data-a]'); if (rb && (e.key === 'Enter' || e.key === ' ') && !/^(BUTTON|A|INPUT|TEXTAREA)$/.test(e.target.tagName)) { e.preventDefault(); rb.click(); return; } if (!TS) return; if (e.key === 'Escape') tutClose(); else if (e.key === 'ArrowRight') tutGo(TS.i + 1); else if (e.key === 'ArrowLeft') tutGo(TS.i - 1); });
 
 /* ---------- Comentarios: consultas, ideas y comentarios ---------- */
 const FBK = [['consulta', 'Consulta'], ['idea', 'Idea'], ['comentario', 'Comentario']];
@@ -987,6 +987,48 @@ function fbInbox() {
     return '<div class="card col g8" style="' + (x.read ? 'opacity:.7' : 'border:1.5px solid var(--accent)') + '"><div class="row between g8"><span style="font-weight:600">' + esc(x.name || 'Atleta') + (x.team ? ' · ' + esc(String(x.team).toUpperCase()) : '') + '</span><span class="muted" style="font-size:13px">' + esc(kn) + ' · ' + d + '</span></div><p class="soft" style="font-size:15px;white-space:pre-wrap">' + esc(x.text) + '</p><div class="row g8"><button type="button" class="chip" data-a="fbMark" data-v="' + esc(x.id) + '">' + (x.read ? 'Marcar como nuevo' : 'Marcar como leído') + '</button><button type="button" class="chip" data-a="fbDel" data-v="' + esc(x.id) + '">Borrar</button></div></div>';
   }).join('') + '</section>';
 }
+
+
+/* ---------- Detalle de la semana (se abre al tocar "Tu semana") ---------- */
+const WDF = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const shortDate = (ds) => { const d = parse(ds); return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3); };
+const hm = (m) => (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60 ? pad(m % 60) + ' min' : '').trim() : m + ' min');
+function weekSheetHtml() {
+  const a = meA(), sh = UI.wk.shift || 0, w = weekInfo(a, sh), today = off(0);
+  let pMin = 0, pKm = 0, dMin = 0, dKm = 0;
+  w.days.forEach((d) => { if (d.p) { pMin += d.p.min || 0; pKm += d.p.km || 0; } const c = on(a, d.date); if (c && c.type === 'actividad' && c.activity) { dMin += c.activity.min || 0; dKm += c.activity.km || 0; } });
+  const first = w.days[0].date, last = w.days[6].date, ttl = sh === 0 ? 'Esta semana' : (sh === 1 ? 'Próxima semana' : (sh === -1 ? 'Semana pasada' : (sh < 0 ? 'Hace ' + (-sh) + ' semanas' : 'En ' + sh + ' semanas')));
+  const tile = (v, u, l, c) => '<div class="col g4" style="align-items:center;text-align:center;flex:1;padding:4px"><span class="num" style="font-size:24px;line-height:1.05;color:' + c + '">' + v + '</span><span class="muted" style="font-size:12px">' + l + '</span></div>';
+  const pct = pMin ? Math.min(100, Math.round(dMin / pMin * 100)) : 0;
+  let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px">' + esc(shortDate(first)) + ' – ' + esc(shortDate(last)) + '</div><h1 class="title">' + ttl + '</h1></div><button type="button" class="x" data-a="wkClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>';
+  out += '<section class="card col g12" aria-label="Resumen de la semana"><div class="eyebrow">Resumen</div><div class="row" style="align-items:stretch">' + tile(w.done + ' / ' + w.planned, '', 'Sesiones hechas', 'var(--accent)') + '<div style="width:1px;background:var(--line)"></div>' + tile(hm(dMin), '', 'de ' + (pMin ? hm(pMin) : '–') + ' planificados', 'var(--good)') + '<div style="width:1px;background:var(--line)"></div>' + tile(dKm + ' km', '', 'de ' + (pKm || '–') + ' km', 'var(--accent2)') + '</div>' + (pMin ? '<div class="bar" aria-hidden="true"><i style="width:' + pct + '%;background:var(--good)"></i></div>' : '') + '</section>';
+  out += '<section class="col g10" aria-label="Días de la semana">';
+  w.days.forEach((d) => {
+    const c = on(a, d.date), isAct = !!(c && c.type === 'actividad'), past = d.date < today, isToday = d.date === today, note = dayNoteFor(d.date), p = d.p;
+    let st, col, bg;
+    if (isAct) { st = 'Hecho'; col = 'var(--good)'; bg = 'var(--good-soft)'; }
+    else if (isToday) { st = p ? 'Hoy' : 'Hoy · descanso'; col = 'var(--accent)'; bg = 'var(--accent-soft)'; }
+    else if (past && p) { st = 'Sin registrar'; col = 'var(--warn)'; bg = 'var(--surface2)'; }
+    else if (!past && p) { st = 'Por hacer'; col = 'var(--muted)'; bg = 'var(--surface2)'; }
+    else { st = 'Descanso'; col = 'var(--muted)'; bg = 'var(--surface2)'; }
+    let body = '';
+    if (p) body += '<div class="col g4"><div class="eyebrow">Plan</div><div style="font-weight:600;font-size:16px">' + esc(p.name) + '</div><div class="muted" style="font-size:14px">' + [p.min ? minText(p.min) : '', p.km ? p.km + ' km' : ''].filter(Boolean).join(' · ') + '</div></div>';
+    if (c) {
+      const A = c.activity; let did;
+      if (isAct) did = (A ? esc(A.name) + (A.min ? ' · ' + minText(A.min) : '') + (A.km ? ' · ' + A.km + ' km' : '') : 'Actividad registrada') + (c.rpe ? ' · esfuerzo ' + c.rpe + '/10' : '');
+      else did = c.type === 'descanso' ? 'Día de descanso registrado' : 'Registraste cómo te sientes';
+      body += '<div class="col g4"><div class="eyebrow" style="color:' + (isAct ? 'var(--good)' : 'var(--muted)') + '">' + (isAct ? 'Lo que hiciste' : 'Tu check-in') + '</div><div style="font-size:15px">' + did + '</div>' + (c.comment ? '<div class="muted" style="font-size:14px">“' + esc(c.comment) + '”</div>' : '') + '</div>';
+    }
+    if (note) body += '<div class="col g4"><div class="eyebrow">Nota de tu coach</div><div class="soft" style="font-size:15px">' + esc(note) + '</div></div>';
+    if (!body) body = '<div class="muted" style="font-size:14px">' + (past ? 'Sin sesión planificada ni registro.' : 'Sin sesión planificada.') + '</div>';
+    out += '<div class="card col g10" id="wkd-' + d.date + '" style="' + (isToday ? 'border:1.5px solid var(--accent)' : '') + (UI.wk.focus === d.date ? ';box-shadow:0 0 0 3px var(--accent-soft)' : '') + '"><div class="row between g8" style="align-items:center"><div style="font-weight:700;font-size:17px;text-transform:capitalize">' + WDF[d.wd] + ' <span class="muted" style="font-weight:500;font-size:14px;text-transform:none">' + esc(shortDate(d.date)) + '</span></div><span style="padding:3px 10px;border-radius:999px;background:' + bg + ';color:' + col + ';font-size:12px;font-weight:700;white-space:nowrap">' + st + '</span></div>' + body + '</div>';
+  });
+  out += '</section>';
+  if (sh === 0) { const nx = weekInfo(a, 1); if (nx.planned) out += '<button type="button" class="card row between g12" data-a="wkShift" data-v="1" style="text-align:left;min-height:64px"><span class="col"><b>Lo que viene: próxima semana</b><span class="muted" style="font-size:13px">' + nx.planned + (nx.planned === 1 ? ' sesión' : ' sesiones') + ' planificadas</span></span><span class="muted" aria-hidden="true">›</span></button>'; }
+  out += '<div class="row g10" style="justify-content:space-between"><button type="button" class="chip" data-a="wkShift" data-v="' + (sh - 1) + '"' + (sh <= -8 ? ' disabled' : '') + '>‹ Semana anterior</button>' + (sh !== 0 ? '<button type="button" class="chip" data-a="wkShift" data-v="0">Esta semana</button>' : '') + '<button type="button" class="chip" data-a="wkShift" data-v="' + (sh + 1) + '"' + (sh >= 12 ? ' disabled' : '') + '>Semana siguiente ›</button></div>';
+  return out + '</div></div>';
+}
+const dayNoteFor = (date) => dayNote(date);
 
 /* ---------- Vista: Ajustes ---------- */
 /* Fila de ajuste con interruptor: titulo y ayuda a la izquierda, interruptor a la derecha. */
@@ -1093,7 +1135,7 @@ function feedbackHtml() {
   out += ckActions();
   return out + '<div class="col g8"><a href="#ruta" data-a="closeFb" class="btn primary"><span>Ver mi ruta</span>' + arrow() + '</a><button type="button" class="btn ghost" data-a="closeFb">Volver a Hoy</button></div></div></div>';
 }
-const overlayHtml = () => (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : ''))));
+const overlayHtml = () => (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : (UI.wk ? weekSheetHtml() : '')))));
 
 /* ---------- Historia: tu camino recorrido ---------- */
 function bestWeekMin(a) {
@@ -1172,7 +1214,7 @@ function render() {
   main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'datos' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
   main.scrollTop = (UI.lastView === UI.view) ? st : 0; UI.lastView = UI.view;
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
-  const h = overlayHtml(), keep = ov.scrollTop;
+  const h = (UI.wk && UI.asId && isCoach()) ? (asRun(overlayHtml) || '') : overlayHtml(), keep = ov.scrollTop;
   ov.innerHTML = h; ov.hidden = !h; if (h) ov.scrollTop = keep;
   tourMaybeOpen();
   story.innerHTML = UI.tour != null ? tourHtml() : ((UI.asId && isCoach() && UI.story != null) ? (asRun(storyHtml) || '') : storyHtml());
@@ -1325,6 +1367,9 @@ const ACT = {
   send() { if (!UI.busy) finishFlow(); },
   feedback() { UI.feedback = { checkin: on(meA(), off(0)), newBadges: [] }; render(); },
   closeFb() { UI.feedback = null; render(); },
+  wkOpen(v) { const t0 = parse(off(0)); t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)); const sh = v ? Math.floor(diffDays(ymd(t0), v) / 7) : 0; UI.wk = { shift: sh, focus: v || null }; render(); if (v) { const el = document.getElementById('wkd-' + v); if (el) el.scrollIntoView({ block: 'center' }); } },
+  wkClose() { UI.wk = null; render(); },
+  wkShift(v) { UI.wk = { shift: Math.max(-8, Math.min(12, Number(v) || 0)), focus: null }; render(); const ov = document.getElementById('overlay'); if (ov) ov.scrollTop = 0; },
   async copyDemo(v) {
     const dl = demoLink(v); let ok = false;
     try { await navigator.clipboard.writeText(dl); ok = true; } catch (e) { try { const el = document.getElementById('demolink-' + v), r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
