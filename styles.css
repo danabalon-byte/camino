@@ -221,3 +221,9 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .setrow[aria-checked="true"] .fcsw-t i{transform:translateX(18px)}
 .setrow .fcsw-t{flex:none}
 :root[data-calm] *,:root[data-calm] *::before,:root[data-calm] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+
+/* Barra de zonas de la forma */
+.gauge{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden}
+.gauge i{display:block;height:100%}
+.gmk{position:absolute;top:-5px;width:4px;height:20px;border-radius:2px;background:var(--text);box-shadow:0 0 0 2px var(--surface)}
+.gl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
