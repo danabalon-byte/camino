@@ -177,7 +177,7 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .fcsw{display:flex;align-items:center;gap:10px;min-height:44px;padding:0;border:0;background:transparent;font-size:14px;font-weight:600;color:var(--soft)}
 .fcsw-t{width:44px;height:26px;border-radius:13px;background:var(--track);position:relative;flex:none;transition:background .15s}
 .fcsw-t i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.35);transition:transform .15s}
-.fcsw[aria-checked="true"] .fcsw-t{background:var(--accent)}
+.fcsw[aria-checked="true"] .fcsw-t{background:var(--good)}
 .fcsw[aria-checked="true"] .fcsw-t i{transform:translateX(18px)}
 @media (prefers-reduced-motion:reduce){.fcsw-t,.fcsw-t i{transition:none}}
 
@@ -204,3 +204,5 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .mrow:first-of-type{border-top:0}
 .mrow .chip{flex:none;align-self:center}
 .mform{padding:4px 0 14px}
+/* Selector de periodo del grafico de forma: verde, como la meta y el interruptor */
+.fcw .chip[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:var(--on-good)}
