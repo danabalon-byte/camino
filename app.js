@@ -67,7 +67,7 @@ try { const r = localStorage.getItem(PREFKEY); if (r) PREF = Object.assign(PREF,
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { ready: false, user: null, profile: null, myPlan: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const ST = { ready: false, user: null, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
@@ -259,9 +259,10 @@ const NAVIC = {
   hoy: '<circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle>',
   ruta: '<path d="M5 19c0-6 14-4 14-12"></path><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="6" r="2"></circle>',
   cabina: '<path d="M5 20V11M12 20V4M19 20v-6"></path>',
+  datos: '<path d="M4 4v16h16"></path><path d="M8 15l4-5 3 3 5-7"></path>',
   ajustes: '<circle cx="12" cy="12" r="3"></circle><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"></path>'
 };
-const tabs = () => (isCoach() ? ['cabina', 'hoy', 'ruta', 'ajustes'] : ['hoy', 'ruta', 'ajustes']).map((id) => ({ id, label: cap(id), ic: NAVIC[id] }));
+const tabs = () => (isCoach() ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes'] : ['hoy', 'datos', 'ruta', 'ajustes']).map((id) => ({ id, label: cap(id), ic: NAVIC[id] }));
 const navHtml = () => '<div class="inner">' + tabs().map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id ? ' aria-current="page"' : '') + '><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + t.ic + '</svg><span>' + t.label + '</span></a>').join('') + '</div>';
 function topHtml() {
   let pills = '';
@@ -311,6 +312,7 @@ function viewHoy() {
       : '<div class="row g16" style="align-items:flex-end;margin-top:8px"><div class="row g6" style="align-items:baseline;flex:none"><span class="num" style="font-size:68px;color:var(--accent)">' + g.days + '</span><span class="muted">' + (g.days === 1 ? 'día' : 'días') + '</span></div><div class="col" style="padding-bottom:4px;min-width:0"><div style="font-weight:600;line-height:1.3">' + esc(g.name) + '</div><div class="muted" style="font-size:13px">' + esc(g.dateText) + ' · ' + (g.days <= 7 ? 'esta semana' : g.weeks + ' semanas') + '</div></div></div><div class="seg" style="margin-top:16px" aria-hidden="true">' + segs + '</div><div class="muted" style="font-size:12px;margin-top:6px">Bloque actual: ' + esc(curP ? curP.n : 'Meta cumplida') + (nxtP ? ' · luego ' + esc(nxtP.n) : '') + '</div>') + '</section>';
   }
 
+  const fiH = formaInfo(ST.myHist); if (fiH) out += formaCard(fiH, true);
   const wk = weekInfo(a); let cols = '';
   wk.days.forEach((d) => {
     const ph = d.p ? Math.min(64, Math.max(8, Math.round((d.p.min || 30) / 180 * 64))) : 4, dh = d.done && d.p ? ph : 0, bd = d.p ? (d.today ? '1.5px dashed var(--accent)' : '1.5px dashed var(--muted)') : '1.5px solid var(--line)';
@@ -405,24 +407,54 @@ function viewCabina() {
 /* ---------- Historial de forma y salidas (lo carga el coach desde intervals.icu) ---------- */
 const histDays = (h) => (h && Array.isArray(h.days) ? h.days.filter((x) => x && x.d && isFinite(x.ctl) && isFinite(x.atl)).sort((a, b) => (a.d < b.d ? -1 : 1)) : []);
 const f1 = (v) => Number(v).toLocaleString('es-CL', { maximumFractionDigits: 1 });
-function histBlock(a) {
-  const h = ST.athHist[a.id], ds = histDays(h);
-  if (!ds.length) return '<div><div class="eyebrow">Forma y carga</div><p class="muted" style="font-size:13px;margin-top:6px">Aún sin historial. Cárgalo abajo, en “Historial de ' + esc(a.first) + '”.</p></div>';
+function formaInfo(h) { const ds = histDays(h); if (!ds.length) return null; const last = ds[ds.length - 1]; return { ds, last, tsb: Math.round(last.ctl - last.atl) }; }
+function formaChart(ds) {
   const W = 320, H = 110, P = 6, n = ds.length, mx = Math.max.apply(null, ds.map((x) => Math.max(x.ctl, x.atl)).concat([10])) * 1.1;
   const X = (i) => P + (n > 1 ? i * (W - 2 * P) / (n - 1) : 0), Y = (v) => H - P - (v / mx) * (H - 2 * P);
   const line = (k) => ds.map((x, i) => X(i).toFixed(1) + ',' + Y(x[k]).toFixed(1)).join(' ');
-  const last = ds[n - 1], tsb = Math.round(last.ctl - last.atl);
-  const lectura = tsb <= -25 ? 'muy cargado: cuida la recuperación' : (tsb <= -10 ? 'cargado, en zona de trabajo' : (tsb <= 5 ? 'equilibrado' : (tsb <= 20 ? 'fresco' : 'muy fresco')));
-  const wk = {}; (h.acts || []).forEach((d) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return; const t = parse(d), m = new Date(t); m.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const k = ymd(m); wk[k] = (wk[k] || 0) + 1; });
+  const last = ds[n - 1];
+  return '<div style="margin-top:8px"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Curva de aptitud y fatiga" style="display:block"><polyline fill="none" stroke="var(--warn)" stroke-width="2" stroke-linejoin="round" points="' + line('atl') + '"></polyline><polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" points="' + line('ctl') + '"></polyline></svg></div>'
+    + '<div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Aptitud (CTL) ' + f1(last.ctl) + '</span><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--warn)"></i>Fatiga (ATL) ' + f1(last.atl) + '</span></div>';
+}
+function weekBars(h) {
+  const wk = {}; ((h && h.acts) || []).forEach((d) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return; const t = parse(d), m = new Date(t); m.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const k = ymd(m); wk[k] = (wk[k] || 0) + 1; });
   const now = parse(off(0)), mon0 = new Date(now); mon0.setDate(now.getDate() - ((now.getDay() + 6) % 7)); const weeks = [];
   for (let i = 7; i >= 0; i--) { const m = new Date(mon0); m.setDate(mon0.getDate() - i * 7); const k = ymd(m); weeks.push({ k, v: wk[k] || 0 }); }
   const mxw = Math.max.apply(null, weeks.map((x) => x.v).concat([1]));
-  const bars = weeks.map((x, i) => '<div class="col" style="flex:1;align-items:center;gap:4px"><div style="position:relative;width:100%;height:44px"><div style="position:absolute;left:0;right:0;bottom:0;border-radius:6px;background:' + (i === 7 ? 'var(--accent)' : 'var(--muted)') + ';opacity:' + (x.v ? 1 : .25) + ';height:' + Math.max(3, Math.round(x.v / mxw * 44)) + 'px"></div></div><span style="font-size:11px;color:var(--muted)">' + x.v + '</span></div>').join('');
-  return '<div><div class="eyebrow">Forma y carga · ' + n + ' días</div><div style="margin-top:8px"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Curva de aptitud y fatiga" style="display:block"><polyline fill="none" stroke="var(--warn)" stroke-width="2" stroke-linejoin="round" points="' + line('atl') + '"></polyline><polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" points="' + line('ctl') + '"></polyline></svg></div>'
-    + '<div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Aptitud (CTL) ' + f1(last.ctl) + '</span><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--warn)"></i>Fatiga (ATL) ' + f1(last.atl) + '</span></div>'
-    + '<p class="soft" style="font-size:15px;margin-top:8px">Forma (TSB) ' + (tsb > 0 ? '+' : '') + tsb + ' al ' + esc(last.d) + ': ' + lectura + '.</p>'
-    + '<div class="eyebrow" style="margin-top:14px">Salidas por semana · últimas 8</div><div class="row g6" style="align-items:flex-end;margin-top:8px">' + bars + '</div>'
+  return '<div class="row g6" style="align-items:flex-end;margin-top:8px">' + weeks.map((x, i) => '<div class="col" style="flex:1;align-items:center;gap:4px"><div style="position:relative;width:100%;height:44px"><div style="position:absolute;left:0;right:0;bottom:0;border-radius:6px;background:' + (i === 7 ? 'var(--accent)' : 'var(--muted)') + ';opacity:' + (x.v ? 1 : .25) + ';height:' + Math.max(3, Math.round(x.v / mxw * 44)) + 'px"></div></div><span style="font-size:11px;color:var(--muted)">' + x.v + '</span></div>').join('') + '</div>';
+}
+function histBlock(a) {
+  const h = ST.athHist[a.id], fi = formaInfo(h);
+  if (!fi) return '<div><div class="eyebrow">Forma y carga</div><p class="muted" style="font-size:13px;margin-top:6px">Aún sin historial. Cárgalo abajo, en “Historial de ' + esc(a.first) + '”.</p></div>';
+  const tsb = fi.tsb, lectura = tsb <= -25 ? 'muy cargado: cuida la recuperación' : (tsb <= -10 ? 'cargado, en zona de trabajo' : (tsb <= 5 ? 'equilibrado' : (tsb <= 20 ? 'fresco' : 'muy fresco')));
+  return '<div><div class="eyebrow">Forma y carga · ' + fi.ds.length + ' días</div>' + formaChart(fi.ds)
+    + '<p class="soft" style="font-size:15px;margin-top:8px">Forma (TSB) ' + (tsb > 0 ? '+' : '') + tsb + ' al ' + esc(fi.last.d) + ': ' + lectura + '.</p>'
+    + '<div class="eyebrow" style="margin-top:14px">Salidas por semana · últimas 8</div>' + weekBars(h)
     + '<div class="muted" style="font-size:12px;margin-top:6px">Datos de intervals.icu' + (h.updatedAt ? ' · cargado ' + relTime(h.updatedAt) : '') + '. De Strava llegan solo las fechas de las salidas, sin duración ni potencia.</div></div>';
+}
+const formaLectura = (tsb) => (tsb <= -25 ? 'Vienes con mucha carga. Prioriza dormir, comer bien y bajar la intensidad.' : (tsb <= -10 ? 'Vienes cargado, y es normal cuando se entrena: tu cuerpo está asimilando el trabajo.' : (tsb <= 5 ? 'Carga y descanso están en un buen equilibrio.' : (tsb <= 20 ? 'Tus piernas vienen frescas: buen momento para rendir.' : 'Vienes muy fresco. Mantén algo de actividad suave para no enfriarte.'))));
+function formaCard(fi, link) {
+  const t = fi.tsb;
+  return '<section class="card col g10" aria-label="Tu forma"><div class="row between"><div class="eyebrow">Tu forma</div>' + (link ? '<a href="#datos" class="muted" style="font-size:13px;text-decoration:underline">Ver mis datos</a>' : '') + '</div><div class="row g16" style="align-items:flex-end"><div class="col"><span class="num" style="font-size:48px;color:var(--accent)">' + (t > 0 ? '+' : '') + t + '</span><span class="muted" style="font-size:12px">Forma</span></div><div class="col"><span class="num" style="font-size:28px">' + f1(fi.last.ctl) + '</span><span class="muted" style="font-size:12px">Aptitud</span></div><div class="col"><span class="num" style="font-size:28px">' + f1(fi.last.atl) + '</span><span class="muted" style="font-size:12px">Fatiga</span></div></div><p class="soft" style="font-size:15px">' + formaLectura(t) + '</p></section>';
+}
+/* ---------- Vista: Datos (historial del propio atleta) ---------- */
+function viewDatos() {
+  const a = meA(), fi = formaInfo(ST.myHist);
+  let out = '<div class="inner"><div class="stack">' + head('Tu historial', 'Mis datos') + msgBanner();
+  if (!fi) out += '<section class="card" aria-label="Forma y carga"><div class="eyebrow">Forma y carga</div><p class="soft" style="margin-top:8px">Tu coach cargará aquí tu historial de forma, fatiga y salidas. Mientras tanto, tus check-ins ya cuentan.</p></section>';
+  else {
+    out += formaCard(fi, false);
+    out += '<section class="card" aria-label="Curva de forma"><div class="eyebrow">Aptitud y fatiga · ' + fi.ds.length + ' días</div>' + formaChart(fi.ds)
+      + '<p class="muted" style="font-size:13px;margin-top:10px"><b>Aptitud</b>: la base que has construido entrenando. <b>Fatiga</b>: el cansancio de tus últimos días. <b>Forma</b>: aptitud menos fatiga; positiva significa piernas frescas, negativa significa que estás cargando trabajo.</p></section>';
+    out += '<section class="card" aria-label="Salidas por semana"><div class="eyebrow">Salidas por semana · últimas 8</div>' + weekBars(ST.myHist) + '<p class="muted" style="font-size:12px;margin-top:8px">La barra naranja es la semana actual. Datos de intervals.icu' + (ST.myHist.updatedAt ? ', cargados ' + relTime(ST.myHist.updatedAt) : '') + '.</p></section>';
+  }
+  const cks = a.checkins.slice().sort((x, y) => (x.date < y.date ? 1 : (x.date > y.date ? -1 : 0))).slice(0, 10), sk = streak(a);
+  out += '<section class="card" aria-label="Bienestar"><div class="row between"><div class="eyebrow">Tu bienestar · 7 días</div><div class="muted" style="font-size:13px">Racha: ' + sk.n + (sk.n === 1 ? ' día' : ' días') + '</div></div><div style="margin-top:8px">' + dualChart(a) + '</div></section>';
+  out += '<section class="card col g10" aria-label="Tus check-ins"><div class="eyebrow">Tus últimos check-ins</div>' + (cks.length ? cks.map((c) => {
+    const d = parse(c.date), sc = score(c), b = band(sc);
+    return '<div class="row between g12" style="align-items:flex-start;padding-top:8px;border-top:1px solid var(--line)"><div class="col g4" style="min-width:0"><span style="font-weight:600">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</span><span class="muted" style="font-size:13px">' + (c.type === 'actividad' ? (c.activity && c.activity.name ? esc(c.activity.name) : 'Actividad') : (c.type === 'descanso' ? 'Descanso' : 'Bienestar')) + ' · Ánimo ' + esc(at(MOODS, c.mood - 1).toLowerCase()) + (c.rpe ? ' · RPE ' + c.rpe : '') + '</span></div><span style="font-weight:600;font-size:14px;color:' + b.color + ';flex:none">' + (sc == null ? '–' : sc + ' · ' + b.label) + '</span></div>';
+  }).join('') : '<p class="soft">Aún no hay check-ins. Tu primer registro aparecerá aquí.</p>') + '</section>';
+  return out + '</div></div>';
 }
 function histEditor(a) {
   const h = ST.athHist[a.id];
@@ -568,20 +600,20 @@ function storyHtml() {
 
 /* ---------- Render ---------- */
 function applyTone() { const r = document.documentElement; if (PREF.tone === 'auto') r.removeAttribute('data-tone'); else r.setAttribute('data-tone', PREF.tone); }
-const VIEWS = { hoy: viewHoy, ruta: viewRuta, cabina: viewCabina, ajustes: viewAjustes };
+const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, cabina: viewCabina, ajustes: viewAjustes };
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
 /* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
 function viewAs() {
   const id = UI.asId, who = ST.athletes.find((x) => x.id === id);
   if (!who) { UI.asId = null; return VIEWS[UI.view](); }
-  const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myCk: ST.myCk, myNotes: ST.myNotes, js: UI.justSaved };
+  const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myHist: ST.myHist, myCk: ST.myCk, myNotes: ST.myNotes, js: UI.justSaved };
   let html;
   try {
     ST.user = { uid: id, name: who.name }; ST.profile = { name: who.name, role: 'athlete', team: who.team || null, pending: false };
-    ST.myPlan = ST.athPlan[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; UI.justSaved = null;
+    ST.myPlan = ST.athPlan[id] || null; ST.myHist = ST.athHist[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; UI.justSaved = null;
     html = VIEWS[UI.view]();
-  } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; UI.justSaved = sv.js; }
+  } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; UI.justSaved = sv.js; }
   html = html.replace(/data-a="(start|feedback|story)"/g, 'disabled data-x="$1"');
   const bar = '<section class="card col g10" aria-label="Vista de coach" style="border:1.5px dashed var(--accent)"><div class="eyebrow" style="color:var(--accent)">Vista de ' + esc(firstName(who.name)) + ' · solo lectura</div><p class="soft" style="font-size:14px">Así ve la app tu atleta. Los check-ins de esta vista llegan de sus últimos 14 días, así que las insignias pueden verse más bajas que las suyas.</p><button type="button" class="chip" data-a="verComoSalir" style="align-self:flex-start">Volver a Cabina</button></section>';
   return html.replace('<div class="stack">', '<div class="stack">' + bar);
@@ -593,7 +625,7 @@ function render() {
   if (!ST.ready) { main.innerHTML = viewLoading(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; story.innerHTML = ''; return; }
   if (!ST.user || !ST.profile) { main.innerHTML = ST.user ? viewLoading() : viewLogin(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; ov.innerHTML = ''; story.innerHTML = ''; return; }
   const ids = tabs().map((t) => t.id); if (ids.indexOf(UI.view) < 0) UI.view = ids[0];
-  main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
+  main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'datos' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
   main.scrollTop = (UI.lastView === UI.view) ? st : 0; UI.lastView = UI.view;
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
   const h = overlayHtml(), keep = ov.scrollTop;
@@ -637,13 +669,14 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e)));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
   ownUnsubs.push(be.listenCheckins(user.uid, (rows) => { ST.myCk = rows; if (UI.justSaved && rows.some((c) => c.date === UI.justSaved.date)) UI.justSaved = null; soft(); }, 120));
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));
   ownUnsubs.push(be.listenPlan(user.uid, (pl) => { ST.myPlan = pl; soft(); }));
+  ownUnsubs.push(be.listenHistory(user.uid, (h) => { ST.myHist = h; soft(); }));
 }
 
 /* ---------- Acciones ---------- */
