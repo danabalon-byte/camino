@@ -586,13 +586,37 @@ function bestWeekMin(a) {
   a.checkins.forEach((c) => { if (c.type === 'actividad' && c.activity && c.activity.min) { const d = parse(c.date), mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const k = ymd(mon); w[k] = (w[k] || 0) + c.activity.min; } });
   const v = Object.keys(w).map((k) => w[k]); return v.length ? Math.max.apply(null, v) : 0;
 }
+/* Salidas: dias con actividad del historial sincronizado + dias con check-in de actividad (sin repetir). */
+function outingDays(a) {
+  const set = {};
+  const h = ST.myHist;
+  if (h && Array.isArray(h.acts)) h.acts.forEach((d) => { if (typeof d === 'string') set[d.slice(0, 10)] = 1; });
+  a.checkins.forEach((c) => { if (c.type === 'actividad') set[c.date] = 1; });
+  return Object.keys(set).sort();
+}
+function bestWeekOutings(days) {
+  const w = {}; let max = 0;
+  days.forEach((ds) => { const d = parse(ds), mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const k = ymd(mon); w[k] = (w[k] || 0) + 1; if (w[k] > max) max = w[k]; });
+  return max;
+}
 function storyHtml() {
   if (UI.story == null) return '';
-  const a = meA(), acts = a.checkins.filter((c) => c.type === 'actividad').length, total = a.checkins.length, bw = bestWeekMin(a), t = myTeam() ? teamTotals(myTeam()) : null;
+  const a = meA(), od = outingDays(a), nOut = od.length, total = a.checkins.length, bw = bestWeekMin(a), bwo = bestWeekOutings(od), t = myTeam() ? teamTotals(myTeam()) : null;
+  const first = od.length ? od[0] : null, spanDays = first ? Math.max(1, diffDays(first, off(0)) + 1) : 0;
+  const s0 = nOut
+    ? { big: String(nOut), unit: nOut === 1 ? 'salida registrada' : 'salidas registradas', line: 'En ' + spanDays + ' días de historia' + (total ? ' y ' + total + (total === 1 ? ' check-in' : ' check-ins') : '') + '. Tu constancia es lo que más construye.' }
+    : { big: String(total), unit: total === 1 ? 'check-in' : 'check-ins', line: 'Cuando se sumen tus salidas, aquí verás todo lo que has construido.' };
+  const s1 = bw
+    ? { big: Math.floor(bw / 60) + ' h ' + pad(bw % 60), unit: 'de actividad', line: 'Sostuviste el volumen y te recuperaste. Esa es tu base para la meta.' }
+    : (bwo ? { big: String(bwo), unit: bwo === 1 ? 'salida en tu mejor semana' : 'salidas en tu mejor semana', line: 'Sostuviste el volumen y te recuperaste. Esa es tu base para la meta.' } : { big: '–', unit: 'aún sin datos', line: 'Cuando registres actividades, aquí verás tu semana más larga.' });
+  const s2 = t
+    ? (t.members ? { big: t.km.toLocaleString('es-CL'), unit: 'km juntos este mes', line: 'Entre ' + t.members + (t.members === 1 ? ' atleta' : ' atletas') + ' ya van al ' + Math.min(100, Math.round(t.km / t.goal * 100)) + '% de la meta del mes. Cada salida suma.' }
+        : { big: '0', unit: 'km juntos este mes', line: 'El equipo parte desde cero este mes. Cada check-in con km suma a la meta de ' + t.goal.toLocaleString('es-CL') + ' km.' })
+    : { big: '–', unit: 'sin equipo aún', line: 'Cuando tu coach te asigne a un equipo verás aquí lo que logran juntos.' };
   const sl = [
-    { c: 's0', k: 'Tu camino hasta hoy', big: String(total), unit: total === 1 ? 'check-in' : 'check-ins', line: acts + (acts === 1 ? ' actividad registrada' : ' actividades registradas') + '. Tu constancia es lo que más construye.', btn: 'Siguiente' },
-    { c: 's1', k: 'Tu semana más larga', big: bw ? Math.floor(bw / 60) + ' h ' + pad(bw % 60) : '–', unit: bw ? 'de actividad' : 'aún sin datos', line: bw ? 'Sostuviste el volumen y te recuperaste. Esa es tu base para la meta.' : 'Cuando registres actividades, aquí verás tu semana más larga.', btn: 'Siguiente' },
-    { c: 's2', k: 'Tu equipo', big: t ? t.km.toLocaleString('es-CL') : '–', unit: t ? 'km juntos este mes' : 'sin equipo aún', line: t ? 'Entre ' + t.members + (t.members === 1 ? ' atleta' : ' atletas') + ' ya van al ' + Math.min(100, Math.round(t.km / t.goal * 100)) + '% de la meta del mes. Cada salida suma.' : 'Cuando tu coach te asigne a un equipo verás aquí lo que logran juntos.', btn: 'Terminar' }
+    Object.assign({ c: 's0', k: 'Tu camino hasta hoy', btn: 'Siguiente' }, s0),
+    Object.assign({ c: 's1', k: 'Tu semana más larga', btn: 'Siguiente' }, s1),
+    Object.assign({ c: 's2', k: 'Tu equipo', btn: 'Terminar' }, s2)
   ];
   const s = sl[UI.story];
   return '<div class="story ' + s.c + '" role="dialog" aria-label="Tu camino recorrido"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, i) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (i <= UI.story ? 1 : .3) + '"></i>').join('') + '</div><div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="x" data-a="storyClose">Cerrar</button></div><div class="col g10" style="flex:1;justify-content:center"><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + s.k + '</div><div class="bigv">' + esc(s.big) + '</div><div style="font-family:var(--font-d);font-weight:600;font-size:34px;line-height:1.1">' + s.unit + '</div><p style="font-size:19px;margin-top:12px;line-height:1.45">' + esc(s.line) + '</p></div><button type="button" class="sbtn" data-a="storyNext">' + s.btn + '</button></div></div>';
@@ -604,17 +628,21 @@ const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, cabina: viewCabi
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
 /* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
-function viewAs() {
+function asRun(fn) {
   const id = UI.asId, who = ST.athletes.find((x) => x.id === id);
-  if (!who) { UI.asId = null; return VIEWS[UI.view](); }
+  if (!who) return null;
   const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myHist: ST.myHist, myCk: ST.myCk, myNotes: ST.myNotes, js: UI.justSaved };
-  let html;
   try {
     ST.user = { uid: id, name: who.name }; ST.profile = { name: who.name, role: 'athlete', team: who.team || null, pending: false };
     ST.myPlan = ST.athPlan[id] || null; ST.myHist = ST.athHist[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; UI.justSaved = null;
-    html = VIEWS[UI.view]();
+    return fn();
   } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; UI.justSaved = sv.js; }
-  html = html.replace(/data-a="(start|feedback|story)"/g, 'disabled data-x="$1"');
+}
+function viewAs() {
+  const id = UI.asId, who = ST.athletes.find((x) => x.id === id);
+  if (!who) { UI.asId = null; return VIEWS[UI.view](); }
+  let html = asRun(() => VIEWS[UI.view]());
+  html = html.replace(/data-a="(start|feedback)"/g, 'disabled data-x="$1"');
   const bar = '<section class="card col g10" aria-label="Vista de coach" style="border:1.5px dashed var(--accent)"><div class="eyebrow" style="color:var(--accent)">Vista de ' + esc(firstName(who.name)) + ' · solo lectura</div><p class="soft" style="font-size:14px">Así ve la app tu atleta. Los check-ins de esta vista llegan de sus últimos 14 días, así que las insignias pueden verse más bajas que las suyas.</p><button type="button" class="chip" data-a="verComoSalir" style="align-self:flex-start">Volver a Cabina</button></section>';
   return html.replace('<div class="stack">', '<div class="stack">' + bar);
 }
@@ -630,7 +658,7 @@ function render() {
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
   const h = overlayHtml(), keep = ov.scrollTop;
   ov.innerHTML = h; ov.hidden = !h; if (h) ov.scrollTop = keep;
-  story.innerHTML = storyHtml();
+  story.innerHTML = (UI.asId && isCoach() && UI.story != null) ? (asRun(storyHtml) || '') : storyHtml();
 }
 function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes') UI.asId = null; render(); }
 let msgTimer = null;
@@ -658,7 +686,7 @@ function setupData() {
   });
   if (p.role === 'coach') {
     dataUnsubs.push(be.listenAthletes(ST.user.uid, (rows) => {
-      ST.athletes = rows.filter((r) => r.id !== ST.user.uid);
+      ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
       const ids = ST.athletes.map((r) => r.id);
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
       ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); })]; });
