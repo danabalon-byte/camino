@@ -77,6 +77,10 @@ const be = {
     return onSnapshot(doc(db, 'users', uid, 'plan', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('plan'));
   },
   savePlan(uid, data) { return setDoc(doc(db, 'users', uid, 'plan', 'current'), clean(data)); },
+  listenHistory(uid, cb) {
+    return onSnapshot(doc(db, 'users', uid, 'history', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('historial'));
+  },
+  saveHistory(uid, data) { return setDoc(doc(db, 'users', uid, 'history', 'current'), clean(data)); },
 
   // Equipo: kilómetros por persona (solo nombre, mes y km) y meta/hito que fija el coach
   listenTeamKm(team, cb) {

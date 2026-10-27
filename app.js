@@ -67,8 +67,8 @@ try { const r = localStorage.getItem(PREFKEY); if (r) PREF = Object.assign(PREF,
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { ready: false, user: null, profile: null, myPlan: null, athPlan: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
-const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, asId: null, msg: '', msgKind: 'err' };
+const ST = { ready: false, user: null, profile: null, myPlan: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
 const isCoach = () => !!(ST.profile && ST.profile.role === 'coach');
@@ -80,7 +80,7 @@ function meA() {
   return { id: ST.user ? ST.user.uid : '', name: ST.user ? ST.user.name : '', first: firstName(ST.user && ST.user.name), checkins: list, notes: ST.myNotes, tsb: [] };
 }
 function athleteObjs() {
-  return ST.athletes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map((p) => ({ id: p.id, name: p.name, first: firstName(p.name), team: p.team, checkins: ST.athCk[p.id] || [], notes: ST.athNotes[p.id] || [], tsb: [] }));
+  return ST.athletes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map((p) => ({ id: p.id, name: p.name, first: firstName(p.name), team: p.team, checkins: ST.athCk[p.id] || [], notes: ST.athNotes[p.id] || [], tsb: histDays(ST.athHist[p.id]).slice(-7).map((x) => Math.round(x.ctl - x.atl)) }));
 }
 
 /* ---------- Cálculos ---------- */
@@ -395,13 +395,53 @@ function viewCabina() {
     if (l.prevInfo) { const pi = l.prevInfo, pp = (pi.items || []).map((x) => String(x).toLowerCase()).join(', '); bits.push('Ayer fuera de lo habitual' + (pp ? ': ' + pp : '') + (pi.text ? ' ("' + pi.text + '")' : '')); }
     out += '<div class="col g6"><div class="eyebrow">Último check-in · ' + relTime(l.ts) + '</div><p class="soft" style="font-size:15px">' + esc(bits.join(' · ')) + '</p>' + (l.comment ? '<p class="muted" style="font-size:14px">“' + esc(l.comment) + '”</p>' : '') + '</div>';
   }
-  out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div><div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Bienestar</span></div><div class="muted" style="font-size:12px;margin-top:4px">La curva de forma (TSB) llegará con la conexión a intervals.icu.</div></div>';
+  out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div><div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Bienestar</span></div></div>' + histBlock(a);
   if (n && l && n.at >= l.ts) out += '<div class="row g12" style="background:var(--good-soft);border:1.5px solid var(--good);border-radius:16px;padding:14px 16px;align-items:flex-start"><span style="flex:none;margin-top:2px">' + check('var(--good)', 22) + '</span><span class="soft" style="font-size:15px">Nota enviada ' + relTime(n.at) + ': “' + esc(n.text) + '”</span></div>';
   out += '<div class="col g10"><div style="font-weight:600">' + (needsReply(a) ? 'Responder con un toque' : 'Dejar una nota') + '</div><div class="chips">' + cabinaPresets(st).map((p, i) => '<button type="button" class="chip" data-a="preset" data-v="' + i + '">' + esc(p) + '</button>').join('') + '</div><label for="replyText" class="muted" style="font-size:13px">Mensaje para ' + esc(a.first) + '</label><textarea id="replyText" placeholder="Escribe o elige una respuesta">' + esc(UI.reply.text) + '</textarea><button type="button" class="btn primary" data-a="sendReply" style="justify-content:center" ' + (UI.reply.text.trim() && !UI.busy ? '' : 'disabled') + '>' + (UI.reply.text.trim() ? 'Enviar a ' + esc(a.first) : 'Escribe o elige una respuesta') + '</button></div></section>';
-  out += planEditor(a);
+  out += planEditor(a) + histEditor(a);
   return out + '</div></div>';
 }
 
+/* ---------- Historial de forma y salidas (lo carga el coach desde intervals.icu) ---------- */
+const histDays = (h) => (h && Array.isArray(h.days) ? h.days.filter((x) => x && x.d && isFinite(x.ctl) && isFinite(x.atl)).sort((a, b) => (a.d < b.d ? -1 : 1)) : []);
+const f1 = (v) => Number(v).toLocaleString('es-CL', { maximumFractionDigits: 1 });
+function histBlock(a) {
+  const h = ST.athHist[a.id], ds = histDays(h);
+  if (!ds.length) return '<div><div class="eyebrow">Forma y carga</div><p class="muted" style="font-size:13px;margin-top:6px">Aún sin historial. Cárgalo abajo, en “Historial de ' + esc(a.first) + '”.</p></div>';
+  const W = 320, H = 110, P = 6, n = ds.length, mx = Math.max.apply(null, ds.map((x) => Math.max(x.ctl, x.atl)).concat([10])) * 1.1;
+  const X = (i) => P + (n > 1 ? i * (W - 2 * P) / (n - 1) : 0), Y = (v) => H - P - (v / mx) * (H - 2 * P);
+  const line = (k) => ds.map((x, i) => X(i).toFixed(1) + ',' + Y(x[k]).toFixed(1)).join(' ');
+  const last = ds[n - 1], tsb = Math.round(last.ctl - last.atl);
+  const lectura = tsb <= -25 ? 'muy cargado: cuida la recuperación' : (tsb <= -10 ? 'cargado, en zona de trabajo' : (tsb <= 5 ? 'equilibrado' : (tsb <= 20 ? 'fresco' : 'muy fresco')));
+  const wk = {}; (h.acts || []).forEach((d) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return; const t = parse(d), m = new Date(t); m.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const k = ymd(m); wk[k] = (wk[k] || 0) + 1; });
+  const now = parse(off(0)), mon0 = new Date(now); mon0.setDate(now.getDate() - ((now.getDay() + 6) % 7)); const weeks = [];
+  for (let i = 7; i >= 0; i--) { const m = new Date(mon0); m.setDate(mon0.getDate() - i * 7); const k = ymd(m); weeks.push({ k, v: wk[k] || 0 }); }
+  const mxw = Math.max.apply(null, weeks.map((x) => x.v).concat([1]));
+  const bars = weeks.map((x, i) => '<div class="col" style="flex:1;align-items:center;gap:4px"><div style="position:relative;width:100%;height:44px"><div style="position:absolute;left:0;right:0;bottom:0;border-radius:6px;background:' + (i === 7 ? 'var(--accent)' : 'var(--muted)') + ';opacity:' + (x.v ? 1 : .25) + ';height:' + Math.max(3, Math.round(x.v / mxw * 44)) + 'px"></div></div><span style="font-size:11px;color:var(--muted)">' + x.v + '</span></div>').join('');
+  return '<div><div class="eyebrow">Forma y carga · ' + n + ' días</div><div style="margin-top:8px"><svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Curva de aptitud y fatiga" style="display:block"><polyline fill="none" stroke="var(--warn)" stroke-width="2" stroke-linejoin="round" points="' + line('atl') + '"></polyline><polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" points="' + line('ctl') + '"></polyline></svg></div>'
+    + '<div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Aptitud (CTL) ' + f1(last.ctl) + '</span><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--warn)"></i>Fatiga (ATL) ' + f1(last.atl) + '</span></div>'
+    + '<p class="soft" style="font-size:15px;margin-top:8px">Forma (TSB) ' + (tsb > 0 ? '+' : '') + tsb + ' al ' + esc(last.d) + ': ' + lectura + '.</p>'
+    + '<div class="eyebrow" style="margin-top:14px">Salidas por semana · últimas 8</div><div class="row g6" style="align-items:flex-end;margin-top:8px">' + bars + '</div>'
+    + '<div class="muted" style="font-size:12px;margin-top:6px">Datos de intervals.icu' + (h.updatedAt ? ' · cargado ' + relTime(h.updatedAt) : '') + '. De Strava llegan solo las fechas de las salidas, sin duración ni potencia.</div></div>';
+}
+function histEditor(a) {
+  const h = ST.athHist[a.id];
+  let out = '<section class="card col g12" aria-label="Historial del atleta"><div class="row between g8" style="align-items:baseline"><div class="eyebrow">Historial de ' + esc(a.first) + '</div><span class="muted" style="font-size:13px">' + (h ? 'Cargado' : 'Sin historial') + '</span></div>';
+  if (!UI.histOpen) return out + '<button type="button" class="chip" data-a="histToggle" style="align-self:flex-start">' + (h ? 'Actualizar historial' : 'Cargar historial') + '</button></section>';
+  if (!UI.histDraft || UI.histDraft.id !== a.id) UI.histDraft = { id: a.id, text: '' };
+  return out + '<div class="info" role="note">' + infoIcon() + '<span>Pega el historial en JSON: days con d, ctl y atl, y acts con las fechas de las salidas. Reemplaza el anterior.</span></div><label for="histText" class="muted" style="font-size:13px">Historial en JSON</label><textarea id="histText" spellcheck="false" placeholder="{ &quot;days&quot;: [{ &quot;d&quot;: &quot;2026-10-27&quot;, &quot;ctl&quot;: 29.8, &quot;atl&quot;: 49.7 }], &quot;acts&quot;: [&quot;2026-10-25&quot;] }" style="min-height:200px;font-family:ui-monospace,Menlo,monospace;font-size:12px">' + esc(UI.histDraft.text) + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="saveHist" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar historial de ' + esc(a.first) + '</button><button type="button" class="chip" data-a="histToggle">Cerrar</button></div></section>';
+}
+function parseHist(text) {
+  let o; try { o = JSON.parse(text); } catch (e) { return { err: 'El texto no es un JSON válido. Revisa comillas y comas.' }; }
+  const D = /^\d{4}-\d{2}-\d{2}$/;
+  if (!o || typeof o !== 'object' || !Array.isArray(o.days)) return { err: 'Falta la lista days con d, ctl y atl.' };
+  if (o.days.length > 120) return { err: 'Hay demasiados días (máximo 120).' };
+  const days = [];
+  for (const x of o.days) { if (!x || !D.test(x.d || '') || !(x.ctl >= 0 && x.ctl <= 500) || !(x.atl >= 0 && x.atl <= 500)) return { err: 'Revisa el día ' + (x && x.d) + ': fecha AAAA-MM-DD y ctl/atl entre 0 y 500.' }; days.push({ d: x.d, ctl: Math.round(x.ctl * 10) / 10, atl: Math.round(x.atl * 10) / 10 }); }
+  const acts = o.acts == null ? [] : o.acts;
+  if (!Array.isArray(acts) || acts.length > 200 || acts.some((d) => !D.test(d))) return { err: 'acts debe ser una lista de hasta 200 fechas AAAA-MM-DD.' };
+  return { hist: { days, acts } };
+}
 const PLAN_TEMPLATE = { goal: { name: 'Nombre de la meta', date: 'AAAA-MM-DD', dateText: '1 de noviembre', detail: 'lugar · distancia' }, phases: [{ n: 'Base', s: 'Semanas 1 a 4 · completada', to: 'AAAA-MM-DD' }], sessions: { 'AAAA-MM-DD': { name: 'Rodillo Z2', min: 45, km: 0, load: 35, note: 'Opcional' } }, notes: { 'AAAA-MM-DD': 'Mensaje para ese día' } };
 const planToText = (pl) => { const o = pl ? { goal: pl.goal, phases: pl.phases, sessions: pl.sessions, notes: pl.notes } : PLAN_TEMPLATE; try { return JSON.stringify(o, null, 1); } catch (e) { return ''; } };
 function planEditor(a) {
@@ -589,7 +629,7 @@ function setupData() {
       ST.athletes = rows.filter((r) => r.id !== ST.user.uid);
       const ids = ST.athletes.map((r) => r.id);
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
-      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); })]; });
+      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); })]; });
       soft();
     }));
     dataUnsubs.push(be.listenPending((rows) => { ST.pending = rows; soft(); }));
@@ -597,7 +637,7 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.myPlan = null; UI.planDraft = null; UI.planOpen = false; UI.asId = null; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e)));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
@@ -647,7 +687,7 @@ const ACT = {
   story(v) { UI.story = Number(v) || 0; render(); },
   storyNext() { UI.story = UI.story >= 2 ? null : UI.story + 1; render(); },
   storyClose() { UI.story = null; render(); },
-  sel(v) { UI.sel = v; UI.reply = { id: v, text: '' }; UI.planDraft = null; render(); },
+  sel(v) { UI.sel = v; UI.reply = { id: v, text: '' }; UI.planDraft = null; UI.histDraft = null; UI.histOpen = false; render(); },
   preset(v) { const a = athleteObjs().find((x) => x.id === UI.sel); if (!a) return; UI.reply = { id: a.id, text: cabinaPresets(statusOf(a))[Number(v)] }; render(); },
   async sendReply() {
     const a = athleteObjs().find((x) => x.id === UI.sel), txt = (UI.reply.text || '').trim(); if (!a || !txt || UI.busy) return;
@@ -656,6 +696,14 @@ const ACT = {
     UI.busy = false; render();
   },
   planToggle() { UI.planOpen = !UI.planOpen; UI.planDraft = null; render(); },
+  histToggle() { UI.histOpen = !UI.histOpen; UI.histDraft = null; render(); },
+  async saveHist() {
+    const a = athleteObjs().find((x) => x.id === UI.sel); if (!a || UI.busy) return;
+    const r = parseHist(UI.histDraft ? UI.histDraft.text : ''); if (r.err) { say(r.err); return; }
+    UI.busy = true; render();
+    try { await be.saveHistory(a.id, Object.assign(r.hist, { updatedAt: Date.now() })); UI.histDraft = null; UI.histOpen = false; say('Historial guardado para ' + a.first + '.', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
   verComo(v) { UI.asId = v; if (location.hash === '#hoy') render(); else location.hash = '#hoy'; },
   verComoSalir() { UI.asId = null; if (location.hash === '#cabina') render(); else location.hash = '#cabina'; },
   async savePlan() {
@@ -683,6 +731,7 @@ document.addEventListener('input', (e) => {
   if (id === 'prevText') UI.draft.prevText = e.target.value;
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Escribe o elige una respuesta'; } }
   if (id === 'planText') UI.planDraft = { id: UI.sel, text: e.target.value };
+  if (id === 'histText') UI.histDraft = { id: UI.sel, text: e.target.value };
   if (id === 'reminder' && ST.user) { be.saveProfile(ST.user.uid, { reminder: e.target.value }).catch(() => {}); }
   if (id === 'metaGoal' || id === 'metaHito') { const cur = UI.metaDraft && UI.metaDraft.team === UI.metaTeam ? UI.metaDraft : { team: UI.metaTeam, goal: (ST.teamMeta[UI.metaTeam] || {}).goal || KM_GOAL_DEFAULT, hito: (ST.teamMeta[UI.metaTeam] || {}).hito || '' }; if (id === 'metaGoal') cur.goal = e.target.value; else cur.hito = e.target.value; UI.metaDraft = cur; }
 });

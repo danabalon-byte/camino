@@ -74,6 +74,8 @@ const be = {
   listenNotes(uid, cb) { return live(() => cb(store.users[uid].notes.map(n => ({ ...n })))); },
   listenPlan(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].plan ? JSON.parse(JSON.stringify(store.users[uid].plan)) : null)); },
   async savePlan(uid, data) { store.users[uid].plan = data; notify(); },
+  listenHistory(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].history ? JSON.parse(JSON.stringify(store.users[uid].history)) : null)); },
+  async saveHistory(uid, data) { store.users[uid].history = data; notify(); },
   listenTeamKm(team, cb) { return live(() => cb(Object.entries(store.km[team] || {}).map(([id, v]) => ({ id, ...v })))); },
   async saveKm(team, uid, data) { (store.km[team] = store.km[team] || {})[uid] = data; notify(); },
   listenTeamMeta(team, cb) { return live(() => cb(store.meta[team] ? { ...store.meta[team] } : null)); },
