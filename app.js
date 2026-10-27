@@ -68,7 +68,7 @@ const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF
 
 /* ---------- Estado ---------- */
 const ST = { ready: false, user: null, profile: null, myPlan: null, athPlan: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
-const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, msg: '', msgKind: 'err' };
+const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
 const isCoach = () => !!(ST.profile && ST.profile.role === 'coach');
@@ -407,7 +407,7 @@ const planToText = (pl) => { const o = pl ? { goal: pl.goal, phases: pl.phases, 
 function planEditor(a) {
   const pl = ST.athPlan[a.id];
   let out = '<section class="card col g12" aria-label="Plan del atleta"><div class="row between g8" style="align-items:baseline"><div class="eyebrow">Plan de ' + esc(a.first) + '</div><span class="muted" style="font-size:13px">' + (pl ? 'Cargado' : 'Sin plan') + '</span></div>';
-  if (!UI.planOpen) return out + '<button type="button" class="chip" data-a="planToggle" style="align-self:flex-start">' + (pl ? 'Ver o editar plan' : 'Cargar plan') + '</button></section>';
+  if (!UI.planOpen) return out + '<div class="row g8 wrap"><button type="button" class="chip" data-a="planToggle">' + (pl ? 'Ver o editar plan' : 'Cargar plan') + '</button><button type="button" class="chip" data-a="verComo" data-v="' + esc(a.id) + '">Ver como ' + esc(a.first) + '</button></div></section>';
   if (!UI.planDraft || UI.planDraft.id !== a.id) UI.planDraft = { id: a.id, text: planToText(pl) };
   return out + '<div class="info" role="note">' + infoIcon() + '<span>Pega el plan en formato JSON: meta, fases, sesiones por fecha y notas por día. El atleta lo ve en Hoy y en Ruta.</span></div><label for="planText" class="muted" style="font-size:13px">Plan en JSON</label><textarea id="planText" spellcheck="false" style="min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px">' + esc(UI.planDraft.text) + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="savePlan" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar plan de ' + esc(a.first) + '</button><button type="button" class="chip" data-a="planToggle">Cerrar</button></div></section>';
 }
@@ -531,6 +531,21 @@ function applyTone() { const r = document.documentElement; if (PREF.tone === 'au
 const VIEWS = { hoy: viewHoy, ruta: viewRuta, cabina: viewCabina, ajustes: viewAjustes };
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
+/* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
+function viewAs() {
+  const id = UI.asId, who = ST.athletes.find((x) => x.id === id);
+  if (!who) { UI.asId = null; return VIEWS[UI.view](); }
+  const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myCk: ST.myCk, myNotes: ST.myNotes, js: UI.justSaved };
+  let html;
+  try {
+    ST.user = { uid: id, name: who.name }; ST.profile = { name: who.name, role: 'athlete', team: who.team || null, pending: false };
+    ST.myPlan = ST.athPlan[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; UI.justSaved = null;
+    html = VIEWS[UI.view]();
+  } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; UI.justSaved = sv.js; }
+  html = html.replace(/data-a="(start|feedback|story)"/g, 'disabled data-x="$1"');
+  const bar = '<section class="card col g10" aria-label="Vista de coach" style="border:1.5px dashed var(--accent)"><div class="eyebrow" style="color:var(--accent)">Vista de ' + esc(firstName(who.name)) + ' · solo lectura</div><p class="soft" style="font-size:14px">Así ve la app tu atleta. Los check-ins de esta vista llegan de sus últimos 14 días, así que las insignias pueden verse más bajas que las suyas.</p><button type="button" class="chip" data-a="verComoSalir" style="align-self:flex-start">Volver a Cabina</button></section>';
+  return html.replace('<div class="stack">', '<div class="stack">' + bar);
+}
 function render() {
   softPending = false;
   const main = document.getElementById('view'), top = document.getElementById('top'), nav = document.getElementById('nav'), ov = document.getElementById('overlay'), story = document.getElementById('story');
@@ -538,14 +553,14 @@ function render() {
   if (!ST.ready) { main.innerHTML = viewLoading(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; story.innerHTML = ''; return; }
   if (!ST.user || !ST.profile) { main.innerHTML = ST.user ? viewLoading() : viewLogin(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; ov.innerHTML = ''; story.innerHTML = ''; return; }
   const ids = tabs().map((t) => t.id); if (ids.indexOf(UI.view) < 0) UI.view = ids[0];
-  main.innerHTML = VIEWS[UI.view]();
+  main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
   main.scrollTop = (UI.lastView === UI.view) ? st : 0; UI.lastView = UI.view;
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
   const h = overlayHtml(), keep = ov.scrollTop;
   ov.innerHTML = h; ov.hidden = !h; if (h) ov.scrollTop = keep;
   story.innerHTML = storyHtml();
 }
-function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; render(); }
+function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes') UI.asId = null; render(); }
 let msgTimer = null;
 function say(msg, kind) { UI.msg = msg; UI.msgKind = kind || 'err'; clearTimeout(msgTimer); if (msg) msgTimer = setTimeout(() => { UI.msg = ''; render(); }, 8000); render(); }
 const friendly = (e) => {
@@ -582,7 +597,7 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.myPlan = null; UI.planDraft = null; UI.planOpen = false; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.myPlan = null; UI.planDraft = null; UI.planOpen = false; UI.asId = null; ST.pending = []; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e)));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
@@ -641,11 +656,13 @@ const ACT = {
     UI.busy = false; render();
   },
   planToggle() { UI.planOpen = !UI.planOpen; UI.planDraft = null; render(); },
+  verComo(v) { UI.asId = v; if (location.hash === '#hoy') render(); else location.hash = '#hoy'; },
+  verComoSalir() { UI.asId = null; if (location.hash === '#cabina') render(); else location.hash = '#cabina'; },
   async savePlan() {
     const a = athleteObjs().find((x) => x.id === UI.sel); if (!a || UI.busy) return;
     const r = parsePlan(UI.planDraft ? UI.planDraft.text : ''); if (r.err) { say(r.err); return; }
     UI.busy = true; render();
-    try { await be.savePlan(a.id, Object.assign(r.plan, { updatedAt: Date.now() })); UI.planDraft = null; say('Plan guardado para ' + a.first + '.', 'ok'); } catch (e) { say(friendly(e)); }
+    try { await be.savePlan(a.id, Object.assign(r.plan, { updatedAt: Date.now() })); UI.planDraft = null; UI.planOpen = false; say('Plan guardado para ' + a.first + '.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
   async accept(v, t) { try { await be.acceptAthlete(v, ST.user.uid, t.dataset.t); } catch (e) { say(friendly(e)); } },
