@@ -264,6 +264,15 @@ const NAVIC = {
 };
 const tabs = () => (isCoach() ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes'] : ['hoy', 'datos', 'ruta', 'ajustes']).map((id) => ({ id, label: cap(id), ic: NAVIC[id] }));
 const navHtml = () => '<div class="inner">' + tabs().map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id ? ' aria-current="page"' : '') + '><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + t.ic + '</svg><span>' + t.label + '</span></a>').join('') + '</div>';
+/* Logo segun el fondo: ciclista blanco sobre fondos oscuros, negro sobre fondos claros. */
+function logoSrc() {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    const m = /^#([0-9a-f]{6})$/i.exec(v);
+    if (m) { const n = parseInt(m[1], 16), l = (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255; return l < 0.45 ? 'icons/logo-blanco.svg' : 'icons/logo-negro.svg'; }
+  } catch (e) { /* sin estilos: usa el logo negro */ }
+  return 'icons/logo-negro.svg';
+}
 function topHtml() {
   let pills = '';
   if (DEMO) pills += '<span class="pill">Demo</span>';
@@ -272,14 +281,14 @@ function topHtml() {
     if (t) pills += '<span class="pill">' + TEAMS[t] + '</span>';
     pills += '<span class="pill role">' + (isCoach() ? 'Coach' : 'Atleta') + '</span>';
   }
-  return '<div class="inner"><span class="brand">Camino</span><span class="row g8">' + pills + '</span></div>';
+  return '<div class="inner"><span class="brand row g8"><img class="brand-logo" src="' + logoSrc() + '" alt="" width="30" height="30">Camino</span><span class="row g8">' + pills + '</span></div>';
 }
 const head = (sub, title) => '<div class="col g4"><div class="muted" style="font-size:14px">' + esc(sub) + '</div><h1 class="title">' + esc(title) + '</h1></div>';
 const msgBanner = () => (UI.msg ? '<div class="banner" role="status">' + infoIcon() + '<span>' + esc(UI.msg) + '</span></div>' : '');
 
 /* ---------- Vista: ingreso y carga ---------- */
 function viewLogin() {
-  return '<div class="inner"><div class="login"><div class="logo" aria-hidden="true"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-6 14-4 14-12"></path><circle cx="5" cy="19" r="2"></circle><circle cx="19" cy="6" r="2" stroke="var(--good)"></circle></svg></div>'
+  return '<div class="inner"><div class="login"><div class="logo" aria-hidden="true"><img src="' + logoSrc() + '" alt="" width="132" height="132"></div>'
     + '<div class="col g8"><h1 class="title" style="font-size:52px">Camino</h1><p class="soft" style="font-size:18px">Tu camino recorrido, día a día. Check-in corto, plan claro y tu coach al tanto.</p></div>'
     + msgBanner()
     + (DEMO
@@ -801,6 +810,7 @@ document.addEventListener('focusout', () => { setTimeout(() => { const t = docum
 
 /* ---------- Arranque ---------- */
 applyTone();
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { render(); }); } catch (e) { /* navegador sin matchMedia */ }
 be.setErrorHandler((where, err) => say(friendly(err)));
 render();
 be.onAuth((user) => startSession(user));
