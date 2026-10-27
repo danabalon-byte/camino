@@ -43,7 +43,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Check-ins: el atleta escribe y lee los suyos; su coach solo lee.
+    // Check-ins: el atleta escribe, corrige, borra y lee los suyos; su coach solo lee.
     match /users/{uid}/checkins/{date} {
       allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
       allow create, update: if signedIn() && request.auth.uid == uid
@@ -64,7 +64,8 @@ service cloud.firestore {
                 && request.resource.data.pain.zone is string && request.resource.data.pain.zone.size() <= 80
                 && request.resource.data.pain.side in ['Izquierdo', 'Derecho', 'Ambos']
                 && request.resource.data.pain.level in ['Leve', 'Moderada', 'Fuerte']));
-      allow delete: if false;
+      // El atleta puede borrar su propio check-in (para corregirlo o rehacerlo).
+      allow delete: if signedIn() && request.auth.uid == uid;
     }
 
     // Notas del coach: las crea solo su coach; el atleta las lee.
@@ -77,6 +78,27 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() <= 600;
       allow update, delete: if false;
+    }
+
+    // Plan del atleta: lo escribe solo su coach; el atleta lo lee.
+    match /users/{uid}/plan/{doc} {
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
+      allow create, update: if isCoachOf(uid)
+        && request.resource.data.keys().hasOnly(['goal', 'phases', 'sessions', 'notes', 'updatedAt'])
+        && request.resource.data.get('phases', []) is list && request.resource.data.get('phases', []).size() <= 12
+        && request.resource.data.get('sessions', {}) is map && request.resource.data.get('sessions', {}).size() <= 120
+        && request.resource.data.get('notes', {}) is map && request.resource.data.get('notes', {}).size() <= 120;
+      allow delete: if false;
+    }
+
+    // Historial de forma y salidas: lo carga solo su coach (desde intervals.icu); el atleta lo lee.
+    match /users/{uid}/history/{doc} {
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
+      allow create, update: if isCoachOf(uid)
+        && request.resource.data.keys().hasOnly(['days', 'acts', 'updatedAt'])
+        && request.resource.data.get('days', []) is list && request.resource.data.get('days', []).size() <= 120
+        && request.resource.data.get('acts', []) is list && request.resource.data.get('acts', []).size() <= 200;
+      allow delete: if false;
     }
 
     // Equipos (grnt, zn): solo km, metas e hitos. Nunca bienestar ni molestias.

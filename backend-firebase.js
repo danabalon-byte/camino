@@ -3,7 +3,7 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { initializeFirestore, terminate, clearIndexedDbPersistence, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, updateDoc, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { initializeFirestore, terminate, clearIndexedDbPersistence, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -66,6 +66,7 @@ const be = {
     const q = query(collection(db, 'users', uid, 'checkins'), orderBy('date', 'desc'), limit(n));
     return onSnapshot(q, (s) => cb(rows(s)), fail('check-ins'));
   },
+  deleteCheckin(uid, date) { return deleteDoc(doc(db, 'users', uid, 'checkins', date)); },
   saveCheckin(uid, c) { return setDoc(doc(db, 'users', uid, 'checkins', c.date), clean(c)); },
   listenNotes(uid, cb) {
     const q = query(collection(db, 'users', uid, 'notes'), orderBy('at', 'desc'), limit(20));

@@ -41,15 +41,6 @@
   --warn:#FFC857; --bad:#FF6B6B; --info:#7AA2FF;
   --track:#2A2F3A; --nav:#12151B; color-scheme:dark;
 }
-:root[data-tone="paleta"]{
-  --bg:#090D1F; --surface:#11183A; --surface2:#1A2350; --line:#28336A;
-  --text:#F1F4FF; --muted:#9DA8D6; --soft:#D3D9F5;
-  --accent:#F28705; --on-accent:#1E0F00; --accent-soft:#2B1E12;
-  --accent2:#F27EA9; --on-accent2:#2A0A18;
-  --good:#04BF68; --good-soft:#0B2B26; --on-good:#00210F;
-  --warn:#FFD166; --bad:#FF6B8A; --info:#05C7F2;
-  --track:#28336A; --nav:#0C1230; color-scheme:dark;
-}
 :root[data-tone="tierra"]{
   --bg:#12140E; --surface:#1C1F15; --surface2:#262B1C; --line:#363D28;
   --text:#F2F0E4; --muted:#B2B59F; --soft:#DAD9C6;
@@ -170,3 +161,46 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .field{width:100%;min-height:48px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--text)}
 .banner{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:14px;border:1.5px solid var(--warn);background:var(--surface2);font-size:14px;color:var(--soft)}
 .btn.google{background:var(--text);color:var(--bg);justify-content:center}
+
+/* Guia: diapositivas deslizantes */
+.gtrack{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px;align-items:stretch}
+.gtrack::-webkit-scrollbar{display:none}
+.gslide{flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always;min-width:0;display:flex}
+.gslide .card{flex:1}
+.gic{width:44px;height:44px;border-radius:14px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex:none}
+.gdots{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.gdot{width:10px;height:10px;min-height:0;padding:0;border-radius:50%;border:0;background:var(--track);position:relative}
+.gdot::after{content:"";position:absolute;inset:-14px -4px}
+.gdot[aria-current="true"]{background:var(--accent);width:22px;border-radius:6px}
+
+/* Interruptor de proyeccion */
+.fcsw{display:flex;align-items:center;gap:10px;min-height:44px;padding:0;border:0;background:transparent;font-size:14px;font-weight:600;color:var(--soft)}
+.fcsw-t{width:44px;height:26px;border-radius:13px;background:var(--track);position:relative;flex:none;transition:background .15s}
+.fcsw-t i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.35);transition:transform .15s}
+.fcsw[aria-checked="true"] .fcsw-t{background:var(--accent)}
+.fcsw[aria-checked="true"] .fcsw-t i{transform:translateX(18px)}
+@media (prefers-reduced-motion:reduce){.fcsw-t,.fcsw-t i{transition:none}}
+
+/* Responder al atleta */
+.qr{display:flex;gap:8px;align-items:stretch}
+.qr-main{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:10px 16px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface2);text-align:left;font-size:15px;line-height:1.3}
+.qr-main:active{border-color:var(--accent)}
+.qr-go{flex:none;font-size:13px;font-weight:700;color:var(--accent)}
+.qr-edit{flex:none;width:56px;min-height:56px;border-radius:16px;border:1.5px solid var(--line);background:transparent;color:var(--soft);display:flex;align-items:center;justify-content:center}
+.undo{border:1.5px solid var(--accent);border-radius:16px;padding:12px 14px;background:var(--accent-soft);display:flex;flex-direction:column;gap:10px}
+.undo-bar{height:4px;border-radius:2px;background:var(--track);overflow:hidden}
+.undo-bar i{display:block;height:100%;background:var(--accent);transform-origin:left;animation:undo 5s linear forwards}
+@keyframes undo{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.undo-bar i{animation:none}}
+
+/* Cambio de vista coach / atleta */
+.modesw{display:flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.modesw button{position:relative;min-height:30px;padding:0 12px;border:0;border-radius:999px;background:transparent;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+.modesw button::after{content:"";position:absolute;inset:-7px -2px}
+.modesw button[aria-pressed="true"]{background:var(--accent2);color:var(--on-accent2)}
+
+/* Gestion del atleta */
+.mrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.mrow:first-of-type{border-top:0}
+.mrow .chip{flex:none;align-self:center}
+.mform{padding:4px 0 14px}
