@@ -67,6 +67,8 @@ const be = {
     return onSnapshot(q, (s) => cb(rows(s)), fail('check-ins'));
   },
   deleteCheckin(uid, date) { return deleteDoc(doc(db, 'users', uid, 'checkins', date)); },
+  // El coach importa historial (solo crea; si el día ya existe, Firestore lo rechaza y no se pisa nada).
+  importCheckin(uid, c) { return setDoc(doc(db, 'users', uid, 'checkins', c.date), clean(c)); },
   saveCheckin(uid, c) { return setDoc(doc(db, 'users', uid, 'checkins', c.date), clean(c)); },
   listenNotes(uid, cb) {
     const q = query(collection(db, 'users', uid, 'notes'), orderBy('at', 'desc'), limit(20));

@@ -20,13 +20,18 @@ const PREVT = ['Comida abundante', 'Alcohol', 'Trasnoche', 'Viaje o jornada larg
 const HARDT = ['Subida', 'Viento en contra', 'Ritmo alto o sprint', 'Terreno técnico', 'Calor', 'Otro'];
 const HARDD = ['Menos de 5 min', '5 a 20 min', 'Más de 20 min'];
 const HARDE = ['Con fuerzas', 'Justo', 'Muy exigido'];
+const CK_KEYS = ['date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'fuel', 'skip', 'ts'];
+const CARBS = ['No', 'Parcial', 'Sí'];
+const HYDRA = ['Poca', 'Normal', 'Bastante'];
+const ENERGY = ['Baja', 'Normal', 'Alta'];
+const SKIPR = ['Trabajo', 'Viaje', 'Malestar físico', 'Imprevisto', 'Otro'];
 const ZONES = ['Cuello', 'Hombro', 'Espalda', 'Cadera', 'Muslo', 'Rodilla', 'Pantorrilla', 'Pie', 'Mano o muñeca'];
 const SIDES = ['Izquierdo', 'Derecho', 'Ambos'];
 const LEVELS = ['Leve', 'Moderada', 'Fuerte'];
 const WD = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const WDL = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const NUMERIC = { sleepH: 1, sleepQ: 1, legs: 1, stress: 1, rpe: 1, heat: 1, mood: 1 };
+const NUMERIC = { sleepH: 1, sleepQ: 1, legs: 1, stress: 1, rpe: 1, heat: 1, mood: 1, carbs: 1, hydra: 1, energy: 1 };
 const TONES = [
   { id: 'auto', name: 'Auto', sub: 'Sigue el tema de tu dispositivo', sw: ['#F3F4F7', '#0F1115', '#C2410C', '#FF7A3D'] },
   { id: 'noche', name: 'Noche', sub: 'Oscuro con naranja', sw: ['#0F1115', '#171A21', '#FF7A3D', '#4ADE9B'] },
@@ -158,7 +163,7 @@ function statusOf(a) {
   const gap = diffDays(l.date, off(0));
   if (gap >= 2) return { k: 'none', reasons: ['Sin check-in hace ' + gap + ' días'] };
   const s = series(a).filter((v) => v != null); let warn = false;
-  if (l.mood <= 2) { warn = true; reasons.push('Ánimo bajo en el último check-in'); }
+  if (l.mood != null && l.mood <= 2) { warn = true; reasons.push('Ánimo bajo en el último check-in'); }
   if (l.pain && l.pain.level !== 'Leve') { warn = true; reasons.push('Molestia ' + String(l.pain.level || '').toLowerCase() + ': ' + String(l.pain.zone || '').toLowerCase()); }
   else if (l.pain) reasons.push('Molestia leve: ' + String(l.pain.zone || '').toLowerCase());
   if (s.length >= 4 && s[s.length - 1] < s[s.length - 4] - 1) { warn = true; reasons.push('Bienestar a la baja en los últimos días'); }
@@ -174,8 +179,9 @@ function needsReply(a) {
 }
 function insightFor(c) {
   if (c.pain && c.pain.level !== 'Leve') return 'Gracias por avisar de la molestia. Tu coach lo verá hoy. Mientras tanto, baja la intensidad y cuida esa zona. Si el dolor aumenta o te limita, consulta a un profesional de salud.';
-  if (c.mood <= 2) return 'Gracias por contarlo. Tu coach lo verá hoy y ajustará con calma: descansar también es entrenar.';
+  if (c.mood != null && c.mood <= 2) return 'Gracias por contarlo. Tu coach lo verá hoy y ajustará con calma: descansar también es entrenar.';
   if (c.type === 'actividad' && c.rpe && c.rpe >= 8) return 'Fue una sesión exigente. Tu coach la revisará y planificará bien tu recuperación.';
+  if (c.mood == null) return 'Sesión registrada. Con esto tu coach ajusta la carga y tu recuperación.';
   if (c.mood === 3) return 'Anotado. Tu semana sigue estable y vas al día con el plan.';
   return 'Qué buena señal. Si el plan lo permite, es un buen día para rodar con ganas.';
 }
@@ -390,9 +396,12 @@ function viewHoy() {
 
   const n = lastNote(a);
   if (n) out += '<section class="card" aria-label="Nota de tu coach"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p></section>';
-  if (todayC) out += '<button type="button" class="btn done" data-a="feedback"><span class="col"><span style="color:var(--good);font-weight:600">Check-in enviado</span><span class="soft" style="font-size:13px;font-weight:500">Toca para ver tu resumen</span></span>' + check('var(--good)', 24) + '</button>';
-  if (todayC) out += ckActions();
-  else out += '<button type="button" class="btn primary" data-a="start"><span><span>Hacer mi check-in</span><small>1 minuto · pocos pasos</small></span>' + arrow() + '</button>';
+  const hasD = !!(todayC && todayC.mood != null), hasP = !!(todayC && todayC.activity), hasSkip = !!(todayC && todayC.skip);
+  const tcard = (k, ttl, sub, done) => '<button type="button" class="btn ' + (done ? 'done' : 'primary') + '" data-a="kind" data-v="' + k + '"><span class="col"><span style="' + (done ? 'color:var(--good);' : '') + 'font-weight:600">' + ttl + '</span><span class="' + (done ? 'soft' : '') + '" style="font-size:13px;font-weight:500">' + sub + '</span></span>' + (done ? check('var(--good)', 24) : arrow()) + '</button>';
+  out += '<section class="col g10" aria-label="Tus registros de hoy">' + tcard('diario', 'Estado del día', hasD ? 'Hecho · toca para corregir' : '1 minuto · cómo amaneciste', hasD) + tcard('post', 'Sensaciones post-entreno', hasP ? 'Hecho · toca para corregir' : (hasSkip ? 'Hoy no entrenaste · toca para registrarla' : 'Después de tu salida'), hasP) + '</section>';
+  if (todayC && !hasP && !hasSkip && !(todayC.type === 'descanso')) out += '<div class="row g8 wrap"><button type="button" class="chip" data-a="kind" data-v="skip">No pude entrenar hoy</button><button type="button" class="chip" data-a="kind" data-v="descanso">Día de descanso</button></div>';
+  if (!todayC) out += '<div class="row g8 wrap"><button type="button" class="chip" data-a="kind" data-v="skip">No pude entrenar hoy</button><button type="button" class="chip" data-a="kind" data-v="descanso">Día de descanso</button></div>';
+  if (todayC) out += '<button type="button" class="btn ghost" data-a="feedback" style="justify-content:center;border:1.5px solid var(--line)">Ver mi resumen de hoy</button>' + ckActions();
   return out + '</div></div>';
 }
 
@@ -473,12 +482,15 @@ function viewCabina() {
   out += st.reasons.length ? '<ul style="margin:0;padding-left:18px" class="soft">' + st.reasons.map((r) => '<li>' + esc(r) + '</li>').join('') + '</ul>' : '<p class="soft">Todo en orden. Su bienestar acompaña bien a la carga.</p>';
   if (l && l.pain) out += '<div class="row g8 wrap"><span class="muted" style="font-size:13px">Molestia reportada:</span><span class="tag out">Zona: ' + esc(String(l.pain.zone || '').toLowerCase()) + ' (' + esc(String(l.pain.side || '').toLowerCase()) + ')</span><span class="tag out">Intensidad: ' + esc(String(l.pain.level || '').toLowerCase()) + '</span></div>';
   if (l) {
-    const bits = ['Ánimo: ' + at(MOODS, l.mood - 1)];
+    const bits = l.mood != null ? ['Ánimo: ' + at(MOODS, l.mood - 1)] : [];
     if (l.sleepH != null) bits.push('Sueño: ' + at(SLEEPH, l.sleepH) + (l.sleepQ ? ' (' + at(SLEEPQ, l.sleepQ - 1).toLowerCase() + ')' : ''));
     if (l.legs != null) bits.push('Piernas: ' + at(LEGS, l.legs).toLowerCase());
     if (l.stress != null) bits.push('Estrés: ' + at(STRESS, l.stress).toLowerCase());
     if (l.rpe) bits.push('RPE ' + l.rpe);
     if (l.hard === 'si') { const hi = l.hardInfo || {}, hp = [hi.type, hi.dur, hi.end].filter(Boolean).map((x) => String(x).toLowerCase()); bits.push('Tramo duro' + (hp.length ? ': ' + hp.join(', ') : '')); }
+    if (l.fuel) { const F = l.fuel, fp = []; if (F.carbs != null) fp.push('carbos: ' + at(CARBS, F.carbs).toLowerCase()); if (F.hydra != null) fp.push('hidratación: ' + at(HYDRA, F.hydra).toLowerCase()); if (F.energy != null) fp.push('energía: ' + at(ENERGY, F.energy).toLowerCase()); if (F.gi === 'si') fp.push('molestias digestivas'); if (F.pre) fp.push('antes: ' + F.pre); if (F.post) fp.push('después: ' + F.post); if (fp.length) bits.push('Nutrición — ' + fp.join(', ')); }
+    if (l.skip) bits.push('No entrenó' + ((l.skip.items || []).length ? ': ' + l.skip.items.map((x) => String(x).toLowerCase()).join(', ') : '') + (l.skip.text ? ' ("' + l.skip.text + '")' : ''));
+    if (l.hardInfo && l.hardInfo.text) bits.push('Tramo: ' + l.hardInfo.text);
     if (l.prevInfo) { const pi = l.prevInfo, pp = (pi.items || []).map((x) => String(x).toLowerCase()).join(', '); bits.push('Ayer fuera de lo habitual' + (pp ? ': ' + pp : '') + (pi.text ? ' ("' + pi.text + '")' : '')); }
     out += '<div class="col g6"><div class="eyebrow">Último check-in · ' + relTime(l.ts) + '</div><p class="soft" style="font-size:15px">' + esc(bits.join(' · ')) + '</p>' + (l.comment ? '<p class="muted" style="font-size:14px">“' + esc(l.comment) + '”</p>' : '') + '</div>';
   }
@@ -765,6 +777,7 @@ function manageCard(a) {
   out += mrow(dot, 'Historial de forma', lines, '<button type="button" class="chip" data-a="histToggle">' + (UI.histOpen ? 'Cerrar' : 'Cargar a mano') + '</button>') + (UI.histOpen ? histForm(a) : '');
   // vista del atleta
   out += mrow('var(--accent2)', 'Ver la app como ' + esc(a.first), ['Solo lectura: Hoy, Datos y Ruta tal como los ve'], '<button type="button" class="chip" data-a="verComo" data-v="' + esc(a.id) + '">Abrir</button>');
+  out += mrow('var(--muted)', 'Historial de Tally', ['Trae sus check-ins anteriores a la app', 'No pisa los días que ya tiene'], '<button type="button" class="chip" data-a="importTally" data-v="' + esc(a.id) + '"' + (UI.busy ? ' disabled' : '') + '>Importar</button>');
   return out + '</section>';
 }
 function parsePlan(text) {
@@ -786,7 +799,7 @@ function parsePlan(text) {
 /* ---------- Vista: Guía (como se llenan los datos) ---------- */
 const GUIA_BASE = [
   { k: 'Hoy', t: 'Tu estado de hoy', ic: 'hoy', p: ['El círculo es un puntaje de 0 a 100 que sale de tu último check-in: ánimo, calidad del sueño, sensación de piernas y estrés. Se promedian y se muestra como semáforo.', '<b>70 o más</b>: listo para rodar. <b>50 a 69</b>: ve con calma. <b>Menos de 50</b>: hoy toca cuidarte y avisar a tu coach.', 'Si hoy no hiciste check-in, usa el de ayer o el último que tengas, y lo dice debajo.'] },
-  { k: 'Constancia', t: 'Por qué el check-in diario importa', ic: 'sueno', p: ['Camino se completa, en gran medida, con las respuestas de tus <b>check-ins diarios</b>. Cada uno suma una pieza: cómo dormiste, cómo están tus piernas, tu ánimo y tu esfuerzo.', 'Con esas piezas tu coach ve cómo respondes al entrenamiento, reconoce tu esfuerzo y ajusta el plan a tu momento real. Sin ellas, el plan se queda solo en números.', 'No necesitas que sea perfecto: <b>1 minuto al día</b> basta. Mientras más constante seas, más claro se ve tu progreso.'] },
+  { k: 'Constancia', t: 'Por qué el check-in diario importa', ic: 'sueno', p: ['Camino se completa, en gran medida, con las respuestas de tus <b>check-ins diarios</b>. Cada uno suma una pieza: cómo dormiste, cómo están tus piernas, tu ánimo y tu esfuerzo.', 'Con esas piezas tu coach ve cómo respondes al entrenamiento, reconoce tu esfuerzo y ajusta el plan a tu momento real. Sin ellas, el plan se queda solo en números.', 'No necesitas que sea perfecto: <b>1 minuto al día</b> basta. Mientras más constante seas, más claro se ve tu progreso.', 'Son <b>dos registros independientes</b>: el <b>Estado del día</b> (sueño, piernas, estrés, ánimo) y las <b>Sensaciones post-entreno</b> (esfuerzo, clima, comida e hidratación). Haz uno, el otro o ambos, y corrígelos cuando quieras. Si no pudiste entrenar, toca <b>“No pude entrenar hoy”</b>.'] },
   { k: 'Check-in', t: 'Cómo se llena el check-in', ic: 'sueno', p: ['Lo llenas tú en Hoy, en 1 minuto. Hay tres tipos: <b>actividad</b> (saliste a entrenar), <b>bienestar</b> (cómo amaneciste) y <b>descanso</b>.', 'Si registras una molestia, tu coach la ve de inmediato y puede escribirte una nota. Esa nota aparece en Hoy.', 'Los check-ins son privados: solo los ven tú y tu coach. El equipo nunca ve tu bienestar ni tus molestias.'] },
   { k: 'Aptitud', t: 'Aptitud: lo que has construido', ic: 'datos', p: ['La aptitud (CTL) es tu base de entrenamiento. Es un promedio ponderado de tu carga de los últimos 42 días aproximadamente.', 'Sube lento, con semanas constantes, y baja lento si paras. Una sola salida larga casi no la mueve.', 'Más aptitud significa que tu cuerpo tolera más trabajo. Es la línea que más importa mirar en el largo plazo.'] },
   { k: 'Fatiga', t: 'Fatiga: el cansancio reciente', ic: 'racha', p: ['La fatiga (ATL) es el promedio de tu carga de los últimos 7 días aproximadamente.', 'Sube rápido con una salida dura y baja rápido con un par de días suaves. Es normal que se dispare después de un fin de semana largo.', 'Por sí sola no es mala: solo dice cuánto trabajo acumulaste esta semana.'] },
@@ -1057,6 +1070,7 @@ function viewAjustes() {
     const dRow = (r, ttl, sub) => { const dl = demoLink(r); return '<div class="col g8"><div><b>' + ttl + '</b><div class="muted" style="font-size:13px">' + sub + '</div></div><div class="demolink" id="demolink-' + r + '" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" data-v="' + r + '" style="flex:1;min-width:130px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button><a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:130px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>Abrir demo</span></a></div></div>'; };
     out += '<section class="card col g14" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
   }
+  if (isCoach() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
   out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
   out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
   out += '<details class="card" aria-label="Instalar"><summary style="font-weight:600;min-height:32px;cursor:pointer">Instalar en el teléfono</summary><p class="soft" style="font-size:15px;margin-top:8px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></details>';
@@ -1066,17 +1080,17 @@ function viewAjustes() {
 }
 
 /* ---------- Overlay: check-in ---------- */
-const stepList = (kind) => (kind === 'actividad' ? ['mood', 'infl', 'act', 'molestia'] : ['mood', 'infl', 'molestia']);
+const stepList = (f) => (f.kind === 'post' ? (f.needMood ? ['mood'] : []).concat(['act', 'fuel', 'molestia']) : (f.kind === 'skip' ? ['mood', 'skip', 'molestia'] : ['mood', 'infl', 'molestia']));
 function flowHtml() {
   const f = UI.flow, d = f.d; let out = '<div class="inner"><div class="stack" style="gap:18px">';
   if (f.step === 'tipo') {
-    const p = planFor(off(0)), todayDone = on(meA(), off(0)) && on(meA(), off(0)).type === 'actividad';
-    out += '<div class="row between"><button type="button" class="link" data-a="close">Cerrar</button><span class="muted" style="font-size:13px">Check-in</span></div><div class="col g8"><h2 class="title">¿Qué quieres registrar hoy?</h2><p class="muted">Elige una opción para empezar.</p></div>';
-    let opts = [{ k: 'actividad', t: 'Terminé una actividad', s: p ? 'Del plan de hoy: ' + planDesc(p) : 'Registra una salida que hiciste' }, { k: 'bienestar', t: 'Solo cómo me siento', s: 'Sin actividad hoy' }, { k: 'descanso', t: 'Día de descanso', s: 'También cuenta para tu constancia' }];
-    if (!p || todayDone) opts = [opts[1], opts[0], opts[2]];
-    out += '<div class="col g10">' + opts.map((o) => '<button type="button" class="opt" data-a="kind" data-v="' + o.k + '" aria-pressed="false"><span><span>' + o.t + '</span><span class="sub">' + esc(o.s) + '</span></span></button>').join('') + '</div>';
+    const p = planFor(off(0)), ex = on(meA(), off(0)), hasD = !!(ex && ex.mood != null), hasP = !!(ex && ex.activity);
+    out += '<div class="row between"><button type="button" class="link" data-a="close">Cerrar</button><span class="muted" style="font-size:13px">Check-in</span></div><div class="col g8"><h2 class="title">¿Qué quieres registrar?</h2><p class="muted">Son dos registros independientes. Puedes hacer uno, el otro o ambos, y volver a corregirlos hoy.</p></div>';
+    const opt = (k, t, sub, done) => '<button type="button" class="opt" data-a="kind" data-v="' + k + '" aria-pressed="false"><span><span>' + t + '</span><span class="sub">' + esc(sub) + '</span></span>' + (done ? '<span style="color:var(--good);font-weight:600;font-size:13px">Hecho · corregir</span>' : '') + '</button>';
+    out += '<div class="col g10">' + opt('diario', 'Estado del día', 'Sueño, piernas, estrés, ánimo y molestias', hasD) + opt('post', 'Sensaciones post-entreno', p ? 'Del plan de hoy: ' + planDesc(p) : 'Esfuerzo, clima, comida e hidratación de una salida', hasP) + '</div>';
+    if (!hasP) out += '<div class="col g8"><div class="eyebrow">Otras opciones</div><div class="col g10">' + opt('skip', 'No pude entrenar hoy', 'Cuéntanos qué pasó', ex && ex.skip) + opt('descanso', 'Día de descanso', 'También cuenta para tu constancia', ex && ex.type === 'descanso' && !ex.skip) + '</div></div>';
   } else {
-    const steps = stepList(f.kind), cur = steps[f.i], n = steps.length;
+    const steps = stepList(f), cur = steps[f.i], n = steps.length;
     out += '<div class="row between"><button type="button" class="link" data-a="back">Atrás</button><span class="muted" style="font-size:13px">Paso ' + (f.i + 1) + ' de ' + n + (cur === 'mood' ? '' : ' · opcional') + '</span></div><div class="bar" aria-hidden="true"><i style="width:' + Math.round((f.i + 1) / n * 100) + '%;background:var(--accent)"></i></div>';
     if (cur === 'mood') out += '<div class="col g8"><h2 class="title">¿Cómo te sientes hoy?</h2><p class="muted">Toca una opción. Tarda unos segundos.</p></div><div class="col g10">' + MOODS.map((m, i) => '<button type="button" class="opt" data-a="mood" data-v="' + (i + 1) + '" aria-pressed="' + (d.mood === i + 1) + '"><span>' + m + '</span><span class="meter" aria-hidden="true"><i style="width:' + ((i + 1) * 20) + '%"></i></span></button>').join('') + '</div>';
     if (cur === 'infl') {
@@ -1095,7 +1109,20 @@ function flowHtml() {
         + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 = muy fácil, 10 = máximo)</span></div><div class="grid5" role="group" aria-label="Esfuerzo percibido">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => '<button type="button" class="chip" data-a="set" data-g="rpe" data-v="' + v + '" aria-pressed="' + (d.rpe === v) + '" style="min-height:52px">' + v + '</button>').join('') + '</div></div>'
         + '<div class="col g10"><div style="font-weight:600">¿Cómo sentiste el clima?</div>' + chips('heat', HEAT, d.heat, 'Clima') + '</div>'
         + '<div class="col g10"><div style="font-weight:600">¿Hubo un tramo bastante más duro que el resto?</div>' + chips('hard', ['No', 'Sí'], d.hard, 'Tramo duro', (i) => (i ? 'si' : 'no')) + '</div>'
-        + (d.hard === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle del tramo duro"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos un poco más de ese tramo. Ayuda a tu coach a ajustar las próximas sesiones.</span></div><div class="col g10"><div style="font-weight:600">¿Qué lo hizo duro?</div>' + chips('hardType', HARDT, d.hardType, 'Tipo de tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('hardDur', HARDD, d.hardDur, 'Duración del tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cómo lo terminaste?</div>' + chips('hardEnd', HARDE, d.hardEnd, 'Cómo terminaste', (i, l) => l) + '</div></div>' : '')
+        + (d.hard === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle del tramo duro"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos un poco más de ese tramo. Ayuda a tu coach a ajustar las próximas sesiones.</span></div><div class="col g10"><div style="font-weight:600">¿Qué lo hizo duro?</div>' + chips('hardType', HARDT, d.hardType, 'Tipo de tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('hardDur', HARDD, d.hardDur, 'Duración del tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cómo lo terminaste?</div>' + chips('hardEnd', HARDE, d.hardEnd, 'Cómo terminaste', (i, l) => l) + '</div><div class="col g8"><label for="hardText" style="font-weight:600">¿Qué tramo fue? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></label><input class="field" id="hardText" type="text" maxlength="200" placeholder="Por ejemplo: los últimos 10 min del repecho" value="' + esc(UI.draft.hardText || '') + '"></div></div>' : '')
+        + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
+    }
+    if (cur === 'skip') {
+      out += '<div class="col g8"><h2 class="title">¿Qué pasó hoy?</h2><p class="muted">Sin culpa: saberlo ayuda a tu coach a reordenar la semana.</p></div><div class="col g10"><div style="font-weight:600">Motivo <span class="muted" style="font-weight:500;font-size:14px">(puedes marcar varios)</span></div>' + multiChips('skipItems', SKIPR, d.skipItems, 'Motivo') + '</div><div class="col g8"><label for="skipText" style="font-weight:600">Cuéntanos un poco más</label><textarea id="skipText" placeholder="Opcional">' + esc(UI.draft.skipText || '') + '</textarea></div><div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
+    }
+    if (cur === 'fuel') {
+      out += '<div class="col g8"><h2 class="title">Comida e hidratación</h2><p class="muted">Ayuda a tu coach y a tu nutricionista a ver cómo cargas y te recuperas.</p></div>'
+        + '<div class="col g10"><div style="font-weight:600">¿Cargaste carbohidratos antes o durante?</div>' + chips('carbs', CARBS, d.carbs, 'Carbohidratos') + '</div>'
+        + '<div class="col g8"><label for="preText" style="font-weight:600">¿Qué fue tu última comida antes de entrenar?</label><input class="field" id="preText" type="text" maxlength="200" placeholder="Por ejemplo: avena con banana" value="' + esc(UI.draft.preText || '') + '"></div>'
+        + '<div class="col g10"><div style="font-weight:600">¿Cómo fue tu hidratación?</div>' + chips('hydra', HYDRA, d.hydra, 'Hidratación') + '</div>'
+        + '<div class="col g10"><div style="font-weight:600">¿Tuviste molestias digestivas?</div>' + chips('gi', ['No', 'Sí'], d.gi, 'Digestivas', (i) => (i ? 'si' : 'no')) + '</div>'
+        + '<div class="col g10"><div style="font-weight:600">¿Cómo fue tu energía general?</div>' + chips('energy', ENERGY, d.energy, 'Energía') + '</div>'
+        + '<div class="col g8"><label for="postText" style="font-weight:600">¿Qué fue tu primera comida después? <span class="muted" style="font-weight:500;font-size:14px">(si ya comiste)</span></label><input class="field" id="postText" type="text" maxlength="200" placeholder="Por ejemplo: batido de proteína" value="' + esc(UI.draft.postText || '') + '"></div>'
         + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
     }
     if (cur === 'molestia') {
@@ -1130,7 +1157,7 @@ function feedbackHtml() {
   const n = lastNote(a);
   let out = '<div class="inner"><div class="stack"><div class="row g14 pop"><div class="row" style="width:56px;height:56px;border-radius:50%;justify-content:center;background:var(--good-soft);border:1.5px solid var(--good);flex:none">' + check('var(--good)', 28) + '</div><div class="col g4"><h2 class="h2" style="font-size:34px">Listo, gracias ' + esc(a.first) + '</h2><div class="muted" style="font-size:14px">Check-in enviado a tu coach</div></div></div><section class="card"><div class="eyebrow">Lo que vemos</div><p style="margin-top:8px;font-size:17px">' + esc(insightFor(c)) + '</p></section>';
   if (newB && newB.length) out += newB.map((b) => '<section class="card row g14 pop" style="border:1.5px solid var(--accent);background:var(--accent-soft)"><div class="row" style="width:56px;height:56px;border-radius:50%;justify-content:center;border:2px solid var(--accent);flex:none">' + icon(b.id, 28, 'var(--accent)') + '</div><div class="col g4"><div class="eyebrow" style="color:var(--accent)">Nueva insignia</div><div class="h3">' + esc(b.label) + '</div></div></section>').join('');
-  out += '<section class="card"><div class="row between g8" style="align-items:baseline"><div class="eyebrow">Tu ánimo · 7 días</div><div class="muted" style="font-size:13px">hoy: ' + at(MOODS, c.mood - 1).toLowerCase() + '</div></div><div style="margin-top:10px">' + spark(a) + '</div></section><section class="card"><div class="eyebrow">Tu constancia</div><div class="row g8" style="margin-top:12px" aria-hidden="true">' + dots + '</div><p class="soft" style="margin-top:12px">' + st.n + (st.n === 1 ? ' día' : ' días') + ' seguidos. Los días de descanso cuentan.</p></section>';
+  out += '<section class="card"><div class="row between g8" style="align-items:baseline"><div class="eyebrow">Tu ánimo · 7 días</div><div class="muted" style="font-size:13px">hoy: ' + (c.mood != null ? at(MOODS, c.mood - 1).toLowerCase() : 'sin registrar') + '</div></div><div style="margin-top:10px">' + spark(a) + '</div></section><section class="card"><div class="eyebrow">Tu constancia</div><div class="row g8" style="margin-top:12px" aria-hidden="true">' + dots + '</div><p class="soft" style="margin-top:12px">' + st.n + (st.n === 1 ? ' día' : ' días') + ' seguidos. Los días de descanso cuentan.</p></section>';
   if (n) out += '<section class="card"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p></section>';
   out += ckActions();
   return out + '<div class="col g8"><a href="#ruta" data-a="closeFb" class="btn primary"><span>Ver mi ruta</span>' + arrow() + '</a><button type="button" class="btn ghost" data-a="closeFb">Volver a Hoy</button></div></div></div>';
@@ -1271,13 +1298,23 @@ function startSession(user) {
 async function finishFlow() {
   const f = UI.flow, d = f.d, a = meA(), uid = ST.user.uid;
   const before = badges(a).filter((b) => b.earned).map((b) => b.id);
-  const act = f.kind === 'actividad' ? (d.activity || { name: 'Actividad libre', min: null, km: 0, load: null }) : null;
+  const ex = on(a, off(0)) || {}, base = {}; CK_KEYS.forEach((k) => { if (ex[k] !== undefined) base[k] = ex[k]; });
+  const dr = UI.draft, tx = (v) => String(v || '').trim().slice(0, 200);
   const pain = (d.painYes === 'si' && d.zones && d.zones.length) ? { zone: d.zones.join(', '), side: d.side || 'Ambos', level: d.level || 'Leve' } : null;
-  const c = {
-    date: off(0), type: f.kind, mood: d.mood || 3, sleepH: d.sleepH != null ? d.sleepH : null, sleepQ: d.sleepQ || null, legs: d.legs != null ? d.legs : null, stress: d.stress != null ? d.stress : null,
-    rpe: d.rpe || null, heat: d.heat != null ? d.heat : null, hard: d.hard || null, hardInfo: d.hard === 'si' ? { type: d.hardType || null, dur: d.hardDur || null, end: d.hardEnd || null } : null,
-    prev: d.prev || null, prevInfo: d.prev === 'si' ? { items: d.prevItems || [], text: (UI.draft.prevText || '').trim() } : null, pain, comment: (UI.draft.comment || '').trim(), activity: act, ts: Date.now()
-  };
+  const comment = (dr.comment || '').trim();
+  let c;
+  if (f.kind === 'diario') {
+    c = Object.assign(base, { date: off(0), type: ex.activity ? 'actividad' : 'bienestar', mood: d.mood || 3, sleepH: d.sleepH != null ? d.sleepH : null, sleepQ: d.sleepQ || null, legs: d.legs != null ? d.legs : null, stress: d.stress != null ? d.stress : null, prev: d.prev || null, prevInfo: d.prev === 'si' ? { items: d.prevItems || [], text: (dr.prevText || '').trim() } : null, pain, comment, ts: Date.now() });
+    if (ex.skip) c.skip = null;
+  } else if (f.kind === 'post') {
+    const fuel = { carbs: d.carbs != null ? d.carbs : null, pre: tx(dr.preText) || null, hydra: d.hydra != null ? d.hydra : null, gi: d.gi || null, energy: d.energy != null ? d.energy : null, post: tx(dr.postText) || null };
+    const hasFuel = Object.keys(fuel).some((k) => fuel[k] != null);
+    c = Object.assign(base, { date: off(0), type: 'actividad', mood: d.mood || ex.mood || null, rpe: d.rpe || null, heat: d.heat != null ? d.heat : null, hard: d.hard || null, hardInfo: d.hard === 'si' ? { type: d.hardType || null, dur: d.hardDur || null, end: d.hardEnd || null, text: tx(dr.hardText) || null } : null, fuel: hasFuel ? fuel : null, skip: null, activity: d.activity || { name: 'Actividad libre', min: null, km: 0, load: null }, pain: pain || ex.pain || null, comment: comment || ex.comment || '', ts: Date.now() });
+  } else {
+    c = Object.assign(base, { date: off(0), type: 'descanso', mood: d.mood || 3, skip: f.kind === 'skip' ? { items: d.skipItems || [], text: String(dr.skipText || '').trim().slice(0, 300) } : null, activity: null, rpe: null, heat: null, hard: null, hardInfo: null, fuel: null, pain, comment, ts: Date.now() });
+  }
+  if (c.comment == null) c.comment = '';
+  const act = c.activity;
   UI.busy = true; render();
   try {
     await be.saveCheckin(uid, c);
@@ -1332,14 +1369,23 @@ const ACT = {
   fcRange(v) { UI.fr = +v; render(); },
   fcZoom() { fzOpen(false); },
   fcZoomClose() { fzClose(); },
-  editCk() {
-    const c = on(meA(), off(0)); if (!c) return;
-    const d = { mood: c.mood, sleepH: c.sleepH == null ? undefined : c.sleepH, sleepQ: c.sleepQ || undefined, legs: c.legs == null ? undefined : c.legs, stress: c.stress == null ? undefined : c.stress, rpe: c.rpe || undefined, heat: c.heat == null ? undefined : c.heat, hard: c.hard || undefined, prev: c.prev || undefined };
-    if (c.hardInfo) { d.hardType = c.hardInfo.type || undefined; d.hardDur = c.hardInfo.dur || undefined; d.hardEnd = c.hardInfo.end || undefined; }
-    if (c.prevInfo) d.prevItems = (c.prevInfo.items || []).slice();
-    if (c.pain) { d.painYes = 'si'; d.zones = String(c.pain.zone || '').split(', ').filter(Boolean); d.side = c.pain.side; d.level = c.pain.level; } else d.painYes = 'no';
-    if (c.activity) d.activity = Object.assign({}, c.activity);
-    UI.flow = { kind: c.type, step: 'run', i: 0, d }; UI.draft = { comment: c.comment || '', prevText: (c.prevInfo && c.prevInfo.text) || '' }; UI.feedback = null; UI.confirmDel = false; render();
+  editCk() { UI.feedback = null; UI.confirmDel = false; ACT.start(); },
+  async importTally(v) {
+    if (UI.busy || !v) return;
+    const p = (ST.athletes || []).find((x) => x.id === v) || (ST.user && ST.user.uid === v ? ST.profile : null); if (!p) return;
+    UI.busy = true; render();
+    try {
+      const r = await fetch('./tally-import.json', { cache: 'no-store' }); if (!r.ok) throw new Error('Falta el archivo tally-import.json en el repositorio.');
+      const data = await r.json(), em = String(p.email || '').toLowerCase(), fn = firstName(p.name || '').toLowerCase();
+      const ds = (data.datasets || []).find((x) => x.email && x.email === em) || (data.datasets || []).find((x) => String(x.name || '').toLowerCase() === fn);
+      if (!ds) { say('No encuentro historial de Tally para ' + (p.name || 'este atleta') + '.'); UI.busy = false; render(); return; }
+      let ok = 0, skip = 0, bad = 0;
+      for (const c of ds.checkins) {
+        try { await be.importCheckin(v, c); ok++; } catch (e) { if (e && /permission|denied|exists/i.test(String(e.code || e.message))) skip++; else bad++; }
+      }
+      say(ok + ' días importados' + (skip ? ', ' + skip + ' ya existían y se dejaron igual' : '') + (bad ? ', ' + bad + ' con error' : '') + '.', bad ? 'err' : 'ok');
+    } catch (e) { say(e && e.message ? e.message : friendly(e)); }
+    UI.busy = false; render();
   },
   delAsk() { UI.confirmDel = true; render(); },
   delNo() { UI.confirmDel = false; render(); },
@@ -1357,7 +1403,24 @@ const ACT = {
   async logout() { await be.signOut(); },
   start() { UI.flow = { kind: null, step: 'tipo', i: 0, d: {} }; UI.draft = { comment: '', prevText: '' }; render(); },
   close() { UI.flow = null; UI.draft = { comment: '', prevText: '' }; render(); },
-  kind(v) { const p = planFor(off(0)), d = {}; if (v === 'actividad') d.activity = p ? { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load } : { name: 'Actividad libre', min: null, km: 0, load: null }; UI.flow = { kind: v, step: 'run', i: 0, d }; render(); },
+  kind(v) {
+    const c = on(meA(), off(0)) || null, p = planFor(off(0)), d = {};
+    if (c) {
+      if (c.mood != null) d.mood = c.mood;
+      d.sleepH = c.sleepH == null ? undefined : c.sleepH; d.sleepQ = c.sleepQ || undefined; d.legs = c.legs == null ? undefined : c.legs; d.stress = c.stress == null ? undefined : c.stress;
+      d.rpe = c.rpe || undefined; d.heat = c.heat == null ? undefined : c.heat; d.hard = c.hard || undefined; d.prev = c.prev || undefined;
+      if (c.hardInfo) { d.hardType = c.hardInfo.type || undefined; d.hardDur = c.hardInfo.dur || undefined; d.hardEnd = c.hardInfo.end || undefined; }
+      if (c.prevInfo) d.prevItems = (c.prevInfo.items || []).slice();
+      if (c.fuel) { d.carbs = c.fuel.carbs == null ? undefined : c.fuel.carbs; d.hydra = c.fuel.hydra == null ? undefined : c.fuel.hydra; d.gi = c.fuel.gi || undefined; d.energy = c.fuel.energy == null ? undefined : c.fuel.energy; }
+      if (c.skip) d.skipItems = (c.skip.items || []).slice();
+      if (c.pain) { d.painYes = 'si'; d.zones = String(c.pain.zone || '').split(', ').filter(Boolean); d.side = c.pain.side; d.level = c.pain.level; } else if (c.mood != null || c.activity) d.painYes = 'no';
+      if (c.activity) d.activity = Object.assign({}, c.activity);
+    }
+    if (v === 'post' && !d.activity) d.activity = p ? { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load } : { name: 'Actividad libre', min: null, km: 0, load: null };
+    UI.flow = { kind: v, step: 'run', i: 0, d, needMood: v === 'post' && !(c && c.mood != null) };
+    UI.draft = { comment: (c && c.comment) || '', prevText: (c && c.prevInfo && c.prevInfo.text) || '', preText: (c && c.fuel && c.fuel.pre) || '', postText: (c && c.fuel && c.fuel.post) || '', hardText: (c && c.hardInfo && c.hardInfo.text) || '', skipText: (c && c.skip && c.skip.text) || '' };
+    UI.feedback = null; render();
+  },
   mood(v) { UI.flow.d.mood = Number(v); UI.flow.i++; render(); },
   set(v, t) { const g = t.dataset.g, val = NUMERIC[g] ? Number(v) : v; UI.flow.d[g] = (UI.flow.d[g] === val) ? undefined : val; render(); },
   multi(v, t) { const g = t.dataset.g, z = UI.flow.d[g] || [], i = z.indexOf(v); if (i >= 0) z.splice(i, 1); else z.push(v); UI.flow.d[g] = z; render(); },
@@ -1457,6 +1520,7 @@ document.addEventListener('input', (e) => {
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id === 'comment') UI.draft.comment = e.target.value;
   if (id === 'prevText') UI.draft.prevText = e.target.value;
+  if (id === 'preText' || id === 'postText' || id === 'hardText' || id === 'skipText') UI.draft[id] = e.target.value;
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Enviar'; } const cn = document.getElementById('replyCount'); if (cn) cn.textContent = e.target.value.length + ' / 600'; }
   if (id === 'planText') UI.planDraft = { id: UI.sel, text: e.target.value };
   if (id === 'histText') UI.histDraft = { id: UI.sel, text: e.target.value };

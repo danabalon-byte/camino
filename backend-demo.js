@@ -128,6 +128,7 @@ const be = {
   async saveProfile(uid, patch) { Object.assign(store.users[uid].profile, patch); notify(); },
   listenCheckins(uid, cb) { return live(() => cb([...store.users[uid].checkins].sort(byDateDesc).map(c => ({ ...c })))); },
   async deleteCheckin(uid, date) { const u = store.users[uid]; u.checkins = u.checkins.filter(x => x.date !== date); notify(); },
+  async importCheckin(uid, c) { const u = store.users[uid]; if (u.checkins.some(x => x.date === c.date)) throw Object.assign(new Error('exists'), { code: 'permission-denied' }); u.checkins.push({ id: c.date, ...c }); notify(); },
   async saveCheckin(uid, c) { const u = store.users[uid]; u.checkins = u.checkins.filter(x => x.date !== c.date); u.checkins.push({ id: c.date, ...c }); notify(); },
   listenNotes(uid, cb) { return live(() => cb(store.users[uid].notes.map(n => ({ ...n })))); },
   listenPlan(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].plan ? JSON.parse(JSON.stringify(store.users[uid].plan)) : null)); },
