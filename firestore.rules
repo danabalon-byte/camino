@@ -3,6 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
+    // Zonas del cuerpo marcadas en una sesión de gym (ids versionados; Camino las relaciona con los músculos de Strava).
+    function zonesOk(a) {
+      return a == null || a.get('gym', null) == null || a.gym.get('zones', null) == null
+        || a.gym.zones.keys().hasOnly(['quads', 'hamstrings', 'glutes', 'hip', 'calves', 'core', 'lower_back', 'upper_back', 'lats', 'chest', 'shoulders', 'arms', 'triceps']);
+    }
     function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
     function isCoach() { return signedIn() && me().get('role', '') == 'coach'; }
     function isCoachOf(athleteUid) {
@@ -27,7 +32,8 @@ service cloud.firestore {
         && request.resource.data.pending == true;
       allow update: if signedIn() && (
         (request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'pending', 'reminder', 'createdAt', 'coachId', 'team'])
+          && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'pending', 'reminder', 'createdAt', 'coachId', 'team', 'shareKm'])
+          && request.resource.data.get('shareKm', true) is bool
           && request.resource.data.get('email', null) == resource.data.get('email', null)
           && request.resource.data.get('role', null) == resource.data.get('role', null)
           && request.resource.data.get('coachId', null) == resource.data.get('coachId', null)
@@ -46,11 +52,13 @@ service cloud.firestore {
     // Check-ins: el atleta escribe, corrige, borra y lee los suyos; su coach solo lee.
     match /users/{uid}/checkins/{date} {
       allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
-      allow create, update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'ts'])
+      allow create, update: if signedIn()
+        && (request.auth.uid == uid || (isCoachOf(uid) && request.method == 'create' && request.resource.data.get('src', null) == 'tally'))
+        && request.resource.data.keys().hasOnly(['src', 'date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'act2', 'fuel', 'skip', 'ts'])
         && date == request.resource.data.date
         && request.resource.data.type in ['actividad', 'bienestar', 'descanso']
-        && request.resource.data.mood is int && request.resource.data.mood >= 1 && request.resource.data.mood <= 5
+        && (request.resource.data.get('mood', null) == null || (request.resource.data.mood is int && request.resource.data.mood >= 1 && request.resource.data.mood <= 5))
+        && request.resource.data.get('src', null) in [null, 'tally']
         && request.resource.data.ts is number
         && (request.resource.data.comment is string && request.resource.data.comment.size() <= 1000)
         && (request.resource.data.get('rpe', null) == null || (request.resource.data.rpe is int && request.resource.data.rpe >= 1 && request.resource.data.rpe <= 10))
@@ -59,6 +67,23 @@ service cloud.firestore {
         && (request.resource.data.get('legs', null) == null || (request.resource.data.legs is int && request.resource.data.legs >= 0 && request.resource.data.legs <= 2))
         && (request.resource.data.get('stress', null) == null || (request.resource.data.stress is int && request.resource.data.stress >= 0 && request.resource.data.stress <= 2))
         && (request.resource.data.get('heat', null) == null || (request.resource.data.heat is int && request.resource.data.heat >= 0 && request.resource.data.heat <= 3))
+        && (request.resource.data.get('fuel', null) == null
+            || (request.resource.data.fuel.keys().hasOnly(['carbs', 'pre', 'hydra', 'gi', 'energy', 'post'])
+                && (request.resource.data.fuel.get('carbs', null) == null || (request.resource.data.fuel.carbs is int && request.resource.data.fuel.carbs >= 0 && request.resource.data.fuel.carbs <= 2))
+                && (request.resource.data.fuel.get('hydra', null) == null || (request.resource.data.fuel.hydra is int && request.resource.data.fuel.hydra >= 0 && request.resource.data.fuel.hydra <= 2))
+                && (request.resource.data.fuel.get('energy', null) == null || (request.resource.data.fuel.energy is int && request.resource.data.fuel.energy >= 0 && request.resource.data.fuel.energy <= 2))
+                && (request.resource.data.fuel.get('gi', null) == null || request.resource.data.fuel.gi in ['si', 'no'])
+                && (request.resource.data.fuel.get('pre', null) == null || (request.resource.data.fuel.pre is string && request.resource.data.fuel.pre.size() <= 200))
+                && (request.resource.data.fuel.get('post', null) == null || (request.resource.data.fuel.post is string && request.resource.data.fuel.post.size() <= 200))))
+        && (request.resource.data.get('act2', null) == null
+            || (request.resource.data.act2.keys().hasOnly(['kind', 'name', 'min', 'km', 'load', 'rpe', 'heat', 'hard', 'hardInfo', 'gym', 'dur'])
+                && (request.resource.data.act2.get('rpe', null) == null || (request.resource.data.act2.rpe is int && request.resource.data.act2.rpe >= 1 && request.resource.data.act2.rpe <= 10))))
+        && zonesOk(request.resource.data.get('activity', null))
+        && zonesOk(request.resource.data.get('act2', null))
+        && (request.resource.data.get('skip', null) == null
+            || (request.resource.data.skip.keys().hasOnly(['items', 'text'])
+                && request.resource.data.skip.items is list && request.resource.data.skip.items.size() <= 5
+                && request.resource.data.skip.text is string && request.resource.data.skip.text.size() <= 300))
         && (request.resource.data.get('pain', null) == null
             || (request.resource.data.pain.keys().hasOnly(['zone', 'side', 'level'])
                 && request.resource.data.pain.zone is string && request.resource.data.pain.zone.size() <= 80
@@ -101,15 +126,34 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Consultas, ideas y comentarios: cualquier persona con sesión envía los suyos; solo el coach los lee y gestiona.
+    match /feedback/{id} {
+      allow read: if isCoach() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'team', 'kind', 'text', 'ts', 'read'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() <= 80
+        && request.resource.data.team is string && request.resource.data.team.size() <= 10
+        && request.resource.data.kind in ['consulta', 'idea', 'comentario']
+        && request.resource.data.text is string && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 1000
+        && request.resource.data.ts is number
+        && request.resource.data.read == false;
+      allow update: if isCoach() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isCoach();
+    }
+
     // Equipos (grnt, zn): solo km, metas e hitos. Nunca bienestar ni molestias.
     match /teams/{teamId}/km/{uid} {
       allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId);
-      allow write: if signedIn() && request.auth.uid == uid
+      // El atleta decide si comparte sus km (campo shareKm de su perfil; por defecto, si).
+      allow create, update: if signedIn() && request.auth.uid == uid
         && me().get('team', '') == teamId
+        && me().get('shareKm', true) == true
         && request.resource.data.keys().hasOnly(['name', 'month', 'km', 'updatedAt'])
         && request.resource.data.name is string && request.resource.data.name.size() <= 80
         && request.resource.data.month.matches('^[0-9]{4}-[0-9]{2}$')
         && request.resource.data.km is number && request.resource.data.km >= 0 && request.resource.data.km < 5000;
+      allow delete: if signedIn() && request.auth.uid == uid;
     }
     match /teams/{teamId}/meta/{doc} {
       allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId);
