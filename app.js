@@ -1154,34 +1154,41 @@ const GZI = ['Suave', 'Media', 'Dura'];
 const gzOf = (S) => (S && S.gym && S.gym.zones && typeof S.gym.zones === 'object' ? S.gym.zones : {});
 const gzList = (S) => GZ.filter((z) => gzOf(S)[z[0]]);
 const gzMol = (S) => GZ.filter((z) => { const v = gzOf(S)[z[0]]; return v && v.m; });
-function gzFigure(view, zs) {
+function gzFigure(view, zs, act) {
   const B = BODY[view], on = (id) => !!(zs && zs[id]);
   let o = '<svg viewBox="' + B.vb + '" class="gzfig" role="img" aria-label="Figura humana, vista ' + (view === 'front' ? 'frontal' : 'posterior') + '. Toca una zona para marcarla.">';
   o += B.deco.map((d) => '<path class="gzd" d="' + d + '"/>').join('');
-  Object.keys(B.zones).forEach((id) => { o += '<g class="gzz' + (on(id) ? ' on' : '') + '" data-a="gzone" data-v="' + id + '" aria-hidden="true">' + B.zones[id].map((d) => '<path d="' + d + '"/>').join('') + '</g>'; });
+  Object.keys(B.zones).forEach((id) => { o += '<g class="gzz' + (on(id) ? ' on' : '') + (act === id ? ' act' : '') + '" data-a="gfig" data-v="' + id + '" aria-hidden="true">' + B.zones[id].map((d) => '<path d="' + d + '"/>').join('') + '</g>'; });
   return o + '</svg>';
 }
 function gzBlock(d) {
-  const zs = d.gzones || {}, view = UI.gview === 'back' ? 'back' : 'front', ids = Object.keys(zs).filter((k) => GZN[k]), n = ids.length;
+  const zs = d.gzones || {}, view = UI.gview === 'back' ? 'back' : 'front', ids = GZ.filter((z) => zs[z[0]]), n = ids.length;
+  const act = zs[UI.gact] ? UI.gact : (ids[0] ? ids[0][0] : null);
   const side = (k, t) => '<button type="button" class="gzseg' + (view === k ? ' on' : '') + '" data-a="gview" data-v="' + k + '" aria-pressed="' + (view === k) + '">' + t + '</button>';
   let o = '<div class="col g10"><div style="font-weight:600">¿Qué zonas trabajaste? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></div>'
-    + '<div class="gzbar"><div class="gzsegs" role="group" aria-label="Vista del cuerpo">' + side('front', 'Frente') + side('back', 'Espalda') + '</div></div>'
-    + '<div class="gzstage"><span class="gzcnt" aria-live="polite"><b>' + n + '</b> ' + (n === 1 ? 'zona' : 'zonas') + '</span>' + gzFigure(view, zs) + '</div>'
-    + '<div class="chips" role="group" aria-label="Atajos">' + [['inf', 'Tren inferior'], ['sup', 'Tren superior'], ['all', 'Todo']].map((x) => '<button type="button" class="chip" data-a="gset" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + (n ? '<button type="button" class="chip" data-a="gset" data-v="none">Limpiar</button>' : '') + '</div>';
-  GZG.forEach((g) => { o += '<div class="gzgl">' + g[1] + '</div><div class="chips" role="group" aria-label="' + g[1] + '">' + GZ.filter((z) => z[2] === g[0]).map((z) => '<button type="button" class="chip" data-a="gzone" data-v="' + z[0] + '" aria-pressed="' + !!zs[z[0]] + '">' + z[1] + '</button>').join('') + '</div>'; });
-  o += '</div>';
-  if (n) {
-    o += '<div class="col g10"><div style="font-weight:600">Detalle por zona</div>';
-    GZ.filter((z) => zs[z[0]]).forEach((z) => {
-      const v = zs[z[0]], id = z[0];
-      o += '<div class="card col g10 gzcard"><div class="row between" style="align-items:center"><span style="font-weight:800">' + z[1] + '</span><button type="button" class="dedit" data-a="gzone" data-v="' + id + '" aria-label="Quitar ' + z[1] + '">Quitar</button></div>'
-        + '<div class="muted" style="font-size:13px">Intensidad en esta zona</div><div class="seg3" role="group" aria-label="Intensidad en ' + z[1] + '">' + GZI.map((t, i) => '<button type="button" class="chip" data-a="gint" data-v="' + i + '" data-z="' + id + '" aria-pressed="' + (v.i === i) + '">' + t + '</button>').join('') + '</div>'
-        + '<div class="row between" style="align-items:center;gap:12px"><span style="font-weight:600" id="gml-' + id + '">¿Quedó con molestia?</span><button type="button" class="gzsw' + (v.m ? ' on' : '') + '" role="switch" aria-checked="' + !!v.m + '" aria-labelledby="gml-' + id + '" data-a="gmol" data-v="' + id + '"><span></span></button></div>'
-        + (v.m ? '<label class="col g6"><span class="muted" style="font-size:13px">Cuéntale a tu coach qué sentiste</span><textarea id="gzt-' + id + '" maxlength="200" placeholder="Por ejemplo: tirón leve al bajar la sentadilla">' + esc(v.t || '') + '</textarea></label>' : '') + '</div>';
+    + '<div class="gzsegs" role="group" aria-label="Vista del cuerpo">' + side('front', 'Frente') + side('back', 'Espalda') + '</div>'
+    + '<div class="gzstage"><span class="gzcnt" aria-live="polite"><b>' + n + '</b> ' + (n === 1 ? 'zona' : 'zonas') + '</span>' + gzFigure(view, zs, act) + '</div>';
+  if (act) {
+    const v = zs[act], nm = GZN[act];
+    o += '<div class="gzpanel" role="group" aria-label="Detalle de ' + nm + '"><div class="row between" style="align-items:center"><span class="gzname">' + nm + '</span><button type="button" class="gzlink" data-a="gzone" data-v="' + act + '">Quitar</button></div>'
+      + '<div class="gzmini" role="group" aria-label="Intensidad en ' + nm + '">' + GZI.map((t, i) => '<button type="button" class="gzseg sm" data-a="gint" data-v="' + i + '" data-z="' + act + '" aria-pressed="' + (v.i === i) + '"' + (v.i === i ? ' data-on="1"' : '') + '>' + t + '</button>').join('') + '</div>'
+      + '<button type="button" class="gzr flat' + (v.m ? ' on' : '') + '" role="switch" aria-checked="' + !!v.m + '" data-a="gmol" data-v="' + act + '"><span>¿Quedó con molestia?</span><span class="gzsw' + (v.m ? ' on' : '') + '"><span></span></span></button>'
+      + (v.m ? '<label class="col g6"><span class="muted" style="font-size:13px">Cuéntale a tu coach qué sentiste <span id="gzc-' + act + '">' + String(v.t || '').length + '/200</span></span><textarea id="gzt-' + act + '" maxlength="200" placeholder="Por ejemplo: tirón leve al bajar la sentadilla">' + esc(v.t || '') + '</textarea></label>' : '') + '</div>';
+  } else {
+    o += '<p class="gzhint">Toca una zona de la figura para marcarla.</p>';
+  }
+  if (UI.gundo && !zs[UI.gundo.id]) o += '<div class="gzundo" role="status">Quitaste ' + esc(GZN[UI.gundo.id]) + '. <button type="button" class="gzlink" data-a="gundo">Deshacer</button></div>';
+  if (n) o += '<div class="gzsum" role="group" aria-label="Zonas marcadas">' + ids.map((z) => '<button type="button" class="gztag' + (act === z[0] ? ' cur' : '') + '" data-a="gact" data-v="' + z[0] + '" aria-pressed="' + (act === z[0]) + '">' + z[1] + (zs[z[0]].m ? '<i title="Con molestia" aria-label="con molestia"></i>' : '') + '</button>').join('') + '<button type="button" class="gzlink" data-a="gset" data-v="none">Limpiar</button></div>';
+  o += '<button type="button" class="gzmore" data-a="glist" aria-expanded="' + !!UI.glist + '" aria-controls="gzlist"><span>Ver lista de zonas</span><span class="gzchev' + (UI.glist ? ' up' : '') + '" aria-hidden="true"></span></button>';
+  if (UI.glist) {
+    o += '<div class="gzlist" id="gzlist">';
+    GZG.forEach((g) => {
+      o += '<div class="gzgh"><span>' + g[1] + '</span><button type="button" class="gzlink" data-a="gset" data-v="' + g[0] + '">Todo</button></div>';
+      GZ.filter((z) => z[2] === g[0]).forEach((z) => { const on = !!zs[z[0]]; o += '<button type="button" class="gzr' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" data-a="gzone" data-v="' + z[0] + '"><span>' + z[1] + '</span><span class="gzsw' + (on ? ' on' : '') + '"><span></span></span></button>'; });
     });
     o += '</div>';
   }
-  return o;
+  return o + '</div>';
 }
 function sessLine(S, a) {
   const k = kindOfAct(S, a) || 'otra', g = S.gym || {};
@@ -1575,7 +1582,7 @@ const ACT = {
       }
     }
     UI.flow = { kind: v, step: 'run', i: 0, d, slot, needMood: v === 'post' && slot === 1 && !(c && c.mood != null) };
-    UI.fuelMore = false;
+    UI.fuelMore = false; UI.gact = null; UI.glist = false; UI.gundo = null; UI.gview = 'front';
     UI.draft = { comment: (c && c.comment) || '', prevText: (c && c.prevInfo && c.prevInfo.text) || '', preText: (c && c.fuel && c.fuel.pre) || '', postText: (c && c.fuel && c.fuel.post) || '', hardText: '', skipText: (c && c.skip && c.skip.text) || '', oname };
     if (v === 'post') { const S2 = sessOf(c, slot); UI.draft.hardText = (S2 && S2.hardInfo && S2.hardInfo.text) || ''; }
     UI.feedback = null; render();
@@ -1584,8 +1591,12 @@ const ACT = {
   rpe(v) { UI.flow.d.rpe = Number(v); render(); },
   fuelMore() { UI.fuelMore = true; render(); },
   gview(v) { UI.gview = v === 'back' ? 'back' : 'front'; render(); },
-  gzone(v) { const d = UI.flow.d; if (!GZN[v]) return; d.gzones = d.gzones || {}; if (d.gzones[v]) delete d.gzones[v]; else d.gzones[v] = { i: 1, m: 0, t: '' }; render(); },
-  gset(v) { const d = UI.flow.d; d.gzones = d.gzones || {}; if (v === 'none') d.gzones = {}; else GZ.forEach((z) => { if ((v === 'all' || z[2] === v) && !d.gzones[z[0]]) d.gzones[z[0]] = { i: 1, m: 0, t: '' }; }); render(); },
+  gfig(v) { const d = UI.flow.d; if (!GZN[v]) return; d.gzones = d.gzones || {}; UI.gundo = null; if (!d.gzones[v]) { d.gzones[v] = { i: 1, m: 0, t: '' }; UI.gact = v; } else if (UI.gact === v) ACT.gzone(v); else UI.gact = v; render(); },
+  gzone(v) { const d = UI.flow.d; if (!GZN[v]) return; d.gzones = d.gzones || {}; if (d.gzones[v]) { const x = d.gzones[v]; UI.gundo = (x.m || x.i !== 1) ? { id: v, val: x } : null; delete d.gzones[v]; if (UI.gact === v) UI.gact = Object.keys(d.gzones)[0] || null; } else { UI.gundo = null; d.gzones[v] = { i: 1, m: 0, t: '' }; UI.gact = v; } render(); },
+  gundo() { const u = UI.gundo, d = UI.flow.d; if (u && GZN[u.id]) { d.gzones = d.gzones || {}; d.gzones[u.id] = u.val; UI.gact = u.id; } UI.gundo = null; render(); },
+  gact(v) { if (UI.flow.d.gzones && UI.flow.d.gzones[v]) { UI.gact = v; render(); } },
+  glist() { UI.glist = !UI.glist; render(); },
+  gset(v) { const d = UI.flow.d; d.gzones = d.gzones || {}; UI.gundo = null; if (v === 'none') { d.gzones = {}; UI.gact = null; } else { GZ.forEach((z) => { if ((v === 'all' || z[2] === v) && !d.gzones[z[0]]) d.gzones[z[0]] = { i: 1, m: 0, t: '' }; }); if (!UI.gact || !d.gzones[UI.gact]) UI.gact = Object.keys(d.gzones)[0] || null; } render(); },
   gint(v, t) { const z = UI.flow.d.gzones && UI.flow.d.gzones[t.dataset.z]; if (z) { z.i = Number(v); render(); } },
   gmol(v) { const z = UI.flow.d.gzones && UI.flow.d.gzones[v]; if (z) { z.m = z.m ? 0 : 1; if (!z.m) z.t = ''; render(); } },
   alt() { UI.flow = { kind: null, step: 'alt', i: 0, d: {} }; UI.draft = { comment: '', prevText: '' }; render(); },
@@ -1688,7 +1699,7 @@ document.addEventListener('input', (e) => {
   const id = e.target.id;
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id === 'comment') UI.draft.comment = e.target.value;
-  if (id && id.indexOf('gzt-') === 0 && UI.flow && UI.flow.d.gzones && UI.flow.d.gzones[id.slice(4)]) UI.flow.d.gzones[id.slice(4)].t = e.target.value;
+  if (id && id.indexOf('gzt-') === 0 && UI.flow && UI.flow.d.gzones && UI.flow.d.gzones[id.slice(4)]) { UI.flow.d.gzones[id.slice(4)].t = e.target.value; const cc = document.getElementById('gzc-' + id.slice(4)); if (cc) cc.textContent = e.target.value.length + '/200'; }
   if (id === 'prevText') UI.draft.prevText = e.target.value;
   if (id === 'preText' || id === 'postText' || id === 'hardText' || id === 'skipText' || id === 'oname') UI.draft[id] = e.target.value;
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Enviar'; } const cn = document.getElementById('replyCount'); if (cn) cn.textContent = e.target.value.length + ' / 600'; }
