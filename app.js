@@ -3,6 +3,7 @@
 // Los datos viven en Firestore (backend-firebase.js). Con ?demo=1 usa datos ficticios (backend-demo.js).
 
 const DEMO_Q = new URLSearchParams(location.search), DEMO = DEMO_Q.has('demo'), DEMO_ROLE = ({ atleta: 'athlete', athlete: 'athlete', coach: 'coach' })[DEMO_Q.get('demo')] || null;
+import { BODY } from './body.js';
 const be = DEMO ? (await import('./backend-demo.js')).default : (await import('./backend-firebase.js')).default;
 
 /* ---------- Constantes ---------- */
@@ -175,6 +176,7 @@ function badges(a) {
 }
 const series = (a) => { const o = []; for (let k = -6; k <= 0; k++) { const c = on(a, off(k)); o.push(c ? c.mood : null); } return o; };
 const lastNote = (a) => (a.notes.length ? a.notes[a.notes.length - 1] : null);
+const gymMolOf = (c) => (c ? gzMol(c.activity).concat(gzMol(c.act2)) : []);
 function statusOf(a) {
   const l = latest(a), reasons = [];
   if (!l) return { k: 'none', reasons: ['Aún sin check-ins'] };
@@ -184,6 +186,7 @@ function statusOf(a) {
   if (l.mood != null && l.mood <= 2) { warn = true; reasons.push('Ánimo bajo en el último check-in'); }
   if (l.pain && l.pain.level !== 'Leve') { warn = true; reasons.push('Molestia ' + String(l.pain.level || '').toLowerCase() + ': ' + String(l.pain.zone || '').toLowerCase()); }
   else if (l.pain) reasons.push('Molestia leve: ' + String(l.pain.zone || '').toLowerCase());
+  const gm = gymMolOf(l); if (gm.length) { warn = true; reasons.push('Molestia tras el gym: ' + gm.map((z) => z[1].toLowerCase()).join(', ')); }
   if (s.length >= 4 && s[s.length - 1] < s[s.length - 4] - 1) { warn = true; reasons.push('Bienestar a la baja en los últimos días'); }
   if (a.tsb && a.tsb.length) { const ts = a.tsb[a.tsb.length - 1]; if (ts <= -25) { warn = true; reasons.push('Forma (TSB) muy negativa: ' + ts); } }
   return { k: warn ? 'warn' : 'ok', reasons };
@@ -510,6 +513,8 @@ function viewCabina() {
   out += '<button type="button" class="btn" data-a="verComo" data-v="' + esc(a.id) + '" style="width:100%;min-height:52px;justify-content:space-between;border:1.5px solid var(--accent2);color:var(--accent2);background:transparent"><span style="font-weight:600">Ver la app como ' + esc(a.first) + '</span><span aria-hidden="true">' + arrow() + '</span></button>';
   out += st.reasons.length ? '<ul style="margin:0;padding-left:18px" class="soft">' + st.reasons.map((r) => '<li>' + esc(r) + '</li>').join('') + '</ul>' : '<p class="soft">Todo en orden. Su bienestar acompaña bien a la carga.</p>';
   if (l && l.pain) out += '<div class="row g8 wrap"><span class="muted" style="font-size:13px">Molestia reportada:</span><span class="tag out">Zona: ' + esc(String(l.pain.zone || '').toLowerCase()) + ' (' + esc(String(l.pain.side || '').toLowerCase()) + ')</span><span class="tag out">Intensidad: ' + esc(String(l.pain.level || '').toLowerCase()) + '</span></div>';
+  if (l && gymMolOf(l).length) out += '<div class="col g6"><span class="muted" style="font-size:13px">Molestias tras el gym:</span>' + [l.activity, l.act2].filter(Boolean).map((S) => gzMol(S).map((z) => '<span class="tag out">' + esc(z[1]) + (gzOf(S)[z[0]].t ? ': ' + esc(gzOf(S)[z[0]].t) : '') + '</span>').join('')).join('') + '</div>';
+  if (l && (gzList(l.activity).length || gzList(l.act2).length)) out += '<div class="row g8 wrap"><span class="muted" style="font-size:13px">Zonas de gym:</span>' + [l.activity, l.act2].filter(Boolean).map((S) => gzList(S).map((z) => '<span class="tag out">' + esc(z[1]) + ' · ' + GZI[gzOf(S)[z[0]].i == null ? 1 : gzOf(S)[z[0]].i].toLowerCase() + '</span>').join('')).join('') + '</div>';
   if (l) {
     const bits = l.mood != null ? ['Ánimo: ' + at(MOODS, l.mood - 1)] : [];
     if (l.sleepH != null) bits.push('Sueño: ' + at(SLEEPH, l.sleepH) + (l.sleepQ ? ' (' + at(SLEEPQ, l.sleepQ - 1).toLowerCase() + ')' : ''));
@@ -1100,6 +1105,7 @@ function viewAjustes() {
     out += '<section class="card col g14" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
   }
   if (isCoach() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
+  out += '<section class="card col g8" aria-label="Créditos"><div class="eyebrow">Créditos</div><p class="soft" style="font-size:14px">Iconos: Phosphor Icons (licencia MIT). Figura del cuerpo: body-muscles de Ivan Vulović (licencia Apache-2.0), adaptada por Camino. Los textos de licencia están junto a la app, en los archivos LICENSE-phosphor-icons.txt, LICENSE-body-muscles.txt y NOTICE-body-muscles.txt.</p></section>';
   if (!isCoach() || !DEMO) { const tc = ST.user ? on(meA(), off(0)) : null; if (tc) out += '<section class="card col g10" aria-label="Mis datos"><div class="eyebrow">Mis datos</div>' + (UI.confirmDel ? '<p class="soft" style="font-size:14px">¿Borrar el registro de hoy? Se elimina de tu historial y tu coach dejará de verlo.</p><div class="row g8 wrap"><button type="button" class="chip" data-a="delCk" style="border-color:var(--bad);color:var(--bad)">Sí, borrar</button><button type="button" class="chip" data-a="delNo">Cancelar</button></div>' : '<button type="button" class="btn ghost" data-a="delAsk" style="border:1.5px solid var(--line);color:var(--bad)"><span>Borrar el registro de hoy</span></button>') + '</section>'; }
   out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
   out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
@@ -1134,11 +1140,54 @@ function rpeBar(v) {
   }
   return o + '</div><div class="rpeword" aria-live="polite">' + (v ? '<b>' + v + '</b> · ' + RPEW[v] : 'Toca una barra para llenar la escala') + '</div>';
 }
+/* ---------- Zonas del cuerpo (gym) ----------
+   Se guardan con ids propios (versionados) y ZSTRAVA los relaciona con los 15 músculos del mapa de Strava. */
+const GZ = [
+  ['quads', 'Cuádriceps', 'inf'], ['hamstrings', 'Isquiotibiales', 'inf'], ['glutes', 'Glúteos', 'inf'], ['hip', 'Cadera y aductores', 'inf'], ['calves', 'Pantorrillas', 'inf'],
+  ['core', 'Abdomen y core', 'tro'], ['lower_back', 'Lumbar', 'tro'], ['upper_back', 'Espalda alta', 'tro'], ['lats', 'Dorsales', 'tro'],
+  ['chest', 'Pecho', 'sup'], ['shoulders', 'Hombros', 'sup'], ['arms', 'Bíceps y antebrazo', 'sup'], ['triceps', 'Tríceps', 'sup']
+];
+const GZN = {}; GZ.forEach((z) => { GZN[z[0]] = z[1]; });
+const GZG = [['inf', 'Tren inferior'], ['tro', 'Tronco'], ['sup', 'Tren superior']];
+const ZSTRAVA = { quads: ['quads'], hamstrings: ['hamstrings'], glutes: ['glutes', 'abductors'], hip: ['adductors'], calves: ['calves'], core: ['abs'], lower_back: ['lower_back'], upper_back: ['upper_back'], lats: ['lats'], chest: ['chest'], shoulders: ['shoulders'], arms: ['biceps', 'forearms'], triceps: ['triceps'] };
+const GZI = ['Suave', 'Media', 'Dura'];
+const gzOf = (S) => (S && S.gym && S.gym.zones && typeof S.gym.zones === 'object' ? S.gym.zones : {});
+const gzList = (S) => GZ.filter((z) => gzOf(S)[z[0]]);
+const gzMol = (S) => GZ.filter((z) => { const v = gzOf(S)[z[0]]; return v && v.m; });
+function gzFigure(view, zs) {
+  const B = BODY[view], on = (id) => !!(zs && zs[id]);
+  let o = '<svg viewBox="' + B.vb + '" class="gzfig" role="img" aria-label="Figura humana, vista ' + (view === 'front' ? 'frontal' : 'posterior') + '. Toca una zona para marcarla.">';
+  o += B.deco.map((d) => '<path class="gzd" d="' + d + '"/>').join('');
+  Object.keys(B.zones).forEach((id) => { o += '<g class="gzz' + (on(id) ? ' on' : '') + '" data-a="gzone" data-v="' + id + '" aria-hidden="true">' + B.zones[id].map((d) => '<path d="' + d + '"/>').join('') + '</g>'; });
+  return o + '</svg>';
+}
+function gzBlock(d) {
+  const zs = d.gzones || {}, view = UI.gview === 'back' ? 'back' : 'front', ids = Object.keys(zs).filter((k) => GZN[k]), n = ids.length;
+  const side = (k, t) => '<button type="button" class="gzseg' + (view === k ? ' on' : '') + '" data-a="gview" data-v="' + k + '" aria-pressed="' + (view === k) + '">' + t + '</button>';
+  let o = '<div class="col g10"><div style="font-weight:600">¿Qué zonas trabajaste? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></div>'
+    + '<div class="gzbar"><div class="gzsegs" role="group" aria-label="Vista del cuerpo">' + side('front', 'Frente') + side('back', 'Espalda') + '</div></div>'
+    + '<div class="gzstage"><span class="gzcnt" aria-live="polite"><b>' + n + '</b> ' + (n === 1 ? 'zona' : 'zonas') + '</span>' + gzFigure(view, zs) + '</div>'
+    + '<div class="chips" role="group" aria-label="Atajos">' + [['inf', 'Tren inferior'], ['sup', 'Tren superior'], ['all', 'Todo']].map((x) => '<button type="button" class="chip" data-a="gset" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + (n ? '<button type="button" class="chip" data-a="gset" data-v="none">Limpiar</button>' : '') + '</div>';
+  GZG.forEach((g) => { o += '<div class="gzgl">' + g[1] + '</div><div class="chips" role="group" aria-label="' + g[1] + '">' + GZ.filter((z) => z[2] === g[0]).map((z) => '<button type="button" class="chip" data-a="gzone" data-v="' + z[0] + '" aria-pressed="' + !!zs[z[0]] + '">' + z[1] + '</button>').join('') + '</div>'; });
+  o += '</div>';
+  if (n) {
+    o += '<div class="col g10"><div style="font-weight:600">Detalle por zona</div>';
+    GZ.filter((z) => zs[z[0]]).forEach((z) => {
+      const v = zs[z[0]], id = z[0];
+      o += '<div class="card col g10 gzcard"><div class="row between" style="align-items:center"><span style="font-weight:800">' + z[1] + '</span><button type="button" class="dedit" data-a="gzone" data-v="' + id + '" aria-label="Quitar ' + z[1] + '">Quitar</button></div>'
+        + '<div class="muted" style="font-size:13px">Intensidad en esta zona</div><div class="seg3" role="group" aria-label="Intensidad en ' + z[1] + '">' + GZI.map((t, i) => '<button type="button" class="chip" data-a="gint" data-v="' + i + '" data-z="' + id + '" aria-pressed="' + (v.i === i) + '">' + t + '</button>').join('') + '</div>'
+        + '<div class="row between" style="align-items:center;gap:12px"><span style="font-weight:600" id="gml-' + id + '">¿Quedó con molestia?</span><button type="button" class="gzsw' + (v.m ? ' on' : '') + '" role="switch" aria-checked="' + !!v.m + '" aria-labelledby="gml-' + id + '" data-a="gmol" data-v="' + id + '"><span></span></button></div>'
+        + (v.m ? '<label class="col g6"><span class="muted" style="font-size:13px">Cuéntale a tu coach qué sentiste</span><textarea id="gzt-' + id + '" maxlength="200" placeholder="Por ejemplo: tirón leve al bajar la sentadilla">' + esc(v.t || '') + '</textarea></label>' : '') + '</div>';
+    });
+    o += '</div>';
+  }
+  return o;
+}
 function sessLine(S, a) {
   const k = kindOfAct(S, a) || 'otra', g = S.gym || {};
   let title = k === 'gym' ? 'Gym' + (g.focus ? ' · ' + String(g.focus).toLowerCase() : '') : (BKINDS[k] ? KIND_LABEL[k] : esc(S.name || 'Actividad'));
   if (S.min) title += ' · ' + minText(S.min);
-  const sub = [S.rpe ? 'Esfuerzo ' + S.rpe : '', k === 'gym' && g.legs != null ? 'piernas ' + String(at(GLEGS, g.legs)).toLowerCase() : '', BKINDS[k] && S.heat != null ? String(at(HEAT, S.heat)).toLowerCase() : ''].filter(Boolean).join(' · ');
+  const sub = [S.rpe ? 'Esfuerzo ' + S.rpe : '', k === 'gym' && g.legs != null ? 'piernas ' + String(at(GLEGS, g.legs)).toLowerCase() : '', (k === 'gym' && gzList(S).length ? 'zonas: ' + gzList(S).slice(0, 3).map((z) => z[1].toLowerCase()).join(', ') + (gzList(S).length > 3 ? ' +' + (gzList(S).length - 3) : '') : ''), (k === 'gym' && gzMol(S).length ? 'molestia en ' + gzMol(S).map((z) => z[1].toLowerCase()).join(', ') : ''), BKINDS[k] && S.heat != null ? String(at(HEAT, S.heat)).toLowerCase() : ''].filter(Boolean).join(' · ');
   return { k, title, sub };
 }
 const stepList = (f) => (f.kind === 'post' ? (f.needMood ? ['mood'] : []).concat(['sesion', 'how', 'fuel', 'molestia']) : (f.kind === 'skip' ? ['mood', 'skip', 'molestia'] : ['mood', 'infl', 'molestia']));
@@ -1188,7 +1237,7 @@ function flowHtml() {
           + (d.hard === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle del tramo duro"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos un poco más de ese tramo. Ayuda a tu coach a ajustar las próximas sesiones.</span></div><div class="col g10"><div style="font-weight:600">¿Qué lo hizo duro?</div>' + chips('hardType', HARDT, d.hardType, 'Tipo de tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('hardDur', HARDD, d.hardDur, 'Duración del tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cómo lo terminaste?</div>' + chips('hardEnd', HARDE, d.hardEnd, 'Cómo terminaste', (i, l) => l) + '</div><div class="col g8"><label for="hardText" style="font-weight:600">¿Qué tramo fue? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></label><input class="field" id="hardText" type="text" maxlength="200" placeholder="Por ejemplo: los últimos 10 min del repecho" value="' + esc(UI.draft.hardText || '') + '"></div></div>' : '') + cont;
       } else if (d.tipo === 'gym') {
         out += '<div class="col g8"><h2 class="title">Tu sesión de gym</h2></div>'
-          + '<div class="col g10"><div style="font-weight:600">¿Qué trabajaste?</div>' + chips('gfocus', GFOCUS, d.gfocus, 'Foco', (i, l) => l) + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Qué trabajaste?</div>' + chips('gfocus', GFOCUS, d.gfocus, 'Foco', (i, l) => l) + '</div>' + gzBlock(d)
           + '<div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('gdur', GDUR, d.gdur, 'Duración') + '</div>'
           + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 muy suave, 10 máximo)</span></div>' + rpeBar(d.rpe) + '</div>'
           + '<div class="col g10"><div style="font-weight:600">¿Cómo quedaron las piernas?</div>' + chips('glegs', GLEGS, d.glegs, 'Piernas') + '</div>' + cont;
@@ -1398,7 +1447,7 @@ async function finishFlow(more) {
     const planOk = f.slot !== 2 && p && ((tipo === 'gym' && pk === 'gym') || (bike && pk && pk !== 'gym'));
     let name, min = null, km = 0, load = null, gym = null;
     if (bike) { if (planOk || (d.activity && d.activity.name && d.activity.kind === undefined && f.slot === 1 && ex.activity && kindOfAct(ex.activity, a) === kind)) { const A = d.activity || { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load }; name = A.name; min = A.min || null; km = A.km || 0; load = A.load == null ? null : A.load; } else { name = 'Salida en ' + KIND_LABEL[kind]; } }
-    else if (tipo === 'gym') { name = 'Gym' + (d.gfocus ? ' · ' + d.gfocus : ''); min = d.gdur != null ? DURMIN[d.gdur] : (planOk && p.min ? p.min : null); load = planOk && p.load != null ? p.load : null; gym = { focus: d.gfocus || null, dur: d.gdur != null ? d.gdur : null, legs: d.glegs != null ? d.glegs : null }; }
+    else if (tipo === 'gym') { name = 'Gym' + (d.gfocus ? ' · ' + d.gfocus : ''); min = d.gdur != null ? DURMIN[d.gdur] : (planOk && p.min ? p.min : null); load = planOk && p.load != null ? p.load : null; gym = { focus: d.gfocus || null, dur: d.gdur != null ? d.gdur : null, legs: d.glegs != null ? d.glegs : null }; const zo = {}; Object.keys(d.gzones || {}).forEach((k) => { const v = d.gzones[k]; if (GZN[k] && v) { zo[k] = { i: v.i == null ? 1 : v.i, m: v.m ? 1 : 0 }; if (v.m && tx(v.t)) zo[k].t = tx(v.t).slice(0, 200); } }); if (Object.keys(zo).length) gym.zones = zo; }
     else { name = tx(dr.oname) || 'Otra actividad'; min = d.odur != null ? DURMIN[d.odur] : null; }
     const S = { kind, name, min, km, load, rpe: d.rpe || null, heat: bike && d.heat != null ? d.heat : null, hard: bike ? (d.hard || null) : null, hardInfo: bike && d.hard === 'si' ? { type: d.hardType || null, dur: d.hardDur || null, end: d.hardEnd || null, text: tx(dr.hardText) || null } : null };
     if (gym) S.gym = gym; if (tipo === 'otra') S.dur = d.odur != null ? d.odur : null;
@@ -1517,7 +1566,7 @@ const ACT = {
         d.rpe = S.rpe || undefined; d.heat = S.heat == null ? undefined : S.heat; d.hard = S.hard || undefined;
         if (S.hardInfo) { d.hardType = S.hardInfo.type || undefined; d.hardDur = S.hardInfo.dur || undefined; d.hardEnd = S.hardInfo.end || undefined; }
         d.activity = { name: S.name, min: S.min || null, km: S.km || 0, load: S.load == null ? null : S.load };
-        if (k === 'gym') { d.tipo = 'gym'; const g = S.gym || {}; d.gfocus = g.focus || undefined; d.gdur = g.dur == null ? undefined : g.dur; d.glegs = g.legs == null ? undefined : g.legs; }
+        if (k === 'gym') { d.tipo = 'gym'; const g = S.gym || {}; d.gfocus = g.focus || undefined; d.gdur = g.dur == null ? undefined : g.dur; d.glegs = g.legs == null ? undefined : g.legs; if (g.zones) { d.gzones = {}; Object.keys(g.zones).forEach((k) => { if (GZN[k]) d.gzones[k] = { i: g.zones[k].i == null ? 1 : g.zones[k].i, m: g.zones[k].m ? 1 : 0, t: g.zones[k].t || '' }; }); } }
         else if (BKINDS[k]) { d.tipo = 'bici'; d.bkind = k; }
         else { d.tipo = 'otra'; oname = S.name || ''; d.odur = S.dur == null ? undefined : S.dur; }
       } else if (slot === 1 && pk) {
@@ -1534,6 +1583,11 @@ const ACT = {
   pick(v, t) { UI.flow.d[t.dataset.g] = v; if (t.dataset.g === 'tipo' && v === 'bici' && !UI.flow.d.bkind) UI.flow.d.bkind = undefined; render(); },
   rpe(v) { UI.flow.d.rpe = Number(v); render(); },
   fuelMore() { UI.fuelMore = true; render(); },
+  gview(v) { UI.gview = v === 'back' ? 'back' : 'front'; render(); },
+  gzone(v) { const d = UI.flow.d; if (!GZN[v]) return; d.gzones = d.gzones || {}; if (d.gzones[v]) delete d.gzones[v]; else d.gzones[v] = { i: 1, m: 0, t: '' }; render(); },
+  gset(v) { const d = UI.flow.d; d.gzones = d.gzones || {}; if (v === 'none') d.gzones = {}; else GZ.forEach((z) => { if ((v === 'all' || z[2] === v) && !d.gzones[z[0]]) d.gzones[z[0]] = { i: 1, m: 0, t: '' }; }); render(); },
+  gint(v, t) { const z = UI.flow.d.gzones && UI.flow.d.gzones[t.dataset.z]; if (z) { z.i = Number(v); render(); } },
+  gmol(v) { const z = UI.flow.d.gzones && UI.flow.d.gzones[v]; if (z) { z.m = z.m ? 0 : 1; if (!z.m) z.t = ''; render(); } },
   alt() { UI.flow = { kind: null, step: 'alt', i: 0, d: {} }; UI.draft = { comment: '', prevText: '' }; render(); },
   sendMore() { if (!UI.busy) finishFlow(true); },
   mood(v) { UI.flow.d.mood = Number(v); UI.flow.i++; render(); },
@@ -1634,6 +1688,7 @@ document.addEventListener('input', (e) => {
   const id = e.target.id;
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id === 'comment') UI.draft.comment = e.target.value;
+  if (id && id.indexOf('gzt-') === 0 && UI.flow && UI.flow.d.gzones && UI.flow.d.gzones[id.slice(4)]) UI.flow.d.gzones[id.slice(4)].t = e.target.value;
   if (id === 'prevText') UI.draft.prevText = e.target.value;
   if (id === 'preText' || id === 'postText' || id === 'hardText' || id === 'skipText' || id === 'oname') UI.draft[id] = e.target.value;
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Enviar'; } const cn = document.getElementById('replyCount'); if (cn) cn.textContent = e.target.value.length + ' / 600'; }

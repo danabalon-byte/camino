@@ -349,3 +349,25 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .plegend{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted)}
 .flowsel .seg3 .chip{min-height:52px;border-radius:14px;flex-direction:row;gap:7px;font-size:16px}
 @media (prefers-reduced-motion:reduce){.flowsel .chip,.flowsel .opt,.flowsel .bigopt{transition:none}}
+
+/* Figura de zonas (gym) */
+.gzbar{display:flex}
+.gzsegs{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.gzseg{min-height:46px;border-radius:14px;border:1.5px solid var(--line);background:transparent;color:var(--text);font-size:15px;font-weight:700}
+.gzseg.on{background:var(--press);color:var(--good);border-color:transparent;transform:translateY(2px);box-shadow:inset 0 5px 11px var(--presssh),inset 0 -1px 0 var(--pressh)}
+.gzstage{position:relative;display:flex;justify-content:center;padding:10px 0 6px;border:1.5px solid var(--line);border-radius:20px;background:var(--surface)}
+.gzfig{width:min(190px,56vw);height:auto;display:block;-webkit-tap-highlight-color:transparent}
+.gzd{fill:var(--line);stroke:var(--surface);stroke-width:.15;opacity:.7}
+.gzz{cursor:pointer}
+.gzz path{fill:color-mix(in srgb,var(--muted) 38%,var(--surface));stroke:var(--surface);stroke-width:.2;transition:fill .15s}
+.gzz.on path{fill:var(--good);filter:drop-shadow(0 0 .7px var(--good))}
+.gzcnt{position:absolute;top:10px;left:14px;font-size:12px;font-weight:700;color:var(--muted)}
+.gzcnt b{color:var(--good)}
+.gzgl{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.gzcard{background:var(--surface);border:1.5px solid var(--line)}
+.gzsw{width:50px;height:30px;border-radius:999px;background:var(--surface2);border:1.5px solid var(--line);position:relative;flex:none;padding:0}
+.gzsw span{position:absolute;top:2px;left:2px;width:23px;height:23px;border-radius:50%;background:var(--muted);transition:left .15s}
+.gzsw.on{background:var(--press);box-shadow:inset 0 3px 6px var(--presssh)}
+.gzsw.on span{left:22px;background:var(--good);box-shadow:0 0 7px var(--good)}
+.gzcard textarea{min-height:64px}
+@media (prefers-reduced-motion:reduce){.gzz path,.gzsw span{transition:none}}
