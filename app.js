@@ -261,7 +261,7 @@ function spark(a) {
 function miniSpark(a) {
   const s = series(a), pts = [];
   s.forEach((v, i) => { if (v != null) pts.push((4 + i * 13.3).toFixed(1) + ',' + (28 - (v - 1) / 4 * 24).toFixed(1)); });
-  return '<svg width="84" height="32" viewBox="0 0 84 32" aria-hidden="true">' + (pts.length > 1 ? '<polyline class="ln-a" points="' + pts.join(' ') + '" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>' : '') + '</svg>';
+  return '<svg width="84" height="32" viewBox="0 0 84 32" aria-hidden="true">' + (pts.length > 2 ? '<polyline class="ln-a" points="' + pts.join(' ') + '" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>' : '') + '</svg>';
 }
 function dualChart(a) {
   const s = series(a), w = [];
