@@ -1719,7 +1719,7 @@ document.addEventListener('focusout', () => { setTimeout(() => { const t = docum
 applyTone();
 applyPrefs();
 try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { render(); }); } catch (e) { /* navegador sin matchMedia */ }
-be.setErrorHandler((where, err) => say(friendly(err)));
+be.setErrorHandler((where, err) => say(friendly(err) + (err && err.code ? ' [' + where + ': ' + String(err.code).replace('firestore/', '') + ']' : '')));
 render();
 be.onAuth((user) => startSession(user));
 if ('serviceWorker' in navigator && !DEMO && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
