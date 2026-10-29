@@ -3,7 +3,7 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { initializeFirestore, terminate, clearIndexedDbPersistence, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { initializeFirestore, terminate, clearIndexedDbPersistence, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -53,7 +53,8 @@ const be = {
   async ensureProfile(user) {
     const ref = doc(db, 'users', user.uid);
     let snap;
-    try { snap = await getDoc(ref); } catch (e) { e.step = 'leer-perfil'; throw e; }
+    // Solo se crea el perfil si el SERVIDOR confirma que no existe (la caché local vacía no cuenta).
+    try { snap = await getDocFromServer(ref); } catch (e) { return; }
     if (!snap.exists()) {
       try { await setDoc(ref, { name: String(user.name).slice(0, 80), email: user.email, role: 'athlete', pending: true, reminder: '19:30', createdAt: Date.now() }); } catch (e) { e.step = 'crear-perfil'; throw e; }
     }
