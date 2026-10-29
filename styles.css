@@ -389,3 +389,24 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .gzgh{display:flex;justify-content:space-between;align-items:center;padding:4px 12px 0 16px;font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .gzgh+.gzr{border-top:0}
 @media (prefers-reduced-motion:reduce){.gzz path,.gzsw span,.gzchev{transition:none}}
+
+/* Opciones de texto plano */
+.po{display:grid;gap:4px}
+.po2{grid-template-columns:1fr 1fr}
+.po4{grid-template-columns:repeat(4,1fr)}
+.pob{min-height:46px;padding:0 6px;border:0;border-radius:14px;background:transparent;color:var(--text);font-size:16px;font-weight:500;display:flex;align-items:center;justify-content:center;text-align:center;transition:box-shadow .15s,background .15s,transform .15s}
+.pob[aria-pressed="true"]{background:var(--press);color:var(--good);font-weight:700;transform:translateY(2px);box-shadow:inset 0 5px 11px var(--presssh),inset 0 -1px 0 var(--pressh)}
+@media (prefers-reduced-motion:reduce){.pob{transition:none}}
+
+/* Extensión del texto plano */
+.po3{grid-template-columns:repeat(3,1fr)}
+.po.neu .pob[aria-pressed="true"]{color:var(--text)}
+.pob .pdot{margin-left:7px}
+/* Selección neutra para respuestas con valencia (ánimo, etc.) */
+.flowsel .opt:not(.ico)[aria-pressed="true"]{color:var(--text)}
+.flowsel .opt[aria-pressed="true"] .meter{background:rgba(127,127,127,.3)}
+.flowsel .opt[aria-pressed="true"] .meter i{background:var(--text)}
+/* Punto "sugerido por tu plan": un hoyo con la luz naranja dentro */
+.pdot{position:relative;width:12px;height:12px;border-radius:50%;background:var(--press);box-shadow:inset 0 2px 3px var(--presssh),inset 0 -1px 0 var(--pressh);flex:none}
+.pdot::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--accent);box-shadow:0 0 5px var(--accent)}
+.pdot[hidden]{display:none}

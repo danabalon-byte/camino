@@ -277,15 +277,18 @@ const arrow = () => ph('arrow-right', 22);
 const check = (color, size) => ph('check', size, color);
 
 /* ---------- Piezas de interfaz ---------- */
-function chips(g, arr, sel, label, valFn) {
-  return '<div class="chips" role="group" aria-label="' + esc(label) + '">' + arr.map((l, i) => {
+/* Opciones de texto plano: sin marcos; la profundidad aparece solo en la elegida.
+   El verde solo se usa en categorías neutras; en respuestas con valencia (sueño, piernas, estrés, molestia...) la elegida se hunde sin color. */
+const GREENG = ['sleepH', 'heat', 'hardType', 'hardDur', 'side', 'gdur', 'odur', 'gfocus', 'carbs', 'bkind'];
+const autoCols = (arr) => { const n = arr.length, long = arr.some((l) => String(l).length > 9); return n <= 3 ? n : (n === 4 ? (long ? 2 : 4) : 3); };
+function plainOpts(g, arr, sel, label, cols, valFn, neu, act, isOn) {
+  return '<div class="po po' + cols + (neu ? ' neu' : '') + '" role="group" aria-label="' + esc(label) + '">' + arr.map((l, i) => {
     const v = valFn ? valFn(i, l) : i;
-    return '<button type="button" class="chip" data-a="set" data-g="' + g + '" data-v="' + esc(v) + '" aria-pressed="' + (sel === v) + '">' + esc(l) + '</button>';
+    return '<button type="button" class="pob" data-a="' + (act || 'set') + '" data-g="' + g + '" data-v="' + esc(v) + '" aria-pressed="' + (isOn ? isOn(l, v) : sel === v) + '">' + esc(l) + '</button>';
   }).join('') + '</div>';
 }
-function multiChips(g, arr, sel, label) {
-  return '<div class="chips" role="group" aria-label="' + esc(label) + '">' + arr.map((x) => '<button type="button" class="chip" data-a="multi" data-g="' + g + '" data-v="' + esc(x) + '" aria-pressed="' + ((sel || []).indexOf(x) >= 0) + '">' + esc(x) + '</button>').join('') + '</div>';
-}
+const chips = (g, arr, sel, label, valFn) => plainOpts(g, arr, sel, label, autoCols(arr), valFn, GREENG.indexOf(g) < 0);
+const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCols(arr), (i, l) => l, true, 'multi', (l, v) => (sel || []).indexOf(l) >= 0);
 const NAVIC = { hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
 const TABLBL = { guia: 'Guía' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
@@ -1228,7 +1231,7 @@ function flowHtml() {
       const pdot = (on) => '<span class="pdot"' + (on ? '' : ' hidden') + ' role="img" aria-label="Sugerido por tu plan"></span>';
       const tile = (k, t) => '<button type="button" class="bigopt" data-a="pick" data-g="tipo" data-v="' + k + '" aria-pressed="' + (d.tipo === k) + '">' + kIcon(k, 24) + '<span>' + t + '</span>' + pdot(tp(k)) + '</button>';
       out += '<div class="col g8"><h2 class="title">' + (f.slot === 2 ? 'Tu segunda sesión' : '¿Qué hiciste?') + '</h2><p class="muted">Elige el tipo de sesión.</p></div><div class="row g10" style="align-items:stretch">' + tile('bici', 'Bici') + tile('gym', 'Gym') + '</div>'
-        + (d.tipo === 'bici' ? '<div class="col g10"><div style="font-weight:600">¿Qué tipo de bici?</div><div class="seg3" role="group" aria-label="Tipo de bici">' + Object.keys(BKINDS).map((k) => '<button type="button" class="chip" data-a="pick" data-g="bkind" data-v="' + k + '" aria-pressed="' + (d.bkind === k) + '" style="min-height:60px;border-radius:18px;font-weight:700">' + BKINDS[k] + (pk === k ? '<span class="ptag" style="position:static;margin-left:6px">Del plan</span>' : '') + '</button>').join('') + '</div></div>' : '')
+        + (d.tipo === 'bici' ? '<div class="col g10"><div style="font-weight:600">¿Qué tipo de bici?</div><div class="po po3" role="group" aria-label="Tipo de bici">' + Object.keys(BKINDS).map((k) => '<button type="button" class="pob" data-a="pick" data-g="bkind" data-v="' + k + '" aria-pressed="' + (d.bkind === k) + '">' + BKINDS[k] + pdot(pk === k) + '</button>').join('') + '</div></div>' : '')
         + '<button type="button" data-a="pick" data-g="tipo" data-v="otra" aria-pressed="' + (d.tipo === 'otra') + '" class="opt ico">' + kIcon('otra', 24) + '<span>Otra</span><span class="sub" style="margin-left:auto">Trote, natación…</span></button>'
         + (pk ? '<div class="plegend"><span class="pdot" aria-hidden="true"></span>Sugerido por tu plan</div>' : '')
         + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center"' + (ok ? '' : ' disabled') + '>Continuar</button></div>';
@@ -1244,14 +1247,14 @@ function flowHtml() {
           + (d.hard === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle del tramo duro"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos un poco más de ese tramo. Ayuda a tu coach a ajustar las próximas sesiones.</span></div><div class="col g10"><div style="font-weight:600">¿Qué lo hizo duro?</div>' + chips('hardType', HARDT, d.hardType, 'Tipo de tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('hardDur', HARDD, d.hardDur, 'Duración del tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cómo lo terminaste?</div>' + chips('hardEnd', HARDE, d.hardEnd, 'Cómo terminaste', (i, l) => l) + '</div><div class="col g8"><label for="hardText" style="font-weight:600">¿Qué tramo fue? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></label><input class="field" id="hardText" type="text" maxlength="200" placeholder="Por ejemplo: los últimos 10 min del repecho" value="' + esc(UI.draft.hardText || '') + '"></div></div>' : '') + cont;
       } else if (d.tipo === 'gym') {
         out += '<div class="col g8"><h2 class="title">Tu sesión de gym</h2></div>'
-          + '<div class="col g10"><div style="font-weight:600">¿Qué trabajaste?</div>' + chips('gfocus', GFOCUS, d.gfocus, 'Foco', (i, l) => l) + '</div>' + gzBlock(d)
-          + '<div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('gdur', GDUR, d.gdur, 'Duración') + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Qué trabajaste?</div>' + plainOpts('gfocus', GFOCUS, d.gfocus, 'Foco', 2, (i, l) => l) + '</div>' + gzBlock(d)
+          + '<div class="col g10"><div style="font-weight:600">¿Cuántos minutos trabajaste?</div>' + plainOpts('gdur', GDURS, d.gdur, 'Minutos', 4) + '</div>'
           + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 muy suave, 10 máximo)</span></div>' + rpeBar(d.rpe) + '</div>'
           + '<div class="col g10"><div style="font-weight:600">¿Cómo quedaron las piernas?</div>' + chips('glegs', GLEGS, d.glegs, 'Piernas') + '</div>' + cont;
       } else {
         out += '<div class="col g8"><h2 class="title">Tu sesión</h2></div>'
           + '<div class="col g8"><label for="oname" style="font-weight:600">¿Qué hiciste?</label><input class="field" id="oname" type="text" maxlength="80" placeholder="Por ejemplo: trote suave" value="' + esc(UI.draft.oname || '') + '"></div>'
-          + '<div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('odur', GDUR, d.odur, 'Duración') + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Cuántos minutos duró?</div>' + plainOpts('odur', GDURS, d.odur, 'Minutos', 4) + '</div>'
           + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue?</div>' + rpeBar(d.rpe) + '</div>' + cont;
       }
     }
