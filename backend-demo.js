@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v2';
+const KEY = 'camino-demo-v3';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -27,11 +27,11 @@ const wkOf = (n) => new Date(off(n) + 'T12:00:00').getDay();
 // factor de carga por semana (n = semanas atras): rampa, semana de descarga cada 4 y bloque fuerte reciente
 const wkFactor = (w, lvl) => (w <= 0 ? 1 : 1) && lvl * (w >= 12 ? 0.62 : w >= 9 ? 0.78 : w >= 8 ? 0.55 : w >= 5 ? 0.92 : w >= 4 ? 0.6 : w >= 2 ? 1.08 : w >= 1 ? 1.15 : 1.0);
 function loadAt(n, lvl) { const w = Math.floor(-n / 7), base = WK[wkOf(n)] || 0; if (!base || (Math.abs(n) * 5 + w * 3) % 9 === 0) return 0; const noise = 1 + 0.12 * Math.sin(n * 1.7) + 0.05 * Math.cos(n * 0.9); return Math.round(base * wkFactor(w, lvl) * noise); }
-function mkHistory(lvl, nDays, ctl0, atl0) {
+function mkHistory(lvl, nDays, ctl0, atl0, noL) {
   const days = [], acts = []; let ctl = ctl0, atl = atl0;
   for (let n = -(nDays - 1); n <= 0; n++) {
     const L = loadAt(n, lvl); ctl += (L - ctl) / 42; atl += (L - atl) / 7;
-    days.push({ d: off(n), ctl: Math.round(ctl * 10) / 10, atl: Math.round(atl * 10) / 10 });
+    days.push(Object.assign({ d: off(n), ctl: Math.round(ctl * 10) / 10, atl: Math.round(atl * 10) / 10 }, noL ? {} : { l: L }));
     if (L > 0 && n < 0) acts.push(off(n));
   }
   return { days: days.slice(-120), acts: acts.slice(-200), updatedAt: Date.now() - 50 * 60000 };
@@ -61,6 +61,8 @@ function mkRichCheckins(hist, days) {
     const c = { id: date, date, type: act ? 'actividad' : (L > 0 ? 'bienestar' : 'descanso'), mood, sleepH: 1 + ((k * 3) % 3), sleepQ: 1 + ((k * 5) % 4), legs: tsb < -12 ? 0 : (tsb < 0 ? 1 : 2), stress: (k * 7) % 3 === 0 ? 1 : 0, rpe: act ? Math.max(3, Math.min(9, Math.round(L / 18))) : null, heat: act ? 1 : null, hard: act ? (L > 120 ? 'si' : 'no') : null, pain: null, comment: comments[k] || '', activity: act ? { name: p ? p[0] : 'Salida', min: Math.round(L * 0.95 + 15), km: Math.round((L * 0.95 + 15) * (wd === 6 ? 0.5 : 0.36)), load: L } : null, ts: tsOf(date, 8, 10 + (k % 40)) };
     if (c.hard === 'si') c.hardInfo = { type: 'Subida larga', dur: '20 min', end: 'Ok' };
     if (k === 10) c.pain = { zone: 'Rodilla', side: 'Izquierdo', level: 'Leve' };
+    if (k === 2) { c.type = 'actividad'; c.rpe = 6; c.activity = { name: 'Gym · piernas', min: 60, km: 0, load: null, kind: 'gym', gym: { focus: 'Piernas', dur: 2, legs: 1, zones: { quads: { i: 2, m: 1, t: 'Tirón leve al bajar escaleras' }, glutes: { i: 1, m: 0 }, hamstrings: { i: 1, m: 0 } } } }; c.heat = null; c.hard = null; }
+    if (k === 4) { c.type = 'actividad'; c.act2 = { kind: 'gym', name: 'Gym · tren superior', min: 45, km: 0, load: null, rpe: 6, gym: { focus: 'Tren superior', dur: 1, zones: { chest: { i: 1, m: 0 }, shoulders: { i: 1, m: 0 }, upper_back: { i: 2, m: 0 } } } }; if (!c.activity) { c.activity = { name: 'Rodaje', min: 50, km: 20, load: null, kind: 'ruta' }; c.rpe = 4; c.heat = 1; c.hard = 'no'; } }
     list.push(c);
   }
   return list;
@@ -81,7 +83,7 @@ function seed() {
     { id: 'n2', text: 'Semana de construcción lista. Tu aptitud va subiendo de forma pareja, ¡sigue así!', at: tsOf(off(-14), 19, 30), from: 'demoCoach' }] };
   const hC = mkHistory(0.95, 100, 36, 31);
   users.demoCoach = { profile: { id: 'demoCoach', name: 'Coach (demo)', role: 'coach', team: null, pending: false, reminder: '19:30' }, checkins: mkRichCheckins(hC, 40), history: hC, plan: mkPlan(0.95, 'Travesía de montaña', '160 km · 3.000 m D+ · tu propio objetivo', 63), notes: [] };
-  const ath = (id, name, team, arr, last, pain, lvl, plan) => { users[id] = { profile: { id, name, role: 'athlete', team, coachId: 'demoCoach', pending: false }, checkins: mkCheckins(arr, last, pain), notes: [], history: mkHistory(lvl || 0.9, 100, 30, 28) }; if (plan) users[id].plan = mkPlan(lvl || 0.9, plan[0], plan[1], plan[2]); };
+  const ath = (id, name, team, arr, last, pain, lvl, plan) => { users[id] = { profile: { id, name, role: 'athlete', team, coachId: 'demoCoach', pending: false }, checkins: mkCheckins(arr, last, pain), notes: [], history: mkHistory(lvl || 0.9, 100, 30, 28, id === 'valentina') }; if (plan) users[id].plan = mkPlan(lvl || 0.9, plan[0], plan[1], plan[2]); };
   ath('camila', 'Camila R.', 'grnt', [4, 4, 3, 4, 4, 5, 4], { sleepH: 3, sleepQ: 2, legs: 1, stress: 0, rpe: 6, comment: 'Salida suave con el grupo, todo bien.', ts: tsOf(off(0), 8, 10) }, null, 1.05, ['Vuelta al Lago', '90 km · 1.200 m D+', 35]);
   ath('joaquin', 'Joaquín P.', 'zn', [4, 4, 3, 3, 2, 2, 2], { sleepH: 1, sleepQ: 3, legs: 0, stress: 2, rpe: 7, comment: 'Me molesta un poco el muslo al pedalear fuerte.', ts: tsOf(off(0), 7, 45) }, { zone: 'Muslo', side: 'Derecho', level: 'Leve' }, 1.5, ['Cuesta Barriga', '40 km · 1.100 m D+', 28]);
   ath('matias', 'Matías S.', 'grnt', [3, 3, 4, 4, 3, 4, null], { sleepH: 3, sleepQ: 1, legs: 2, stress: 0, rpe: 5, ts: tsOf(off(-1), 21, 30) }, null, 0.85);

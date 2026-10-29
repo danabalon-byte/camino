@@ -958,7 +958,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 39;
+const APP_VER = 40;
 const NEWS = [
   'Íconos nuevos y botones planos que se hunden al elegirlos.',
   'Opciones en texto, en verde cuando el dato es neutro.',
@@ -1793,7 +1793,7 @@ const ACT = {
     try { await be.saveTeamMeta(team, { goal: goal > 0 ? goal : KM_GOAL_DEFAULT, hito: String(hito || '').slice(0, 200) }); UI.metaDraft = null; say('Guardado para ' + TEAMS[team] + '.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
-  resetDemo() { try { localStorage.removeItem('camino-demo-v2'); sessionStorage.removeItem('camino-demo-user'); } catch (e) {} location.reload(); }
+  resetDemo() { try { localStorage.removeItem('camino-demo-v3'); sessionStorage.removeItem('camino-demo-user'); } catch (e) {} location.reload(); }
 };
 function guiaSync() {
   const tr = document.getElementById('gtrack'); if (!tr) return;
