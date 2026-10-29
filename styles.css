@@ -8,7 +8,7 @@
   --text:#12151B; --muted:#596273; --soft:#2E3442;
   --accent:#C2410C; --on-accent:#FFFFFF; --accent-soft:#FDE9DE;
   --accent2:#1F55C7; --on-accent2:#FFFFFF;
-  --good:#0B7A4B; --good-soft:#DDF3E8; --on-good:#FFFFFF;
+  --good:#0B7A4B; --good-soft:#DDF3E8; --on-good:#FFFFFF; --press:#E4E7EE; --pressh:rgba(255,255,255,.9); --presssh:rgba(20,30,50,.30);
   --warn:#9A5B00; --bad:#B42323; --info:#1F55C7;
   --track:#DDE1E8; --nav:#FFFFFF;
 }
@@ -18,7 +18,7 @@
     --text:#F2F4F7; --muted:#A3ABB9; --soft:#D5DAE3;
     --accent:#FF7A3D; --on-accent:#1A0E07; --accent-soft:#2A1B12;
     --accent2:#7AA2FF; --on-accent2:#0B1530;
-    --good:#4ADE9B; --good-soft:#13261E; --on-good:#0C1F16;
+    --good:#4ADE9B; --good-soft:#13261E; --on-good:#0C1F16; --press:#0A0C10; --pressh:rgba(255,255,255,.07); --presssh:rgba(0,0,0,.75);
     --warn:#FFC857; --bad:#FF6B6B; --info:#7AA2FF;
     --track:#2A2F3A; --nav:#12151B; color-scheme:dark;
   }
@@ -28,7 +28,7 @@
   --text:#F2F4F7; --muted:#A3ABB9; --soft:#D5DAE3;
   --accent:#FF7A3D; --on-accent:#1A0E07; --accent-soft:#2A1B12;
   --accent2:#7AA2FF; --on-accent2:#0B1530;
-  --good:#4ADE9B; --good-soft:#13261E; --on-good:#0C1F16;
+  --good:#4ADE9B; --good-soft:#13261E; --on-good:#0C1F16; --press:#0A0C10; --pressh:rgba(255,255,255,.07); --presssh:rgba(0,0,0,.75);
   --warn:#FFC857; --bad:#FF6B6B; --info:#7AA2FF;
   --track:#2A2F3A; --nav:#12151B; color-scheme:dark;
 }
@@ -37,7 +37,7 @@
   --text:#F2F4F7; --muted:#A3ABB9; --soft:#D5DAE3;
   --accent:#FF7A3D; --on-accent:#1A0E07; --accent-soft:#2A1B12;
   --accent2:#7AA2FF; --on-accent2:#0B1530;
-  --good:#4ADE9B; --good-soft:#13261E; --on-good:#0C1F16;
+  --good:#4ADE9B; --good-soft:#13261E; --on-good:#0C1F16; --press:#0A0C10; --pressh:rgba(255,255,255,.07); --presssh:rgba(0,0,0,.75);
   --warn:#FFC857; --bad:#FF6B6B; --info:#7AA2FF;
   --track:#2A2F3A; --nav:#12151B; color-scheme:dark;
 }
@@ -46,7 +46,7 @@
   --text:#F2F0E4; --muted:#B2B59F; --soft:#DAD9C6;
   --accent:#E0A93B; --on-accent:#1F1503; --accent-soft:#2E2610;
   --accent2:#8CC9D6; --on-accent2:#0A2128;
-  --good:#8EDB8F; --good-soft:#1B2A1B; --on-good:#0F200F;
+  --good:#8EDB8F; --good-soft:#1B2A1B; --on-good:#0F200F; --press:#0D0F09; --pressh:rgba(255,255,255,.07); --presssh:rgba(0,0,0,.75);
   --warn:#F2994A; --bad:#FF7A6B; --info:#8CC9D6;
   --track:#363D28; --nav:#0F110B; color-scheme:dark;
 }
@@ -55,7 +55,7 @@
   --text:#12151B; --muted:#596273; --soft:#2E3442;
   --accent:#C2410C; --on-accent:#FFFFFF; --accent-soft:#FDE9DE;
   --accent2:#1F55C7; --on-accent2:#FFFFFF;
-  --good:#0B7A4B; --good-soft:#DDF3E8; --on-good:#FFFFFF;
+  --good:#0B7A4B; --good-soft:#DDF3E8; --on-good:#FFFFFF; --press:#E4E7EE; --pressh:rgba(255,255,255,.9); --presssh:rgba(20,30,50,.30);
   --warn:#9A5B00; --bad:#B42323; --info:#1F55C7;
   --track:#DDE1E8; --nav:#FFFFFF; color-scheme:light;
 }
@@ -302,15 +302,8 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .wkmore{margin-top:10px;font-size:14px;font-weight:600;color:var(--accent)}
 
 /* ---- Selección neutra (azul) dentro del check-in ---- */
-.flowsel .chip[aria-pressed="true"]{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent2)}
-.flowsel .opt[aria-pressed="true"]{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent2)}
-.flowsel .opt[aria-pressed="true"] .sub{color:var(--on-accent2)}
-.bigopt{flex:1;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:14px;min-height:140px;padding:16px;border-radius:22px;border:1.5px solid var(--line);background:var(--surface);color:var(--text);font-size:22px;font-weight:800;text-align:left;line-height:1.15}
-.bigopt .s{font-size:13px;font-weight:500;opacity:.8}
-.bigopt[aria-pressed="true"]{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent2)}
 .ptag{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:3px 9px;border-radius:999px;align-self:flex-start;line-height:1.3}
 .ptag[hidden]{display:none}
-.bigopt[aria-pressed="true"] .ptag,.chip[aria-pressed="true"] .ptag{background:#fff;color:var(--accent2)}
 .seg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .seg3 .chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
 
@@ -342,3 +335,17 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .dmini{width:36px;height:36px;border-radius:12px;background:var(--good-soft);color:var(--good);display:grid;place-items:center;flex:none}
 .dst{font-weight:700;font-size:15px}
 .daddl{align-self:flex-start;border:0;background:transparent;color:var(--accent);font-weight:700;font-size:14px;min-height:40px;padding:0}
+
+/* Selección del flujo: planas con contorno; la elegida se hunde y se enciende en verde */
+.flowsel .chip,.flowsel .opt,.flowsel .bigopt{background:transparent;color:var(--text);border:1.5px solid var(--line);box-shadow:none;transition:box-shadow .15s,background .15s,transform .15s}
+.flowsel .chip[aria-pressed="true"],.flowsel .opt[aria-pressed="true"],.flowsel .bigopt[aria-pressed="true"]{background:var(--press);color:var(--good);border-color:transparent;font-weight:700;transform:translateY(2px);box-shadow:inset 0 5px 11px var(--presssh),inset 0 -1px 0 var(--pressh),inset 0 0 0 1px rgba(127,127,127,.15)}
+.flowsel .opt[aria-pressed="true"] .sub{color:var(--muted);opacity:1}
+.flowsel .chip[aria-pressed="true"] svg,.flowsel .opt[aria-pressed="true"] svg,.flowsel .bigopt[aria-pressed="true"] svg{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--good) 45%,transparent))}
+.bigopt{flex:1;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:56px;padding:0 16px;border-radius:16px;font-size:18px;font-weight:700;text-align:left;position:relative;color:var(--text)}
+.opt.ico{justify-content:flex-start;min-height:56px;padding:0 16px;border-radius:16px;font-size:18px;font-weight:700}
+.opt.ico .sub{margin-left:auto;font-size:13px}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;margin-left:2px}
+.pdot[hidden]{display:none}
+.plegend{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.flowsel .seg3 .chip{min-height:52px;border-radius:14px;flex-direction:row;gap:7px;font-size:16px}
+@media (prefers-reduced-motion:reduce){.flowsel .chip,.flowsel .opt,.flowsel .bigopt{transition:none}}
