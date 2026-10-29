@@ -279,6 +279,7 @@ const check = (color, size) => ph('check', size, color);
 /* ---------- Piezas de interfaz ---------- */
 /* Opciones de texto plano: sin marcos; la profundidad aparece solo en la elegida.
    El verde solo se usa en categorías neutras; en respuestas con valencia (sueño, piernas, estrés, molestia...) la elegida se hunde sin color. */
+const GDURS = ['-30', '30-60', '60-90', '+90'];
 const GREENG = ['sleepH', 'heat', 'hardType', 'hardDur', 'side', 'gdur', 'odur', 'gfocus', 'carbs', 'bkind'];
 const autoCols = (arr) => { const n = arr.length, long = arr.some((l) => String(l).length > 9); return n <= 3 ? n : (n === 4 ? (long ? 2 : 4) : 3); };
 function plainOpts(g, arr, sel, label, cols, valFn, neu, act, isOn) {
