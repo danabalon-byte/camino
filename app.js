@@ -20,7 +20,7 @@ const PREVT = ['Comida abundante', 'Alcohol', 'Trasnoche', 'Viaje o jornada larg
 const HARDT = ['Subida', 'Viento en contra', 'Ritmo alto o sprint', 'Terreno técnico', 'Calor', 'Otro'];
 const HARDD = ['Menos de 5 min', '5 a 20 min', 'Más de 20 min'];
 const HARDE = ['Con fuerzas', 'Justo', 'Muy exigido'];
-const CK_KEYS = ['date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'fuel', 'skip', 'ts'];
+const CK_KEYS = ['act2', 'date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'fuel', 'skip', 'ts'];
 const CARBS = ['No', 'Parcial', 'Sí'];
 const HYDRA = ['Poca', 'Normal', 'Bastante'];
 const ENERGY = ['Baja', 'Normal', 'Alta'];
@@ -31,7 +31,7 @@ const LEVELS = ['Leve', 'Moderada', 'Fuerte'];
 const WD = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const WDL = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const NUMERIC = { sleepH: 1, sleepQ: 1, legs: 1, stress: 1, rpe: 1, heat: 1, mood: 1, carbs: 1, hydra: 1, energy: 1 };
+const NUMERIC = { gdur: 1, odur: 1, glegs: 1, sleepH: 1, sleepQ: 1, legs: 1, stress: 1, rpe: 1, heat: 1, mood: 1, carbs: 1, hydra: 1, energy: 1 };
 const TONES = [
   { id: 'auto', name: 'Auto', sub: 'Sigue el tema de tu dispositivo', sw: ['#F3F4F7', '#0F1115', '#C2410C', '#FF7A3D'] },
   { id: 'noche', name: 'Noche', sub: 'Oscuro con naranja', sw: ['#0F1115', '#171A21', '#FF7A3D', '#4ADE9B'] },
@@ -396,13 +396,31 @@ function viewHoy() {
 
   const n = lastNote(a);
   if (n) out += '<section class="card" aria-label="Nota de tu coach"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p></section>';
-  const hasD = !!(todayC && todayC.mood != null), hasP = !!(todayC && todayC.activity), hasSkip = !!(todayC && todayC.skip);
-  const tcard = (k, ttl, sub, done) => '<button type="button" class="btn ' + (done ? 'done' : 'primary') + '" data-a="kind" data-v="' + k + '"><span class="col"><span style="' + (done ? 'color:var(--good);' : '') + 'font-weight:600">' + ttl + '</span><span class="' + (done ? 'soft' : '') + '" style="font-size:13px;font-weight:500">' + sub + '</span></span>' + (done ? check('var(--good)', 24) : arrow()) + '</button>';
-  out += '<section class="col g10" aria-label="Tus registros de hoy">' + tcard('diario', 'Estado del día', hasD ? 'Hecho · toca para corregir' : '1 minuto · cómo amaneciste', hasD) + tcard('post', 'Sensaciones post-entreno', hasP ? 'Hecho · toca para corregir' : (hasSkip ? 'Hoy no entrenaste · toca para registrarla' : 'Después de tu salida'), hasP) + '</section>';
-  if (todayC && !hasP && !hasSkip && !(todayC.type === 'descanso')) out += '<div class="row g8 wrap"><button type="button" class="chip" data-a="kind" data-v="skip">No pude entrenar hoy</button><button type="button" class="chip" data-a="kind" data-v="descanso">Día de descanso</button></div>';
-  if (!todayC) out += '<div class="row g8 wrap"><button type="button" class="chip" data-a="kind" data-v="skip">No pude entrenar hoy</button><button type="button" class="chip" data-a="kind" data-v="descanso">Día de descanso</button></div>';
-  if (todayC) out += '<button type="button" class="btn ghost" data-a="feedback" style="justify-content:center;border:1.5px solid var(--line)">Ver mi resumen de hoy</button>' + ckActions();
+  out += dayCard(a, todayC);
   return out + '</div></div>';
+}
+
+/* ---------- Tarjeta "Tu día" (Hoy) ---------- */
+function dayCard(a, c) {
+  const hasD = !!(c && c.mood != null), S1 = sessOf(c, 1), S2 = sessOf(c, 2), hasP = !!S1, isSkip = !!(c && c.skip), isRest = !!(c && c.type === 'descanso' && !c.skip), p = planFor(off(0));
+  const complete = hasD && (hasP || isSkip || isRest), st = streak(a);
+  const ring = (done, ic) => '<span class="dring ' + (done ? 'done' : 'todo') + '" aria-hidden="true">' + (done ? check('currentColor', 22) : ic) + '</span>';
+  let dsum = '';
+  if (hasD) { const bits = []; if (c.sleepH != null) bits.push('Dormiste ' + String(at(SLEEPH, c.sleepH)).toLowerCase()); if (c.legs != null) bits.push('piernas ' + String(at(LEGS, c.legs)).toLowerCase()); if (!bits.length) bits.push('Ánimo: ' + String(at(MOODS, c.mood - 1)).toLowerCase()); dsum = bits.join(' · '); }
+  let out = '<section class="card dcard" aria-label="Tu día"><div class="row between"><div class="eyebrow">Tu día</div>' + (complete ? '<span class="dbadge">Día completo</span>' : (!hasP ? '<button type="button" class="link" data-a="alt" style="min-height:36px;font-size:14px">Hoy fue distinto</button>' : '')) + '</div><div class="dnodes">';
+  // nodo 1
+  out += '<div class="dnode ' + (hasP || true ? 'dl' : '') + '">' + ring(hasD, kIcon('otra', 22).replace('<path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6L12 16.7 6.7 19.6l1.1-6L3.4 9.4l6-.8z"></path>', '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path>')) + '<div class="col grow g4" style="min-width:0"><div class="row between g8"><span class="dt1">Estado del día</span>' + (hasD ? '<button type="button" class="dedit" data-a="kind" data-v="diario" aria-label="Editar el estado del día">Editar</button>' : '') + '</div>'
+    + (hasD ? '<span class="dt2">' + esc(dsum) + '</span>' : '<span class="dt2">Sueño, piernas, estrés y ánimo · 1 minuto</span><button type="button" class="btn primary dbtn" data-a="kind" data-v="diario"><span>Hacer mi estado del día</span>' + arrow() + '</button>') + '</div></div>';
+  // nodo 2
+  out += '<div class="dnode">' + ring(hasP || isSkip || isRest, kIcon('gravel', 22)) + '<div class="col grow g4" style="min-width:0"><span class="dt1">Sensaciones post-entreno</span>';
+  [S1, S2].forEach((S, i) => { if (!S) return; const L = sessLine(S, a); out += '<div class="dsess"><span class="dmini">' + kIcon(L.k === 'gym' ? 'gym' : (BKINDS[L.k] ? 'gravel' : 'otra'), 20) + '</span><span class="col grow" style="min-width:0"><span class="dst">' + L.title + '</span>' + (L.sub ? '<span class="dt2">' + esc(L.sub) + '</span>' : '') + '</span><button type="button" class="dedit" data-a="kind" data-v="post" data-s="' + (i + 1) + '" aria-label="Editar sesión ' + (i + 1) + '">Editar</button></div>'; });
+  if (isSkip) out += '<span class="dt2">Hoy no entrenaste' + ((c.skip.items || []).length ? ': ' + esc(c.skip.items.join(', ').toLowerCase()) : '') + '</span>';
+  else if (isRest) out += '<span class="dt2">Hoy descansas. También suma a tu constancia.</span>';
+  if (!hasP) out += '<span class="dt2">' + (p ? 'Del plan: ' + esc(planDesc(p)) : 'Cuéntalo cuando termines tu salida o tu gym') + '</span><button type="button" class="btn ' + (hasD ? 'primary' : 'outline') + ' dbtn" data-a="kind" data-v="post" data-s="1"><span>' + (isSkip || isRest ? 'Registrar una sesión' : 'Registrar mi sesión') + '</span>' + arrow() + '</button>';
+  else if (!S2) out += '<button type="button" class="daddl" data-a="kind" data-v="post" data-s="2">+ Agregar otra sesión</button>';
+  out += '</div></div></div></section>';
+  out += '<div class="row between g12" style="padding:0 6px;align-items:center"><span class="muted" style="font-size:14px">Racha: ' + st.n + (st.n === 1 ? ' día' : ' días') + '</span>' + (c ? '<button type="button" class="link" data-a="feedback" style="min-height:44px;font-size:14px;font-weight:700">Mi resumen</button>' : '') + '</div>';
+  return out;
 }
 
 /* ---------- Vista: Ruta ---------- */
@@ -799,7 +817,7 @@ function parsePlan(text) {
 /* ---------- Vista: Guía (como se llenan los datos) ---------- */
 const GUIA_BASE = [
   { k: 'Hoy', t: 'Tu estado de hoy', ic: 'hoy', p: ['El círculo es un puntaje de 0 a 100 que sale de tu último check-in: ánimo, calidad del sueño, sensación de piernas y estrés. Se promedian y se muestra como semáforo.', '<b>70 o más</b>: listo para rodar. <b>50 a 69</b>: ve con calma. <b>Menos de 50</b>: hoy toca cuidarte y avisar a tu coach.', 'Si hoy no hiciste check-in, usa el de ayer o el último que tengas, y lo dice debajo.'] },
-  { k: 'Constancia', t: 'Por qué el check-in diario importa', ic: 'sueno', p: ['Camino se completa, en gran medida, con las respuestas de tus <b>check-ins diarios</b>. Cada uno suma una pieza: cómo dormiste, cómo están tus piernas, tu ánimo y tu esfuerzo.', 'Con esas piezas tu coach ve cómo respondes al entrenamiento, reconoce tu esfuerzo y ajusta el plan a tu momento real. Sin ellas, el plan se queda solo en números.', 'No necesitas que sea perfecto: <b>1 minuto al día</b> basta. Mientras más constante seas, más claro se ve tu progreso.', 'Son <b>dos registros independientes</b>: el <b>Estado del día</b> (sueño, piernas, estrés, ánimo) y las <b>Sensaciones post-entreno</b> (esfuerzo, clima, comida e hidratación). Haz uno, el otro o ambos, y corrígelos cuando quieras. Si no pudiste entrenar, toca <b>“No pude entrenar hoy”</b>.'] },
+  { k: 'Constancia', t: 'Por qué el check-in diario importa', ic: 'sueno', p: ['Camino se completa, en gran medida, con las respuestas de tus <b>check-ins diarios</b>. Cada uno suma una pieza: cómo dormiste, cómo están tus piernas, tu ánimo y tu esfuerzo.', 'Con esas piezas tu coach ve cómo respondes al entrenamiento, reconoce tu esfuerzo y ajusta el plan a tu momento real. Sin ellas, el plan se queda solo en números.', 'No necesitas que sea perfecto: <b>1 minuto al día</b> basta. Mientras más constante seas, más claro se ve tu progreso.', 'Son <b>dos registros independientes</b>: el <b>Estado del día</b> (sueño, piernas, estrés, ánimo) y las <b>Sensaciones post-entreno</b> (esfuerzo, clima, comida e hidratación). Haz uno, el otro o ambos, y corrígelos cuando quieras. En el post-entreno eliges <b>Bici</b> (MTB, Ruta o Gravel), <b>Gym</b> u <b>Otra</b>, y puedes registrar hasta <b>2 sesiones</b> en un día. Si hoy fue distinto, toca <b>“Hoy fue distinto”</b>.'] },
   { k: 'Check-in', t: 'Cómo se llena el check-in', ic: 'sueno', p: ['Lo llenas tú en Hoy, en 1 minuto. Hay tres tipos: <b>actividad</b> (saliste a entrenar), <b>bienestar</b> (cómo amaneciste) y <b>descanso</b>.', 'Si registras una molestia, tu coach la ve de inmediato y puede escribirte una nota. Esa nota aparece en Hoy.', 'Los check-ins son privados: solo los ven tú y tu coach. El equipo nunca ve tu bienestar ni tus molestias.'] },
   { k: 'Aptitud', t: 'Aptitud: lo que has construido', ic: 'datos', p: ['La aptitud (CTL) es tu base de entrenamiento. Es un promedio ponderado de tu carga de los últimos 42 días aproximadamente.', 'Sube lento, con semanas constantes, y baja lento si paras. Una sola salida larga casi no la mueve.', 'Más aptitud significa que tu cuerpo tolera más trabajo. Es la línea que más importa mirar en el largo plazo.'] },
   { k: 'Fatiga', t: 'Fatiga: el cansancio reciente', ic: 'racha', p: ['La fatiga (ATL) es el promedio de tu carga de los últimos 7 días aproximadamente.', 'Sube rápido con una salida dura y baja rápido con un par de días suaves. Es normal que se dispare después de un fin de semana largo.', 'Por sí sola no es mala: solo dice cuánto trabajo acumulaste esta semana.'] },
@@ -1009,7 +1027,7 @@ const hm = (m) => (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60 ? pad(m % 60) 
 function weekSheetHtml() {
   const a = meA(), sh = UI.wk.shift || 0, w = weekInfo(a, sh), today = off(0);
   let pMin = 0, pKm = 0, dMin = 0, dKm = 0;
-  w.days.forEach((d) => { if (d.p) { pMin += d.p.min || 0; pKm += d.p.km || 0; } const c = on(a, d.date); if (c && c.type === 'actividad' && c.activity) { dMin += c.activity.min || 0; dKm += c.activity.km || 0; } });
+  w.days.forEach((d) => { if (d.p) { pMin += d.p.min || 0; pKm += d.p.km || 0; } const c = on(a, d.date); if (c && c.type === 'actividad' && c.activity) { dMin += (c.activity.min || 0) + ((c.act2 && c.act2.min) || 0); dKm += (c.activity.km || 0) + ((c.act2 && c.act2.km) || 0); } });
   const first = w.days[0].date, last = w.days[6].date, ttl = sh === 0 ? 'Esta semana' : (sh === 1 ? 'Próxima semana' : (sh === -1 ? 'Semana pasada' : (sh < 0 ? 'Hace ' + (-sh) + ' semanas' : 'En ' + sh + ' semanas')));
   const tile = (v, u, l, c) => '<div class="col g4" style="align-items:center;text-align:center;flex:1;padding:4px"><span class="num" style="font-size:24px;line-height:1.05;color:' + c + '">' + v + '</span><span class="muted" style="font-size:12px">' + l + '</span></div>';
   const pct = pMin ? Math.min(100, Math.round(dMin / pMin * 100)) : 0;
@@ -1071,6 +1089,7 @@ function viewAjustes() {
     out += '<section class="card col g14" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
   }
   if (isCoach() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
+  if (!isCoach() || !DEMO) { const tc = ST.user ? on(meA(), off(0)) : null; if (tc) out += '<section class="card col g10" aria-label="Mis datos"><div class="eyebrow">Mis datos</div>' + (UI.confirmDel ? '<p class="soft" style="font-size:14px">¿Borrar el registro de hoy? Se elimina de tu historial y tu coach dejará de verlo.</p><div class="row g8 wrap"><button type="button" class="chip" data-a="delCk" style="border-color:var(--bad);color:var(--bad)">Sí, borrar</button><button type="button" class="chip" data-a="delNo">Cancelar</button></div>' : '<button type="button" class="btn ghost" data-a="delAsk" style="border:1.5px solid var(--line);color:var(--bad)"><span>Borrar el registro de hoy</span></button>') + '</section>'; }
   out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
   out += '<section class="card col g12" aria-label="Privacidad"><div class="eyebrow">Quién ve qué</div><div class="col g10">' + [['Tu coach', 'Check-ins, molestias y notas'], ['Tu equipo', 'Solo kilómetros, insignias e hitos'], ['Nadie más', 'Tu bienestar y tus molestias son privados']].map((x) => '<div class="row g12" style="align-items:baseline"><span style="font-weight:600;min-width:84px">' + x[0] + '</span><span class="soft" style="font-size:14px">' + x[1] + '</span></div>').join('') + '</div></section>';
   out += '<details class="card" aria-label="Instalar"><summary style="font-weight:600;min-height:32px;cursor:pointer">Instalar en el teléfono</summary><p class="soft" style="font-size:15px;margin-top:8px">En Android: menú de Chrome y “Instalar aplicación”. En iPhone: Compartir y “Agregar a inicio”.</p></details>';
@@ -1080,10 +1099,46 @@ function viewAjustes() {
 }
 
 /* ---------- Overlay: check-in ---------- */
-const stepList = (f) => (f.kind === 'post' ? (f.needMood ? ['mood'] : []).concat(['act', 'fuel', 'molestia']) : (f.kind === 'skip' ? ['mood', 'skip', 'molestia'] : ['mood', 'infl', 'molestia']));
+
+/* ---------- Sesiones del día (bici, gym, otra) ---------- */
+const BKINDS = { gravel: 'Gravel', ruta: 'Ruta', mtb: 'MTB' };
+const KIND_LABEL = { gravel: 'Gravel', ruta: 'Ruta', mtb: 'MTB', gym: 'Gym', otra: 'Otra' };
+const GFOCUS = ['Piernas', 'Tren superior', 'Cuerpo completo', 'Core y movilidad'];
+const GDUR = ['Menos de 30 min', '30-60 min', '60-90 min', 'Más de 90 min'];
+const DURMIN = [20, 45, 75, 100];
+const GLEGS = ['Frescas', 'Algo cargadas', 'Muy cargadas'];
+const RPEW = ['', 'Muy suave', 'Muy suave', 'Suave', 'Suave', 'Moderado', 'Moderado', 'Duro', 'Duro', 'Muy duro', 'Máximo'];
+const RPEC = ['', '#0B7A4B', '#2F7A38', '#527A26', '#767B13', '#9A7B00', '#A76804', '#B55408', '#C2410C', '#BB3218', '#B42323'];
+const GYMRX = /fuerza|gym|gimnasio|pesas/i;
+function planKind(p) { if (!p) return null; const n = String(p.name || ''); if (GYMRX.test(n)) return 'gym'; if (/mtb|monta/i.test(n)) return 'mtb'; if (/gravel/i.test(n)) return 'gravel'; if (/ruta|road/i.test(n)) return 'ruta'; return 'bici'; }
+function lastBikeKind(a) { const cnt = {}; ((a && a.checkins) || []).forEach((c) => { const k = c.activity && c.activity.kind; if (BKINDS[k]) cnt[k] = (cnt[k] || 0) + 1; }); const ks = Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x]); return ks[0] || 'ruta'; }
+const kindOfAct = (A, a) => (!A ? null : (A.kind || (GYMRX.test(A.name || '') ? 'gym' : lastBikeKind(a))));
+function sessOf(c, slot) { if (!c) return null; if (slot === 2) return c.act2 || null; return c.activity ? Object.assign({}, c.activity, { rpe: c.rpe, heat: c.heat, hard: c.hard, hardInfo: c.hardInfo }) : null; }
+function kIcon(k, size) {
+  const p = k === 'gym' ? '<path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"></path>' : (k === 'otra' ? '<path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6L12 16.7 6.7 19.6l1.1-6L3.4 9.4l6-.8z"></path>' : '<circle cx="6" cy="17" r="3.5"></circle><circle cx="18" cy="17" r="3.5"></circle><path d="M6 17l4-8h5l3 8M10 9L8 6H6"></path>');
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
+}
+function rpeBar(v) {
+  let o = '<div class="rpebar" role="group" aria-label="Esfuerzo percibido, del 1 al 10">';
+  for (let i = 1; i <= 10; i++) {
+    const fill = v && i <= v, c = RPEC[i], h = Math.round(26 + (i - 1) * 8.6);
+    o += '<button type="button" class="rcol' + (v === i ? ' cur' : '') + '" data-a="rpe" data-v="' + i + '" aria-pressed="' + (v === i) + '" aria-label="' + i + ', ' + RPEW[i] + '"><span class="rbar" style="height:' + h + 'px;border-color:' + c + ';background:' + (fill ? c : c + '14') + '"></span><span class="rnum">' + i + '</span></button>';
+  }
+  return o + '</div><div class="rpeword" aria-live="polite">' + (v ? '<b>' + v + '</b> · ' + RPEW[v] : 'Toca una barra para llenar la escala') + '</div>';
+}
+function sessLine(S, a) {
+  const k = kindOfAct(S, a) || 'otra', g = S.gym || {};
+  let title = k === 'gym' ? 'Gym' + (g.focus ? ' · ' + String(g.focus).toLowerCase() : '') : (BKINDS[k] ? KIND_LABEL[k] : esc(S.name || 'Actividad'));
+  if (S.min) title += ' · ' + minText(S.min);
+  const sub = [S.rpe ? 'Esfuerzo ' + S.rpe : '', k === 'gym' && g.legs != null ? 'piernas ' + String(at(GLEGS, g.legs)).toLowerCase() : '', BKINDS[k] && S.heat != null ? String(at(HEAT, S.heat)).toLowerCase() : ''].filter(Boolean).join(' · ');
+  return { k, title, sub };
+}
+const stepList = (f) => (f.kind === 'post' ? (f.needMood ? ['mood'] : []).concat(['sesion', 'how', 'fuel', 'molestia']) : (f.kind === 'skip' ? ['mood', 'skip', 'molestia'] : ['mood', 'infl', 'molestia']));
 function flowHtml() {
-  const f = UI.flow, d = f.d; let out = '<div class="inner"><div class="stack" style="gap:18px">';
-  if (f.step === 'tipo') {
+  const f = UI.flow, d = f.d; let out = '<div class="inner flowsel"><div class="stack" style="gap:18px">';
+  if (f.step === 'alt') {
+    out += '<div class="row between"><button type="button" class="link" data-a="close">Cerrar</button><span class="muted" style="font-size:13px">Hoy fue distinto</span></div><div class="col g8"><h2 class="title">¿Hoy fue distinto?</h2><p class="muted">Cuéntalo sin culpa: también cuenta para tu constancia.</p></div><div class="col g10"><button type="button" class="opt" data-a="kind" data-v="descanso" aria-pressed="false"><span><span>Día de descanso</span><span class="sub">Descanso planificado</span></span></button><button type="button" class="opt" data-a="kind" data-v="skip" aria-pressed="false"><span><span>No pude entrenar</span><span class="sub">Cuéntanos qué pasó</span></span></button></div>';
+  } else if (f.step === 'tipo') {
     const p = planFor(off(0)), ex = on(meA(), off(0)), hasD = !!(ex && ex.mood != null), hasP = !!(ex && ex.activity);
     out += '<div class="row between"><button type="button" class="link" data-a="close">Cerrar</button><span class="muted" style="font-size:13px">Check-in</span></div><div class="col g8"><h2 class="title">¿Qué quieres registrar?</h2><p class="muted">Son dos registros independientes. Puedes hacer uno, el otro o ambos, y volver a corregirlos hoy.</p></div>';
     const opt = (k, t, sub, done) => '<button type="button" class="opt" data-a="kind" data-v="' + k + '" aria-pressed="false"><span><span>' + t + '</span><span class="sub">' + esc(sub) + '</span></span>' + (done ? '<span style="color:var(--good);font-weight:600;font-size:13px">Hecho · corregir</span>' : '') + '</button>';
@@ -1091,7 +1146,7 @@ function flowHtml() {
     if (!hasP) out += '<div class="col g8"><div class="eyebrow">Otras opciones</div><div class="col g10">' + opt('skip', 'No pude entrenar hoy', 'Cuéntanos qué pasó', ex && ex.skip) + opt('descanso', 'Día de descanso', 'También cuenta para tu constancia', ex && ex.type === 'descanso' && !ex.skip) + '</div></div>';
   } else {
     const steps = stepList(f), cur = steps[f.i], n = steps.length;
-    out += '<div class="row between"><button type="button" class="link" data-a="back">Atrás</button><span class="muted" style="font-size:13px">Paso ' + (f.i + 1) + ' de ' + n + (cur === 'mood' ? '' : ' · opcional') + '</span></div><div class="bar" aria-hidden="true"><i style="width:' + Math.round((f.i + 1) / n * 100) + '%;background:var(--accent)"></i></div>';
+    out += '<div class="row between"><button type="button" class="link" data-a="back">Atrás</button><span class="muted" style="font-size:13px">Paso ' + (f.i + 1) + ' de ' + n + (['infl', 'skip', 'fuel', 'molestia'].indexOf(cur) < 0 ? '' : ' · opcional') + '</span></div><div class="bar" aria-hidden="true"><i style="width:' + Math.round((f.i + 1) / n * 100) + '%;background:var(--accent)"></i></div>';
     if (cur === 'mood') out += '<div class="col g8"><h2 class="title">¿Cómo te sientes hoy?</h2><p class="muted">Toca una opción. Tarda unos segundos.</p></div><div class="col g10">' + MOODS.map((m, i) => '<button type="button" class="opt" data-a="mood" data-v="' + (i + 1) + '" aria-pressed="' + (d.mood === i + 1) + '"><span>' + m + '</span><span class="meter" aria-hidden="true"><i style="width:' + ((i + 1) * 20) + '%"></i></span></button>').join('') + '</div>';
     if (cur === 'infl') {
       out += '<div class="col g8"><h2 class="title">¿Qué influyó en tu día?</h2><p class="muted">Si quieres, cuéntanos más. Tu coach lo ve y ajusta contigo.</p></div>'
@@ -1103,26 +1158,46 @@ function flowHtml() {
         + (d.prev === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle de lo habitual de ayer"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos qué fue distinto. Así tu coach entiende cómo llegas hoy y no lo toma como un mal día.</span></div><div class="col g10"><div style="font-weight:600">¿Qué pasó? <span class="muted" style="font-weight:500;font-size:14px">(puedes marcar varias)</span></div>' + multiChips('prevItems', PREVT, d.prevItems, 'Qué pasó ayer') + '</div><div class="col g8"><label for="prevText" style="font-weight:600">¿Quieres explicar un poco más?</label><textarea id="prevText" placeholder="Opcional. Por ejemplo: cena tarde con la familia, dormí 4 horas">' + esc(UI.draft.prevText || '') + '</textarea></div></div>' : '')
         + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
     }
-    if (cur === 'act') {
-      const act = d.activity;
-      out += '<div class="col g8"><h2 class="title">Tu actividad</h2>' + (act && act.min ? '<div class="card tight row g12" style="background:var(--surface2)"><span class="col grow"><span class="eyebrow">Del plan de hoy</span><span style="font-weight:600">' + esc(act.name) + '</span><span class="muted" style="font-size:14px">' + esc(planDesc({ name: '', min: act.min, km: act.km }).replace(/^ · /, '')) + '</span></span>' + check('var(--good)', 22) + '</div>' : '<p class="muted">Cuéntanos cómo fue.</p>') + '</div>'
-        + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 = muy fácil, 10 = máximo)</span></div><div class="grid5" role="group" aria-label="Esfuerzo percibido">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => '<button type="button" class="chip" data-a="set" data-g="rpe" data-v="' + v + '" aria-pressed="' + (d.rpe === v) + '" style="min-height:52px">' + v + '</button>').join('') + '</div></div>'
-        + '<div class="col g10"><div style="font-weight:600">¿Cómo sentiste el clima?</div>' + chips('heat', HEAT, d.heat, 'Clima') + '</div>'
-        + '<div class="col g10"><div style="font-weight:600">¿Hubo un tramo bastante más duro que el resto?</div>' + chips('hard', ['No', 'Sí'], d.hard, 'Tramo duro', (i) => (i ? 'si' : 'no')) + '</div>'
-        + (d.hard === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle del tramo duro"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos un poco más de ese tramo. Ayuda a tu coach a ajustar las próximas sesiones.</span></div><div class="col g10"><div style="font-weight:600">¿Qué lo hizo duro?</div>' + chips('hardType', HARDT, d.hardType, 'Tipo de tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('hardDur', HARDD, d.hardDur, 'Duración del tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cómo lo terminaste?</div>' + chips('hardEnd', HARDE, d.hardEnd, 'Cómo terminaste', (i, l) => l) + '</div><div class="col g8"><label for="hardText" style="font-weight:600">¿Qué tramo fue? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></label><input class="field" id="hardText" type="text" maxlength="200" placeholder="Por ejemplo: los últimos 10 min del repecho" value="' + esc(UI.draft.hardText || '') + '"></div></div>' : '')
-        + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
+    if (cur === 'sesion') {
+      const p = planFor(off(0)), pk = f.slot === 2 ? null : planKind(p), tp = (k) => (pk && ((k === 'gym' && pk === 'gym') || (k === 'bici' && pk !== 'gym')));
+      const ok = d.tipo === 'gym' || d.tipo === 'otra' || (d.tipo === 'bici' && d.bkind);
+      const tile = (k, t, sub) => '<button type="button" class="bigopt" data-a="pick" data-g="tipo" data-v="' + k + '" aria-pressed="' + (d.tipo === k) + '"><span class="ptag"' + (tp(k) ? '' : ' hidden') + '>Del plan</span><span>' + kIcon(k, 34) + '<br>' + t + '<br><span class="s">' + sub + '</span></span></button>';
+      out += '<div class="col g8"><h2 class="title">' + (f.slot === 2 ? 'Tu segunda sesión' : '¿Qué hiciste?') + '</h2><p class="muted">Elige el tipo de sesión.</p></div><div class="row g10" style="align-items:stretch">' + tile('bici', 'Bici', 'MTB · Ruta · Gravel') + tile('gym', 'Gym', 'Fuerza y gimnasio') + '</div>'
+        + (d.tipo === 'bici' ? '<div class="col g10"><div style="font-weight:600">¿Qué tipo de bici?</div><div class="seg3" role="group" aria-label="Tipo de bici">' + Object.keys(BKINDS).map((k) => '<button type="button" class="chip" data-a="pick" data-g="bkind" data-v="' + k + '" aria-pressed="' + (d.bkind === k) + '" style="min-height:60px;border-radius:18px;font-weight:700">' + BKINDS[k] + (pk === k ? '<span class="ptag" style="position:static;margin-left:6px">Del plan</span>' : '') + '</button>').join('') + '</div></div>' : '')
+        + '<button type="button" class="opt" data-a="pick" data-g="tipo" data-v="otra" aria-pressed="' + (d.tipo === 'otra') + '" style="min-height:58px"><span>Otra</span><span class="sub" style="margin:0">Trote, natación, caminata…</span></button>'
+        + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center"' + (ok ? '' : ' disabled') + '>Continuar</button></div>';
+    }
+    if (cur === 'how') {
+      const act = d.activity, p = planFor(off(0)), pk = planKind(p), planOk = f.slot !== 2 && p && ((d.tipo === 'gym' && pk === 'gym') || (d.tipo === 'bici' && pk !== 'gym'));
+      const cont = '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
+      if (d.tipo === 'bici') {
+        out += '<div class="col g8"><h2 class="title">Tu salida</h2>' + (planOk && act && act.min ? '<div class="card tight row g12" style="background:var(--surface2)"><span class="col grow"><span class="eyebrow">Del plan de hoy · ' + BKINDS[d.bkind] + '</span><span style="font-weight:600">' + esc(act.name) + '</span><span class="muted" style="font-size:14px">' + esc(planDesc({ name: '', min: act.min, km: act.km }).replace(/^ · /, '')) + '</span></span>' + check('var(--good)', 22) + '</div>' : '<p class="muted">Cuéntanos cómo fue.</p>') + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 muy suave, 10 máximo)</span></div>' + rpeBar(d.rpe) + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Cómo estuvo el clima?</div>' + chips('heat', HEAT, d.heat, 'Clima') + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Hubo un tramo bastante más duro que el resto?</div>' + chips('hard', ['No', 'Sí'], d.hard, 'Tramo duro', (i) => (i ? 'si' : 'no')) + '</div>'
+          + (d.hard === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle del tramo duro"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos un poco más de ese tramo. Ayuda a tu coach a ajustar las próximas sesiones.</span></div><div class="col g10"><div style="font-weight:600">¿Qué lo hizo duro?</div>' + chips('hardType', HARDT, d.hardType, 'Tipo de tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('hardDur', HARDD, d.hardDur, 'Duración del tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cómo lo terminaste?</div>' + chips('hardEnd', HARDE, d.hardEnd, 'Cómo terminaste', (i, l) => l) + '</div><div class="col g8"><label for="hardText" style="font-weight:600">¿Qué tramo fue? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></label><input class="field" id="hardText" type="text" maxlength="200" placeholder="Por ejemplo: los últimos 10 min del repecho" value="' + esc(UI.draft.hardText || '') + '"></div></div>' : '') + cont;
+      } else if (d.tipo === 'gym') {
+        out += '<div class="col g8"><h2 class="title">Tu sesión de gym</h2></div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Qué trabajaste?</div>' + chips('gfocus', GFOCUS, d.gfocus, 'Foco', (i, l) => l) + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('gdur', GDUR, d.gdur, 'Duración') + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 muy suave, 10 máximo)</span></div>' + rpeBar(d.rpe) + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Cómo quedaron las piernas?</div>' + chips('glegs', GLEGS, d.glegs, 'Piernas') + '</div>' + cont;
+      } else {
+        out += '<div class="col g8"><h2 class="title">Tu sesión</h2></div>'
+          + '<div class="col g8"><label for="oname" style="font-weight:600">¿Qué hiciste?</label><input class="field" id="oname" type="text" maxlength="80" placeholder="Por ejemplo: trote suave" value="' + esc(UI.draft.oname || '') + '"></div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('odur', GDUR, d.odur, 'Duración') + '</div>'
+          + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue?</div>' + rpeBar(d.rpe) + '</div>' + cont;
+      }
     }
     if (cur === 'skip') {
       out += '<div class="col g8"><h2 class="title">¿Qué pasó hoy?</h2><p class="muted">Sin culpa: saberlo ayuda a tu coach a reordenar la semana.</p></div><div class="col g10"><div style="font-weight:600">Motivo <span class="muted" style="font-weight:500;font-size:14px">(puedes marcar varios)</span></div>' + multiChips('skipItems', SKIPR, d.skipItems, 'Motivo') + '</div><div class="col g8"><label for="skipText" style="font-weight:600">Cuéntanos un poco más</label><textarea id="skipText" placeholder="Opcional">' + esc(UI.draft.skipText || '') + '</textarea></div><div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
     }
     if (cur === 'fuel') {
-      out += '<div class="col g8"><h2 class="title">Comida e hidratación</h2><p class="muted">Ayuda a tu coach y a tu nutricionista a ver cómo cargas y te recuperas.</p></div>'
-        + '<div class="col g10"><div style="font-weight:600">¿Cargaste carbohidratos antes o durante?</div>' + chips('carbs', CARBS, d.carbs, 'Carbohidratos') + '</div>'
-        + '<div class="col g8"><label for="preText" style="font-weight:600">¿Qué fue tu última comida antes de entrenar?</label><input class="field" id="preText" type="text" maxlength="200" placeholder="Por ejemplo: avena con banana" value="' + esc(UI.draft.preText || '') + '"></div>'
-        + '<div class="col g10"><div style="font-weight:600">¿Cómo fue tu hidratación?</div>' + chips('hydra', HYDRA, d.hydra, 'Hidratación') + '</div>'
-        + '<div class="col g10"><div style="font-weight:600">¿Tuviste molestias digestivas?</div>' + chips('gi', ['No', 'Sí'], d.gi, 'Digestivas', (i) => (i ? 'si' : 'no')) + '</div>'
+      const gym = d.tipo === 'gym', more = UI.fuelMore || !!(UI.draft.preText || UI.draft.postText);
+      out += '<div class="col g8"><h2 class="title">Comida e hidratación</h2><p class="muted">Opcional. Ayuda a tu coach y a tu nutricionista.</p></div>'
+        + (gym ? '' : '<div class="col g10"><div style="font-weight:600">¿Cargaste carbohidratos antes o durante?</div>' + chips('carbs', CARBS, d.carbs, 'Carbohidratos') + '</div><div class="col g10"><div style="font-weight:600">¿Cómo fue tu hidratación?</div>' + chips('hydra', HYDRA, d.hydra, 'Hidratación') + '</div><div class="col g10"><div style="font-weight:600">¿Tuviste molestias digestivas?</div>' + chips('gi', ['No', 'Sí'], d.gi, 'Digestivas', (i) => (i ? 'si' : 'no')) + '</div>')
         + '<div class="col g10"><div style="font-weight:600">¿Cómo fue tu energía general?</div>' + chips('energy', ENERGY, d.energy, 'Energía') + '</div>'
-        + '<div class="col g8"><label for="postText" style="font-weight:600">¿Qué fue tu primera comida después? <span class="muted" style="font-weight:500;font-size:14px">(si ya comiste)</span></label><input class="field" id="postText" type="text" maxlength="200" placeholder="Por ejemplo: batido de proteína" value="' + esc(UI.draft.postText || '') + '"></div>'
+        + (more ? '<div class="col g8"><label for="preText" style="font-weight:600">¿Qué comiste antes de entrenar?</label><input class="field" id="preText" type="text" maxlength="200" placeholder="Por ejemplo: avena con banana" value="' + esc(UI.draft.preText || '') + '"></div><div class="col g8"><label for="postText" style="font-weight:600">¿Qué comiste después?</label><input class="field" id="postText" type="text" maxlength="200" placeholder="Por ejemplo: batido de proteína" value="' + esc(UI.draft.postText || '') + '"></div>' : '<button type="button" class="link" data-a="fuelMore" style="align-self:flex-start;min-height:44px;color:var(--accent);font-weight:700">+ Contar qué comí antes y después</button>')
         + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center">Continuar</button><button type="button" class="btn ghost" data-a="next">Omitir</button></div>';
     }
     if (cur === 'molestia') {
@@ -1133,7 +1208,7 @@ function flowHtml() {
           + '<div class="col g10"><div style="font-weight:600">Lado</div>' + chips('side', SIDES, d.side, 'Lado', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">Intensidad</div>' + chips('level', LEVELS, d.level, 'Intensidad', (i, l) => l) + '</div>'
           + (d.level === 'Fuerte' || d.level === 'Moderada' ? '<div class="info" role="note">' + infoIcon() + '<span>' + (d.level === 'Fuerte' ? 'Una molestia fuerte merece atención. Tu coach la verá hoy, pero si te limita o aumenta, consulta también a un profesional de salud.' : 'Tu coach verá esta molestia hoy y ajustará la carga. Si empeora, avísale y considera consultar a un profesional de salud.') + '</span></div>' : '');
       }
-      out += '<div class="col g8"><label for="comment" style="font-weight:600">¿Algo más que quieras contarle a tu coach?</label><textarea id="comment" placeholder="Opcional">' + esc(UI.draft.comment) + '</textarea></div><div class="col g8"><button type="button" class="btn primary" data-a="send" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>' + (UI.busy ? 'Enviando…' : 'Enviar check-in') + '</button></div>';
+      out += '<div class="col g8"><label for="comment" style="font-weight:600">¿Algo más que quieras contarle a tu coach?</label><textarea id="comment" placeholder="Opcional">' + esc(UI.draft.comment) + '</textarea></div><div class="col g8"><button type="button" class="btn primary" data-a="send" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>' + (UI.busy ? 'Enviando…' : (f.kind === 'post' ? 'Enviar sesión' : 'Enviar check-in')) + '</button>' + (f.kind === 'post' && f.slot === 1 && !(on(meA(), off(0)) || {}).act2 ? '<button type="button" class="btn ghost" data-a="sendMore"' + (UI.busy ? ' disabled' : '') + '>Guardar y agregar otra sesión</button>' : '') + '</div>';
     }
   }
   return out + '</div></div>';
@@ -1295,7 +1370,7 @@ function startSession(user) {
 }
 
 /* ---------- Acciones ---------- */
-async function finishFlow() {
+async function finishFlow(more) {
   const f = UI.flow, d = f.d, a = meA(), uid = ST.user.uid;
   const before = badges(a).filter((b) => b.earned).map((b) => b.id);
   const ex = on(a, off(0)) || {}, base = {}; CK_KEYS.forEach((k) => { if (ex[k] !== undefined) base[k] = ex[k]; });
@@ -1309,7 +1384,17 @@ async function finishFlow() {
   } else if (f.kind === 'post') {
     const fuel = { carbs: d.carbs != null ? d.carbs : null, pre: tx(dr.preText) || null, hydra: d.hydra != null ? d.hydra : null, gi: d.gi || null, energy: d.energy != null ? d.energy : null, post: tx(dr.postText) || null };
     const hasFuel = Object.keys(fuel).some((k) => fuel[k] != null);
-    c = Object.assign(base, { date: off(0), type: 'actividad', mood: d.mood || ex.mood || null, rpe: d.rpe || null, heat: d.heat != null ? d.heat : null, hard: d.hard || null, hardInfo: d.hard === 'si' ? { type: d.hardType || null, dur: d.hardDur || null, end: d.hardEnd || null, text: tx(dr.hardText) || null } : null, fuel: hasFuel ? fuel : null, skip: null, activity: d.activity || { name: 'Actividad libre', min: null, km: 0, load: null }, pain: pain || ex.pain || null, comment: comment || ex.comment || '', ts: Date.now() });
+    const p = planFor(off(0)), pk = planKind(p), tipo = d.tipo || 'otra', kind = tipo === 'bici' ? (d.bkind || lastBikeKind(a)) : tipo, bike = tipo === 'bici';
+    const planOk = f.slot !== 2 && p && ((tipo === 'gym' && pk === 'gym') || (bike && pk && pk !== 'gym'));
+    let name, min = null, km = 0, load = null, gym = null;
+    if (bike) { if (planOk || (d.activity && d.activity.name && d.activity.kind === undefined && f.slot === 1 && ex.activity && kindOfAct(ex.activity, a) === kind)) { const A = d.activity || { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load }; name = A.name; min = A.min || null; km = A.km || 0; load = A.load == null ? null : A.load; } else { name = 'Salida en ' + KIND_LABEL[kind]; } }
+    else if (tipo === 'gym') { name = 'Gym' + (d.gfocus ? ' · ' + d.gfocus : ''); min = d.gdur != null ? DURMIN[d.gdur] : (planOk && p.min ? p.min : null); load = planOk && p.load != null ? p.load : null; gym = { focus: d.gfocus || null, dur: d.gdur != null ? d.gdur : null, legs: d.glegs != null ? d.glegs : null }; }
+    else { name = tx(dr.oname) || 'Otra actividad'; min = d.odur != null ? DURMIN[d.odur] : null; }
+    const S = { kind, name, min, km, load, rpe: d.rpe || null, heat: bike && d.heat != null ? d.heat : null, hard: bike ? (d.hard || null) : null, hardInfo: bike && d.hard === 'si' ? { type: d.hardType || null, dur: d.hardDur || null, end: d.hardEnd || null, text: tx(dr.hardText) || null } : null };
+    if (gym) S.gym = gym; if (tipo === 'otra') S.dur = d.odur != null ? d.odur : null;
+    c = Object.assign(base, { date: off(0), type: 'actividad', mood: d.mood || ex.mood || null, skip: null, fuel: hasFuel ? fuel : (ex.fuel || null), pain: pain || ex.pain || null, comment: comment || ex.comment || '', ts: Date.now() });
+    if (f.slot === 2) { c.act2 = S; if (!c.activity) c.activity = { name: S.name, min: S.min, km: S.km, load: S.load, kind: S.kind }; }
+    else { const A = { name: S.name, min: S.min, km: S.km, load: S.load, kind: S.kind }; if (S.gym) A.gym = S.gym; if (S.dur != null) A.dur = S.dur; c.activity = A; c.rpe = S.rpe; c.heat = S.heat; c.hard = S.hard; c.hardInfo = S.hardInfo; }
   } else {
     c = Object.assign(base, { date: off(0), type: 'descanso', mood: d.mood || 3, skip: f.kind === 'skip' ? { items: d.skipItems || [], text: String(dr.skipText || '').trim().slice(0, 300) } : null, activity: null, rpe: null, heat: null, hard: null, hardInfo: null, fuel: null, pain, comment, ts: Date.now() });
   }
@@ -1323,6 +1408,7 @@ async function finishFlow() {
   const t = myTeam();
   if (t && sharesKm()) { be.saveKm(t, uid, { name: ST.profile.name || ST.user.name, month: monthKey(), km: myMonthKm(act && act.km ? act.km : 0), updatedAt: Date.now() }).catch(() => {}); }
   const projected = meA(), after = badges(projected).filter((b) => b.earned), fresh = after.filter((b) => before.indexOf(b.id) < 0);
+  if (more) { UI.draft = { comment: '', prevText: '' }; ACT.kind('post', { dataset: { s: '2' } }); return; }
   UI.feedback = { checkin: c, newBadges: fresh }; UI.flow = null; UI.draft = { comment: '', prevText: '' };
   try { if (PREF.haptic !== false && navigator.vibrate) navigator.vibrate(30); } catch (e) {}
   render();
@@ -1403,24 +1489,43 @@ const ACT = {
   async logout() { await be.signOut(); },
   start() { UI.flow = { kind: null, step: 'tipo', i: 0, d: {} }; UI.draft = { comment: '', prevText: '' }; render(); },
   close() { UI.flow = null; UI.draft = { comment: '', prevText: '' }; render(); },
-  kind(v) {
-    const c = on(meA(), off(0)) || null, p = planFor(off(0)), d = {};
+  kind(v, t) {
+    const a = meA(), c = on(a, off(0)) || null, p = planFor(off(0)), d = {}, slot = v === 'post' ? (Number(t && t.dataset && t.dataset.s) === 2 ? 2 : 1) : 1;
     if (c) {
       if (c.mood != null) d.mood = c.mood;
       d.sleepH = c.sleepH == null ? undefined : c.sleepH; d.sleepQ = c.sleepQ || undefined; d.legs = c.legs == null ? undefined : c.legs; d.stress = c.stress == null ? undefined : c.stress;
-      d.rpe = c.rpe || undefined; d.heat = c.heat == null ? undefined : c.heat; d.hard = c.hard || undefined; d.prev = c.prev || undefined;
-      if (c.hardInfo) { d.hardType = c.hardInfo.type || undefined; d.hardDur = c.hardInfo.dur || undefined; d.hardEnd = c.hardInfo.end || undefined; }
+      d.prev = c.prev || undefined;
       if (c.prevInfo) d.prevItems = (c.prevInfo.items || []).slice();
       if (c.fuel) { d.carbs = c.fuel.carbs == null ? undefined : c.fuel.carbs; d.hydra = c.fuel.hydra == null ? undefined : c.fuel.hydra; d.gi = c.fuel.gi || undefined; d.energy = c.fuel.energy == null ? undefined : c.fuel.energy; }
       if (c.skip) d.skipItems = (c.skip.items || []).slice();
       if (c.pain) { d.painYes = 'si'; d.zones = String(c.pain.zone || '').split(', ').filter(Boolean); d.side = c.pain.side; d.level = c.pain.level; } else if (c.mood != null || c.activity) d.painYes = 'no';
-      if (c.activity) d.activity = Object.assign({}, c.activity);
     }
-    if (v === 'post' && !d.activity) d.activity = p ? { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load } : { name: 'Actividad libre', min: null, km: 0, load: null };
-    UI.flow = { kind: v, step: 'run', i: 0, d, needMood: v === 'post' && !(c && c.mood != null) };
-    UI.draft = { comment: (c && c.comment) || '', prevText: (c && c.prevInfo && c.prevInfo.text) || '', preText: (c && c.fuel && c.fuel.pre) || '', postText: (c && c.fuel && c.fuel.post) || '', hardText: (c && c.hardInfo && c.hardInfo.text) || '', skipText: (c && c.skip && c.skip.text) || '' };
+    let oname = '';
+    if (v === 'post') {
+      const S = sessOf(c, slot), k = kindOfAct(S, a), pk = planKind(p);
+      if (S) {
+        d.rpe = S.rpe || undefined; d.heat = S.heat == null ? undefined : S.heat; d.hard = S.hard || undefined;
+        if (S.hardInfo) { d.hardType = S.hardInfo.type || undefined; d.hardDur = S.hardInfo.dur || undefined; d.hardEnd = S.hardInfo.end || undefined; }
+        d.activity = { name: S.name, min: S.min || null, km: S.km || 0, load: S.load == null ? null : S.load };
+        if (k === 'gym') { d.tipo = 'gym'; const g = S.gym || {}; d.gfocus = g.focus || undefined; d.gdur = g.dur == null ? undefined : g.dur; d.glegs = g.legs == null ? undefined : g.legs; }
+        else if (BKINDS[k]) { d.tipo = 'bici'; d.bkind = k; }
+        else { d.tipo = 'otra'; oname = S.name || ''; d.odur = S.dur == null ? undefined : S.dur; }
+      } else if (slot === 1 && pk) {
+        if (pk === 'gym') d.tipo = 'gym'; else { d.tipo = 'bici'; d.bkind = BKINDS[pk] ? pk : lastBikeKind(a); }
+        d.activity = { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load };
+      }
+    }
+    UI.flow = { kind: v, step: 'run', i: 0, d, slot, needMood: v === 'post' && slot === 1 && !(c && c.mood != null) };
+    UI.fuelMore = false;
+    UI.draft = { comment: (c && c.comment) || '', prevText: (c && c.prevInfo && c.prevInfo.text) || '', preText: (c && c.fuel && c.fuel.pre) || '', postText: (c && c.fuel && c.fuel.post) || '', hardText: '', skipText: (c && c.skip && c.skip.text) || '', oname };
+    if (v === 'post') { const S2 = sessOf(c, slot); UI.draft.hardText = (S2 && S2.hardInfo && S2.hardInfo.text) || ''; }
     UI.feedback = null; render();
   },
+  pick(v, t) { UI.flow.d[t.dataset.g] = v; if (t.dataset.g === 'tipo' && v === 'bici' && !UI.flow.d.bkind) UI.flow.d.bkind = undefined; render(); },
+  rpe(v) { UI.flow.d.rpe = Number(v); render(); },
+  fuelMore() { UI.fuelMore = true; render(); },
+  alt() { UI.flow = { kind: null, step: 'alt', i: 0, d: {} }; UI.draft = { comment: '', prevText: '' }; render(); },
+  sendMore() { if (!UI.busy) finishFlow(true); },
   mood(v) { UI.flow.d.mood = Number(v); UI.flow.i++; render(); },
   set(v, t) { const g = t.dataset.g, val = NUMERIC[g] ? Number(v) : v; UI.flow.d[g] = (UI.flow.d[g] === val) ? undefined : val; render(); },
   multi(v, t) { const g = t.dataset.g, z = UI.flow.d[g] || [], i = z.indexOf(v); if (i >= 0) z.splice(i, 1); else z.push(v); UI.flow.d[g] = z; render(); },
@@ -1520,7 +1625,7 @@ document.addEventListener('input', (e) => {
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id === 'comment') UI.draft.comment = e.target.value;
   if (id === 'prevText') UI.draft.prevText = e.target.value;
-  if (id === 'preText' || id === 'postText' || id === 'hardText' || id === 'skipText') UI.draft[id] = e.target.value;
+  if (id === 'preText' || id === 'postText' || id === 'hardText' || id === 'skipText' || id === 'oname') UI.draft[id] = e.target.value;
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Enviar'; } const cn = document.getElementById('replyCount'); if (cn) cn.textContent = e.target.value.length + ' / 600'; }
   if (id === 'planText') UI.planDraft = { id: UI.sel, text: e.target.value };
   if (id === 'histText') UI.histDraft = { id: UI.sel, text: e.target.value };

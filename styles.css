@@ -300,3 +300,45 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .wkcard{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .wkcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .wkmore{margin-top:10px;font-size:14px;font-weight:600;color:var(--accent)}
+
+/* ---- Selección neutra (azul) dentro del check-in ---- */
+.flowsel .chip[aria-pressed="true"]{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent2)}
+.flowsel .opt[aria-pressed="true"]{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent2)}
+.flowsel .opt[aria-pressed="true"] .sub{color:var(--on-accent2)}
+.bigopt{flex:1;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;gap:14px;min-height:140px;padding:16px;border-radius:22px;border:1.5px solid var(--line);background:var(--surface);color:var(--text);font-size:22px;font-weight:800;text-align:left;line-height:1.15}
+.bigopt .s{font-size:13px;font-weight:500;opacity:.8}
+.bigopt[aria-pressed="true"]{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent2)}
+.ptag{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:3px 9px;border-radius:999px;align-self:flex-start;line-height:1.3}
+.ptag[hidden]{display:none}
+.bigopt[aria-pressed="true"] .ptag,.chip[aria-pressed="true"] .ptag{background:#fff;color:var(--accent2)}
+.seg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seg3 .chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+
+/* ---- Barra de esfuerzo que se llena ---- */
+.rpebar{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;align-items:end;height:132px}
+.rcol{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%;padding:0;border:0;background:transparent;color:var(--muted)}
+.rbar{display:block;width:100%;border-radius:8px;border:2px solid;box-sizing:border-box}
+.rnum{font-size:13px;font-weight:700}
+.rcol.cur .rbar{outline:2.5px solid var(--text);outline-offset:2px}
+.rcol.cur .rnum{color:var(--text)}
+.rpeword{font-size:15px;color:var(--soft);min-height:22px}
+
+/* ---- Tarjeta "Tu día" ---- */
+.dcard{display:flex;flex-direction:column;gap:16px}
+.dnodes{display:flex;flex-direction:column;gap:20px}
+.dnode{display:flex;gap:14px;position:relative}
+.dnode.dl::after{content:"";position:absolute;left:21px;top:46px;bottom:-18px;width:3px;border-radius:2px;background:var(--line)}
+.dring{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none}
+.dring.done{background:var(--good);color:var(--on-good)}
+.dring.todo{border:2.5px solid var(--accent);color:var(--accent)}
+.dt1{font-weight:700;font-size:17px;line-height:1.2}
+.dt2{font-size:13px;color:var(--muted);font-weight:500}
+.dedit{border:0;background:transparent;color:var(--accent);font-weight:700;font-size:14px;min-height:36px;padding:0 4px}
+.dbadge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--good-soft);color:var(--good)}
+.dbtn{min-height:48px;font-size:16px;border-radius:16px;padding:0 18px;margin-top:8px}
+.btn.outline{background:transparent;border:1.5px solid var(--accent);color:var(--accent)}
+.dsess{display:flex;gap:12px;align-items:center;padding:8px 0}
+.dsess+.dsess{border-top:1px solid var(--line)}
+.dmini{width:36px;height:36px;border-radius:12px;background:var(--good-soft);color:var(--good);display:grid;place-items:center;flex:none}
+.dst{font-weight:700;font-size:15px}
+.daddl{align-self:flex-start;border:0;background:transparent;color:var(--accent);font-weight:700;font-size:14px;min-height:40px;padding:0}
