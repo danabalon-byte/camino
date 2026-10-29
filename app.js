@@ -101,10 +101,10 @@ const myTeam = () => (ST.profile && ST.profile.team) || null;
 function meA() {
   let list = ST.myCk;
   if (UI.justSaved && !list.some((c) => c.date === UI.justSaved.date)) list = [UI.justSaved].concat(list);
-  return { id: ST.user ? ST.user.uid : '', name: ST.user ? ST.user.name : '', first: firstName(ST.user && ST.user.name), checkins: list, notes: ST.myNotes, tsb: [] };
+  return { id: ST.user ? ST.user.uid : '', name: ST.user ? ST.user.name : '', first: firstName(ST.user && ST.user.name), checkins: list, notes: ST.myNotes, tsb: [], hist: ST.myHist, plan: ST.myPlan };
 }
 function athleteObjs() {
-  return ST.athletes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map((p) => ({ id: p.id, name: p.name, first: firstName(p.name), team: p.team, checkins: ST.athCk[p.id] || [], notes: ST.athNotes[p.id] || [], tsb: histDays(ST.athHist[p.id]).slice(-7).map((x) => Math.round(x.ctl - x.atl)) }));
+  return ST.athletes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map((p) => ({ id: p.id, name: p.name, first: firstName(p.name), team: p.team, checkins: ST.athCk[p.id] || [], notes: ST.athNotes[p.id] || [], tsb: histDays(ST.athHist[p.id]).slice(-7).map((x) => Math.round(x.ctl - x.atl)), hist: ST.athHist[p.id], plan: ST.athPlan[p.id] }));
 }
 
 /* ---------- Cálculos ---------- */
@@ -189,6 +189,7 @@ function statusOf(a) {
   const gm = gymMolOf(l); if (gm.length) { warn = true; reasons.push('Molestia tras el gym: ' + gm.map((z) => z[1].toLowerCase()).join(', ')); }
   if (s.length >= 4 && s[s.length - 1] < s[s.length - 4] - 1) { warn = true; reasons.push('Bienestar a la baja en los últimos días'); }
   if (a.tsb && a.tsb.length) { const ts = a.tsb[a.tsb.length - 1]; if (ts <= -25) { warn = true; reasons.push('Forma (TSB) muy negativa: ' + ts); } }
+  { const li = a.hist ? loadInfo(a) : null; if (li && li.ratio != null && li.base >= RAMP_MIN_BASE && li.ratio > 1 + RAMP_WARN) { warn = true; reasons.push('Carga 7 días +' + Math.round((li.ratio - 1) * 100) + ' % sobre su promedio de 4 semanas'); } }
   return { k: warn ? 'warn' : 'ok', reasons };
 }
 function needsReply(a) {
@@ -532,6 +533,7 @@ function viewCabina() {
     if (l.prevInfo) { const pi = l.prevInfo, pp = (pi.items || []).map((x) => String(x).toLowerCase()).join(', '); bits.push('Ayer fuera de lo habitual' + (pp ? ': ' + pp : '') + (pi.text ? ' ("' + pi.text + '")' : '')); }
     out += '<div class="col g6"><div class="eyebrow">Último check-in · ' + relTime(l.ts) + '</div><p class="soft" style="font-size:15px">' + esc(bits.join(' · ')) + '</p>' + (l.comment ? '<p class="muted" style="font-size:14px">“' + esc(l.comment) + '”</p>' : '') + '</div>';
   }
+  { const ll = loadLine(loadInfo(a)); if (ll) out += '<p class="soft" style="font-size:14px">' + esc(ll) + '</p>'; }
   out += replyBlock(a, st, l, n);
   out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div><div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Bienestar</span></div></div>' + histBlock(a);
   out += '</section>';
@@ -543,6 +545,85 @@ function viewCabina() {
 /* ---------- Historial de forma y salidas (lo carga el coach desde intervals.icu) ---------- */
 const histDays = (h) => (h && Array.isArray(h.days) ? h.days.filter((x) => x && x.d && isFinite(x.ctl) && isFinite(x.atl)).sort((a, b) => (a.d < b.d ? -1 : 1)) : []);
 const f1 = (v) => Number(v).toLocaleString('es-CL', { maximumFractionDigits: 1 });
+/* ---------- Carga de entrenamiento (TSS) ----------
+   Jerarquía de fuentes: 1) TSS real de intervals.icu (carga diaria exacta o derivada del historial; alta confianza);
+   2) carga del plan cuando el atleta cumplió su sesión (media); 3) estimación: minutos × TSS por hora propio del atleta, ajustado por esfuerzo (aproximada).
+   Gym y otras actividades NO se suman al TSS de bici: se muestran aparte en UA (RPE × minutos). */
+const TPH_DEFAULT = 50; // TSS por hora típico si aún no hay historial propio (medianas reales: 40 a 62 en los atletas del grupo)
+const RAMP_LABEL = 0.25, RAMP_WARN = 0.5, RAMP_MIN_BASE = 120; // orientativos, no validados como predictores de lesión
+const rpeFactor = (rpe) => (rpe >= 1 ? Math.max(0.8, Math.min(1.25, 1 + 0.06 * (rpe - 5))) : 1); // el esfuerzo ajusta como máximo ±20 %: en los datos reales no ordena bien la intensidad por hora
+/* TSS diario real: si el historial trae la carga exacta del día (l), se usa; si no, se deriva de la fatiga: TSS = ATL_ayer + 7·(ATL_hoy − ATL_ayer). */
+function histDaily(h) {
+  const ds = histDays(h), o = {};
+  for (let i = 0; i < ds.length; i++) {
+    if (ds[i].l != null && isFinite(ds[i].l)) { o[ds[i].d] = Math.max(0, Math.round(ds[i].l)); continue; }
+    if (i && diffDays(ds[i - 1].d, ds[i].d) === 1) { const v = Math.round(ds[i - 1].atl + 7 * (ds[i].atl - ds[i - 1].atl)); o[ds[i].d] = v < 6 ? 0 : v; } // bajo 6 es ruido del redondeo
+  }
+  return o;
+}
+const median = (v) => { const x = v.slice().sort((p, q) => p - q), m = x.length >> 1; return x.length % 2 ? x[m] : (x[m - 1] + x[m]) / 2; };
+/* TSS por hora propio del atleta: 1) días con check-in de bici y carga real del historial; 2) su plan (carga/min); 3) valor típico del grupo. */
+const TPH_CACHE = {};
+function tphOf(a) {
+  const hs = histDays(a.hist), key = [a.id, a.checkins.length, hs.length ? hs[hs.length - 1].d + hs[hs.length - 1].atl : 0].join('|');
+  if (TPH_CACHE[a.id] && TPH_CACHE[a.id].key === key) return TPH_CACHE[a.id].v;
+  const hd = histDaily(a.hist), pairs = [];
+  a.checkins.forEach((c) => { const S1 = sessOf(c, 1), S2 = sessOf(c, 2), ss = [S1, S2].filter(Boolean); if (!ss.length || hd[c.date] == null || hd[c.date] < 10) return; let min = 0, bike = true; ss.forEach((S) => { const k = kindOfAct(S, a) || 'otra'; if (!BKINDS[k]) bike = false; min += S.min || 0; }); if (bike && min >= 20) pairs.push(hd[c.date] / (min / 60)); });
+  const pl = a.plan && a.plan.sessions ? Object.keys(a.plan.sessions).map((d) => a.plan.sessions[d]).filter((x) => x && x.load > 0 && x.min >= 20).map((x) => x.load / (x.min / 60)) : [];
+  const v = pairs.length >= 5 ? { tph: median(pairs), src: 'hist', n: pairs.length } : (pl.length >= 3 ? { tph: median(pl), src: 'plan', n: pl.length } : { tph: TPH_DEFAULT, src: 'def', n: 0 });
+  TPH_CACHE[a.id] = { key, v }; return v;
+}
+function sessLoad(S, a) {
+  const k = kindOfAct(S, a) || 'otra', bike = !!BKINDS[k], ua = S.rpe && S.min ? Math.round(S.rpe * S.min) : null;
+  if (!bike) return { k, tss: null, src: null, ua };
+  if (S.load != null && S.load > 0) return { k, tss: Math.round(S.load), src: 'plan', ua: null };
+  if (!(S.min > 0)) return { k, tss: null, src: null, ua: null };
+  return { k, tss: Math.round(S.min / 60 * tphOf(a).tph * rpeFactor(S.rpe)), src: 'rpe', ua: null };
+}
+function dayLoad(a, hd, date) {
+  const c = on(a, date); let est = 0, src = null, ua = 0;
+  if (c) [sessOf(c, 1), sessOf(c, 2)].forEach((S) => { if (!S) return; const L = sessLoad(S, a); if (L.tss != null) { est += L.tss; src = (src === 'rpe' || L.src === 'rpe') ? 'rpe' : 'plan'; } if (L.ua) ua += L.ua; });
+  const h = hd[date];
+  if (h != null && h > 0) return { tss: h, src: 'hist', ua };
+  if (est > 0) return { tss: est, src, ua };
+  return { tss: 0, src: null, ua };
+}
+const LOAD_CACHE = {};
+function loadInfo(a) {
+  const h = a.hist, hs = histDays(h), l = latest(a);
+  const key = [a.id, a.checkins.length, l ? l.ts : 0, hs.length ? hs[hs.length - 1].d + hs[hs.length - 1].atl : 0, off(0)].join('|');
+  if (LOAD_CACHE[a.id] && LOAD_CACHE[a.id].key === key) return LOAD_CACHE[a.id].v;
+  const hd = histDaily(h), cache = {}, day = (k) => cache[k] || (cache[k] = dayLoad(a, hd, off(k)));
+  const sum = (from, to) => { const r = { t: 0, ua: 0, by: { hist: 0, plan: 0, rpe: 0 }, vals: [] }; for (let k = from; k <= to; k++) { const d = day(k); r.t += d.tss; r.ua += d.ua; if (d.src) r.by[d.src] += d.tss; r.vals.push(d.tss); } return r; };
+  const w7 = sum(-6, 0), prev = [sum(-13, -7), sum(-20, -14), sum(-27, -21), sum(-34, -28)].filter((x) => x.t > 0);
+  const base = prev.length >= 2 ? prev.reduce((t, x) => t + x.t, 0) / prev.length : null, ratio = base && base > 0 ? w7.t / base : null;
+  const mean = w7.t / 7, sd = Math.sqrt(w7.vals.reduce((t, v) => t + (v - mean) * (v - mean), 0) / 7), mono = sd > 0 && w7.t > 0 ? mean / sd : null;
+  const t = parse(off(0)), mon0 = new Date(t); mon0.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const weeks = [];
+  for (let i = 7; i >= 0; i--) { let tt = 0; for (let j = 0; j < 7; j++) { const d = new Date(mon0); d.setDate(mon0.getDate() - i * 7 + j); const k = diffDays(off(0), ymd(d)); if (k <= 0) tt += day(k).tss; } weeks.push({ k: i, t: tt }); }
+  const pl = a.plan && a.plan.sessions ? a.plan.sessions : null; let planWeek = 0; if (pl) for (let j = 0; j < 7; j++) { const d = new Date(mon0); d.setDate(mon0.getDate() + j); const x = pl[ymd(d)]; if (x && x.load) planWeek += x.load; }
+  const v = { w7, base, ratio, mono, strain: mono ? w7.t * mono : null, weeks, planWeek, weekT: weeks[7].t, has: w7.t > 0 || base != null || w7.ua > 0 };
+  LOAD_CACHE[a.id] = { key, v }; return v;
+}
+const srcLine = (by) => { const t = by.hist + by.plan + by.rpe; if (!t) return ''; const p = (x) => Math.round(x / t * 100), o = []; if (by.hist) o.push(p(by.hist) + ' % de intervals.icu'); if (by.plan) o.push(p(by.plan) + ' % del plan cumplido'); if (by.rpe) o.push(p(by.rpe) + ' % estimado con tus minutos y tu esfuerzo (aproximado)'); return o.join(' · '); };
+const rampWord = (r) => (r == null ? { n: 'Reuniendo datos', c: 'var(--muted)', t: 'Con unas semanas de historial podremos comparar tu carga con tu promedio.' }
+  : (r < 0.8 ? { n: 'Más suave que tu promedio', c: 'var(--soft)', t: 'Buena semana para asimilar lo trabajado.' }
+  : (r <= 1 + RAMP_LABEL * 0.5 ? { n: 'Similar a tu promedio', c: 'var(--good)', t: 'Vas con un ritmo parejo y sostenible.' }
+  : (r <= 1 + RAMP_LABEL ? { n: 'Algo más exigente', c: 'var(--soft)', t: 'Un poco por sobre tu promedio: cuida el sueño y la comida.' }
+  : { n: 'Subió bastante', c: 'var(--warn)', t: 'Subió rápido respecto a tu promedio. Descansa bien y cuéntale a tu coach cómo te sientes.' }))));
+function loadCard(li) {
+  if (!li || !li.has) return '';
+  const w = rampWord(li.ratio), mx = Math.max.apply(null, li.weeks.map((x) => x.t).concat([50]));
+  const bars = '<div class="ldbars" role="img" aria-label="Carga semanal, últimas 8 semanas: ' + li.weeks.map((x) => Math.round(x.t)).join(', ') + '">' + li.weeks.map((x, i) => '<i class="' + (i === 7 ? 'cur' : '') + '" style="height:' + Math.max(4, Math.round(x.t / mx * 56)) + 'px"></i>').join('') + '</div>';
+  return '<section class="card col g10" aria-label="Tu carga"><div class="eyebrow">Tu carga · 7 días</div>'
+    + '<div class="row g12" style="align-items:flex-end"><div class="row g6" style="align-items:baseline"><span class="num" style="font-size:56px;color:var(--text)">' + Math.round(li.w7.t) + '</span><span class="muted" style="font-size:15px">TSS</span></div><span style="font-size:15px;font-weight:600;color:' + w.c + ';padding-bottom:10px">' + w.n + '</span></div>'
+    + '<p class="soft" style="font-size:15px">' + w.t + (li.base != null ? ' Tu promedio de las 4 semanas previas: <b>' + Math.round(li.base) + '</b>.' : '') + '</p>'
+    + bars + '<div class="row between muted" style="font-size:12px"><span>hace 8 semanas</span><span>esta semana (en curso)' + (li.planWeek ? ' · plan ' + Math.round(li.planWeek) : '') + '</span></div>'
+    + (li.w7.ua ? '<p class="soft" style="font-size:14px">Fuerza y otras actividades: <b>' + Math.round(li.w7.ua) + ' UA</b> (esfuerzo × minutos). Se cuentan aparte porque cansan distinto que la bici.</p>' : '')
+    + '<p class="muted" style="font-size:12px">Fuente: ' + srcLine(li.w7.by) + '.</p>'
+    + '<details><summary class="muted" style="font-size:13px;cursor:pointer;min-height:32px">¿Qué es el TSS?</summary><p class="muted" style="font-size:13px;margin-top:6px">El TSS mide cuánto te costó entrenar: una hora rodando justo a tu umbral vale 100. Sube con más duración y más intensidad. Sirve para ver tu tendencia, no para juzgar un día: cuando es estimado con tus minutos es aproximado, y no mide el sueño, el estrés ni la comida.</p></details></section>';
+}
+const loadLine = (li) => (li && li.has ? 'Carga 7 días: ' + Math.round(li.w7.t) + ' TSS' + (li.ratio != null ? ' (' + (li.ratio >= 1 ? '+' : '') + Math.round((li.ratio - 1) * 100) + ' % vs. su promedio de 4 semanas)' : '') + (li.mono != null ? ' · monotonía ' + li.mono.toFixed(1) : '') + (li.w7.ua ? ' · fuerza ' + Math.round(li.w7.ua) + ' UA' : '') + (srcLine(li.w7.by) ? ' · ' + srcLine(li.w7.by).replace('estimado con tus minutos y tu esfuerzo', 'estimado') : '') : '');
+
 function formaInfo(h) { const ds = histDays(h); if (!ds.length) return null; const last = ds[ds.length - 1]; return { ds, last, tsb: Math.round(last.ctl - last.atl) }; }
 /* ---------- Grafico de forma (aptitud, fatiga, forma) ---------- */
 const FC_MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -753,9 +834,10 @@ function formaCard(fi, link) {
 function viewDatos() {
   const a = meA(), fi = formaInfo(ST.myHist);
   let out = '<div class="inner"><div class="stack">' + head('Tu historial', 'Mis datos') + msgBanner();
-  if (!fi) out += '<section class="card" aria-label="Forma y carga"><div class="eyebrow">Forma y carga</div><p class="soft" style="margin-top:8px">Tu coach cargará aquí tu historial de forma, fatiga y salidas. Mientras tanto, tus check-ins ya cuentan.</p></section>';
+  if (!fi) out += loadCard(loadInfo(a)) + '<section class="card" aria-label="Forma y carga"><div class="eyebrow">Forma y carga</div><p class="soft" style="margin-top:8px">Tu coach cargará aquí tu historial de forma, fatiga y salidas. Mientras tanto, tus check-ins ya cuentan.</p></section>';
   else {
     out += formaCard(fi, false);
+    out += loadCard(loadInfo(a));
     FZ = { fi: fi, plan: ST.myPlan };
     out += '<section class="card" aria-label="Curva de forma"><div class="row between"><div class="eyebrow">Aptitud y fatiga · ' + fi.ds.length + ' días</div>' + zoomBtn() + '</div>' + formaChart(fi.ds, fcOpts(ST.myPlan, fi))
       + '<p class="muted" style="font-size:13px;margin-top:10px"><b>Aptitud</b>: la base que has construido entrenando. <b>Fatiga</b>: el cansancio de tus últimos días. <b>Forma</b>: aptitud menos fatiga; positiva significa piernas frescas, negativa significa que estás cargando trabajo.</p></section>';
@@ -779,7 +861,7 @@ function parseHist(text) {
   if (!o || typeof o !== 'object' || !Array.isArray(o.days)) return { err: 'Falta la lista days con d, ctl y atl.' };
   if (o.days.length > 120) return { err: 'Hay demasiados días (máximo 120).' };
   const days = [];
-  for (const x of o.days) { if (!x || !D.test(x.d || '') || !(x.ctl >= 0 && x.ctl <= 500) || !(x.atl >= 0 && x.atl <= 500)) return { err: 'Revisa el día ' + (x && x.d) + ': fecha AAAA-MM-DD y ctl/atl entre 0 y 500.' }; days.push({ d: x.d, ctl: Math.round(x.ctl * 10) / 10, atl: Math.round(x.atl * 10) / 10 }); }
+  for (const x of o.days) { if (!x || !D.test(x.d || '') || !(x.ctl >= 0 && x.ctl <= 500) || !(x.atl >= 0 && x.atl <= 500)) return { err: 'Revisa el día ' + (x && x.d) + ': fecha AAAA-MM-DD y ctl/atl entre 0 y 500.' }; const dd = { d: x.d, ctl: Math.round(x.ctl * 10) / 10, atl: Math.round(x.atl * 10) / 10 }; if (x.l != null && x.l >= 0 && x.l <= 2000) dd.l = Math.round(x.l); days.push(dd); }
   const acts = o.acts == null ? [] : o.acts;
   if (!Array.isArray(acts) || acts.length > 200 || acts.some((d) => !D.test(d))) return { err: 'acts debe ser una lista de hasta 200 fechas AAAA-MM-DD.' };
   return { hist: { days, acts } };
@@ -876,14 +958,15 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 37;
+const APP_VER = 39;
 const NEWS = [
   'Íconos nuevos y botones planos que se hunden al elegirlos.',
   'Opciones en texto, en verde cuando el dato es neutro.',
   'En Gym, una figura humana para marcar las zonas que trabajaste y si hubo molestia.',
   'Registra dos sesiones el mismo día.',
   'Modo oscuro con luz y filete al elegir, y tutoriales renovados.',
-  'Aviso automático cuando hay una versión nueva de la app.'
+  'Aviso automático cuando hay una versión nueva de la app.',
+  'Nueva tarjeta de carga (TSS) en Datos: cuánto te costó la semana, comparado con tu promedio.'
 ];
 const newsKey = () => 'camino.news.' + (ST.user ? ST.user.uid : '');
 /* ---------- Recorrido de bienvenida (primera vez y desde Guía/Ajustes) ---------- */
@@ -951,10 +1034,11 @@ const TUT = {
   },
   datos: {
     t: 'Datos', ic: 'datos', sub: 'Aptitud, fatiga y forma',
-    mock: () => tmTop() + '<div class="tmc col g6" id="m-forma"><div class="tm3"><b style="color:var(--good)">+12</b><b style="color:var(--accent2)">47</b><b style="color:var(--accent)">35</b></div><div class="tmgauge"><i></i></div></div><div class="row g6" id="m-rng"><span class="tmchip2">30 d</span><span class="tmchip2">60 d</span><span class="tmchip2" data-on="2">90 d</span></div><div class="row between"><span class="tml" style="width:40%"></span><span class="tmchip2" id="m-zoom">Ampliar</span></div><div class="tmc" id="m-chart"><svg viewBox="0 0 200 70" width="100%" height="70" aria-hidden="true"><path d="M0 50 C30 48 40 20 70 30 S110 52 140 34 S180 20 200 28" fill="none" stroke="var(--accent)" stroke-width="2.5"/><path d="M0 56 C40 54 80 46 120 44 S170 40 200 38" fill="none" stroke="var(--accent2)" stroke-width="2.5"/></svg></div><div class="row between tmc" id="m-sw-row"><span class="tml" style="width:50%"></span>' + tmSw('m-sw', 5) + '</div><div class="tmc" id="m-bars"><div class="tmwk"><i style="height:30%"></i><i style="height:70%"></i><i style="height:50%"></i><i style="height:90%"></i><i style="height:40%"></i></div></div>' + tmNav(TNAV()),
+    mock: () => tmTop() + '<div class="tmc row g10" id="m-load" style="align-items:flex-end"><b style="font-size:26px">385</b><span class="tmrpe" style="flex:1;height:30px"><i style="height:60%"></i><i style="height:70%"></i><i style="height:55%"></i><i style="height:80%"></i></span></div><div class="tmc col g6" id="m-forma"><div class="tm3"><b style="color:var(--good)">+12</b><b style="color:var(--accent2)">47</b><b style="color:var(--accent)">35</b></div><div class="tmgauge"><i></i></div></div><div class="row g6" id="m-rng"><span class="tmchip2">30 d</span><span class="tmchip2">60 d</span><span class="tmchip2" data-on="2">90 d</span></div><div class="row between"><span class="tml" style="width:40%"></span><span class="tmchip2" id="m-zoom">Ampliar</span></div><div class="tmc" id="m-chart"><svg viewBox="0 0 200 70" width="100%" height="70" aria-hidden="true"><path d="M0 50 C30 48 40 20 70 30 S110 52 140 34 S180 20 200 28" fill="none" stroke="var(--accent)" stroke-width="2.5"/><path d="M0 56 C40 54 80 46 120 44 S170 40 200 38" fill="none" stroke="var(--accent2)" stroke-width="2.5"/></svg></div><div class="row between tmc" id="m-sw-row"><span class="tml" style="width:50%"></span>' + tmSw('m-sw', 5) + '</div><div class="tmc" id="m-bars"><div class="tmwk"><i style="height:30%"></i><i style="height:70%"></i><i style="height:50%"></i><i style="height:90%"></i><i style="height:40%"></i></div></div>' + tmNav(TNAV()),
     steps: [
       { at: 'm-nav-datos', say: 'Toca <b>Datos</b> en el menú de abajo.' },
       { at: 'm-forma', say: '<b>Tu forma</b> junto a tu aptitud (azul) y tu fatiga (naranja). El medidor te dice si vienes cargado o fresco.' },
+      { at: 'm-load', say: '<b>Tu carga</b> (TSS): cuánto te costó entrenar en 7 días, comparado con tu promedio. Una hora a tu umbral vale 100. Úsalo para ver tu tendencia.' },
       { at: 'm-rng', say: 'Cambia el rango del gráfico: <b>30, 60 o 90 días</b>.' },
       { at: 'm-chart', swipe: true, say: '<b>Arrastra el dedo</b> sobre el gráfico para leer el valor de cada día.' },
       { at: 'm-zoom', say: 'Toca <b>Ampliar</b> para ver el gráfico a pantalla completa. También se abre solo si <b>giras el teléfono</b> a horizontal.' },
@@ -1224,7 +1308,7 @@ function sessLine(S, a) {
   const k = kindOfAct(S, a) || 'otra', g = S.gym || {};
   let title = k === 'gym' ? 'Gym' + (g.focus ? ' · ' + String(g.focus).toLowerCase() : '') : (BKINDS[k] ? KIND_LABEL[k] : esc(S.name || 'Actividad'));
   if (S.min) title += ' · ' + minText(S.min);
-  const sub = [S.rpe ? 'Esfuerzo ' + S.rpe : '', k === 'gym' && g.legs != null ? 'piernas ' + String(at(GLEGS, g.legs)).toLowerCase() : '', (k === 'gym' && gzList(S).length ? 'zonas: ' + gzList(S).slice(0, 3).map((z) => z[1].toLowerCase()).join(', ') + (gzList(S).length > 3 ? ' +' + (gzList(S).length - 3) : '') : ''), (k === 'gym' && gzMol(S).length ? 'molestia en ' + gzMol(S).map((z) => z[1].toLowerCase()).join(', ') : ''), BKINDS[k] && S.heat != null ? String(at(HEAT, S.heat)).toLowerCase() : ''].filter(Boolean).join(' · ');
+  const sub = [S.rpe ? 'Esfuerzo ' + S.rpe : '', k === 'gym' && g.legs != null ? 'piernas ' + String(at(GLEGS, g.legs)).toLowerCase() : '', (k === 'gym' && gzList(S).length ? 'zonas: ' + gzList(S).slice(0, 3).map((z) => z[1].toLowerCase()).join(', ') + (gzList(S).length > 3 ? ' +' + (gzList(S).length - 3) : '') : ''), (k === 'gym' && gzMol(S).length ? 'molestia en ' + gzMol(S).map((z) => z[1].toLowerCase()).join(', ') : ''), BKINDS[k] && S.heat != null ? String(at(HEAT, S.heat)).toLowerCase() : '', (() => { const L = sessLoad(S, a); return L.tss != null ? (L.src === 'rpe' ? '≈' : '') + L.tss + ' TSS' : ''; })()].filter(Boolean).join(' · ');
   return { k, title, sub };
 }
 const stepList = (f) => (f.kind === 'post' ? (f.needMood ? ['mood'] : []).concat(['sesion', 'how', 'fuel', 'molestia']) : (f.kind === 'skip' ? ['mood', 'skip', 'molestia'] : ['mood', 'infl', 'molestia']));
