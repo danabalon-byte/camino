@@ -373,7 +373,7 @@ function viewLogin() {
       : '<div class="col g10"><button type="button" class="btn google" data-a="login"' + (UI.busy ? ' disabled' : '') + '><span>Continuar con Google</span></button><p class="muted" style="font-size:13px">Tu coach ve tus check-ins y molestias. Tu equipo ve solo kilómetros, insignias e hitos.</p></div>')
     + '</div></div>';
 }
-const viewLoading = () => '<div class="inner"><div class="login"><p class="muted">Cargando…</p>' + msgBanner() + '</div></div>';
+const viewLoading = () => '<div class="inner"><div class="login"><p class="muted">Cargando…</p>' + msgBanner() + (ST.user ? '<button type="button" class="btn ghost" data-a="logout" style="justify-content:center;border:1.5px solid var(--line);margin-top:14px">Cerrar sesión</button>' : '') + '</div></div>';
 
 /* ---------- Vista: Hoy ---------- */
 function viewHoy() {
@@ -1431,7 +1431,7 @@ function startSession(user) {
   stopAll();
   ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
-  be.ensureProfile(user).catch((e) => say(friendly(e)));
+  be.ensureProfile(user).catch((e) => say(friendly(e) + ' [' + ((e && e.step) || 'perfil') + ': ' + String((e && e.code) || '').replace('firestore/', '') + ' | ' + (user.email || 'sin correo') + ' | ' + String(user.uid).slice(0, 6) + ']'));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
   ownUnsubs.push(be.listenCheckins(user.uid, (rows) => { ST.myCk = rows; if (UI.justSaved && rows.some((c) => c.date === UI.justSaved.date)) UI.justSaved = null; soft(); }, 120));
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));

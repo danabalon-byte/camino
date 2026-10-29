@@ -1,6 +1,6 @@
 // Service worker mínimo: guarda la "carcasa" de la app para abrirla sin conexión.
 // Los datos los maneja Firestore con su propia caché local.
-const CACHE = 'camino-shell-v33';
+const CACHE = 'camino-shell-v34';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'body.js', 'backend-firebase.js', 'firebase-config.js', 'manifest.webmanifest', './icon-192.png', './icon-512.png', './logo-negro.svg', './logo-blanco.svg', './grnt-logo.svg', './grnt-mark.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

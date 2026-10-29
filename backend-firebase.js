@@ -52,9 +52,10 @@ const be = {
   // Perfil propio (se crea en el primer ingreso como atleta pendiente de asignación)
   async ensureProfile(user) {
     const ref = doc(db, 'users', user.uid);
-    const snap = await getDoc(ref);
+    let snap;
+    try { snap = await getDoc(ref); } catch (e) { e.step = 'leer-perfil'; throw e; }
     if (!snap.exists()) {
-      await setDoc(ref, { name: String(user.name).slice(0, 80), email: user.email, role: 'athlete', pending: true, reminder: '19:30', createdAt: Date.now() });
+      try { await setDoc(ref, { name: String(user.name).slice(0, 80), email: user.email, role: 'athlete', pending: true, reminder: '19:30', createdAt: Date.now() }); } catch (e) { e.step = 'crear-perfil'; throw e; }
     }
   },
   listenProfile(uid, cb) {
