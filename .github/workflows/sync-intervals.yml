@@ -25,7 +25,7 @@ jobs:
       - name: Crear script
         run: |
           cat > sync.mjs <<'JS'
-          // Sincroniza forma (CTL/ATL) y fechas de salidas desde intervals.icu hacia Firestore (users/{uid}/history/current).
+          // Sincroniza forma (CTL/ATL), carga diaria exacta (l = TSS del día) y fechas de salidas desde intervals.icu hacia Firestore (users/{uid}/history/current).
           // Se ejecuta en GitHub Actions. Los registros de Actions son públicos: aquí NO se imprimen correos, IDs ni datos de atletas.
           import admin from 'firebase-admin';
 
@@ -47,7 +47,7 @@ jobs:
             try {
               const base = 'https://intervals.icu/api/v1/athlete/' + encodeURIComponent(icu);
               const [well, acts] = await Promise.all([get(base + '/wellness?oldest=' + oldest + '&newest=' + newest), get(base + '/activities?oldest=' + oldest + '&newest=' + newest)]);
-              const days = well.filter((x) => x && x.id && typeof x.ctl === 'number' && typeof x.atl === 'number').map((x) => ({ d: x.id, ctl: Math.round(x.ctl * 10) / 10, atl: Math.round(x.atl * 10) / 10 })).sort((a, b) => (a.d < b.d ? -1 : 1)).slice(-120);
+              const days = well.filter((x) => x && x.id && typeof x.ctl === 'number' && typeof x.atl === 'number').map((x) => ({ d: x.id, ctl: Math.round(x.ctl * 10) / 10, atl: Math.round(x.atl * 10) / 10, ...(typeof x.ctlLoad === 'number' ? { l: Math.round(x.ctlLoad) } : {}) })).sort((a, b) => (a.d < b.d ? -1 : 1)).slice(-120);
               const actDates = acts.map((x) => String(x.start_date_local || '').slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-200);
               if (!days.length) { skipped++; console.log('Atleta ' + i + ': sin datos de forma, se omite'); continue; }
               if (DRY) { console.log('Atleta ' + i + ' (simulación): ' + days.length + ' días, ' + actDates.length + ' salidas'); ok++; continue; }
