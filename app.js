@@ -874,33 +874,47 @@ function viewGuia() {
 }
 
 
+
+/* ---------- Versión y novedades ---------- */
+const APP_VER = 37;
+const NEWS = [
+  'Íconos nuevos y botones planos que se hunden al elegirlos.',
+  'Opciones en texto, en verde cuando el dato es neutro.',
+  'En Gym, una figura humana para marcar las zonas que trabajaste y si hubo molestia.',
+  'Registra dos sesiones el mismo día.',
+  'Modo oscuro con luz y filete al elegir, y tutoriales renovados.',
+  'Aviso automático cuando hay una versión nueva de la app.'
+];
+const newsKey = () => 'camino.news.' + (ST.user ? ST.user.uid : '');
 /* ---------- Recorrido de bienvenida (primera vez y desde Guía/Ajustes) ---------- */
 function tourSlides() {
   const sl = [
     { c: 's0', ic: 'hoy', k: 'Bienvenida', t: 'Esto es Camino', p: 'Tu coach y tú en un solo lugar. Camino se completa con tus check-ins diarios: con ellos tu coach refleja tu esfuerzo y ajusta tu plan. En 1 minuto te muestro cómo se usa.' },
-    { c: 's1', ic: 'hoy', k: 'Hoy', t: 'Tu check-in diario', p: 'En Hoy respondes cómo dormiste, tus piernas, tu ánimo y tu estrés. El círculo te da un puntaje de 0 a 100 y tu coach lo ve al instante. Si te equivocas, puedes corregirlo o borrarlo.' },
+    { c: 's1', ic: 'hoy', k: 'Hoy', t: 'Tu check-in diario', p: 'En Hoy respondes cómo dormiste, tus piernas, tu ánimo y tu estrés, y registras tu sesión: bici, gym u otra, con tu esfuerzo y, en gym, las zonas que trabajaste en una figura. Tu coach lo ve al instante. Si te equivocas, puedes corregirlo o borrarlo.' },
     { c: 's2', ic: 'datos', k: 'Datos', t: 'Aptitud, fatiga y forma', p: 'Aptitud es lo que has construido, fatiga es el cansancio de esta semana y forma es la resta entre ambas. Activa "Proyección del plan" para ver cómo llegarías a tu meta.' },
     { c: 's0', ic: 'ruta', k: 'Ruta', t: 'Tu plan y tu camino', p: 'Aquí ves la semana, tus sesiones, tu meta y "Ver mi resumen" con tus salidas, tu mejor semana y los kilómetros de tu equipo.' },
     { c: 's1', ic: 'ajustes', k: 'Ajustes', t: 'Hazla tuya', p: 'Cambia el tono visual, activa el recordatorio diario y decide con un interruptor si compartes tus km con el equipo.' },
     { c: 's2', ic: 'guia', k: 'Guía', t: 'Si te queda una duda', p: 'En la pestaña Guía desliza las tarjetas para ver cómo se llena cada dato. Puedes volver a este recorrido cuando quieras desde ahí.', btn: 'Empezar' }
   ];
-  if (isCoach()) sl.splice(4, 0, { c: 's0', ic: 'cabina', k: 'Cabina', t: 'Tu panel de coach', p: 'En Cabina ves quién necesita respuesta, abres a cada atleta, cargas su plan e historial y usas "Ver la app como" para ver lo que ve cada uno. El interruptor de arriba cambia entre tu vista de coach y la tuya.' });
+  if (UI.tourNews) sl.unshift({ c: 's1', ic: 'hoy', k: 'Novedades', t: 'Camino se actualizó', p: '', list: NEWS, btn: 'Ver el recorrido' });
+  if (isCoach()) sl.splice(UI.tourNews ? 5 : 4, 0, { c: 's0', ic: 'cabina', k: 'Cabina', t: 'Tu panel de coach', p: 'En Cabina ves quién necesita respuesta, abres a cada atleta, cargas su plan e historial y usas "Ver la app como" para ver lo que ve cada uno. El interruptor de arriba cambia entre tu vista de coach y la tuya.' });
   return sl;
 }
 function tourHtml() {
   if (UI.tour == null) return '';
   const sl = tourSlides(), i = Math.min(UI.tour, sl.length - 1), s = sl[i], last = i === sl.length - 1;
-  const ico = (i === 0 && myTeam() && TEAM_LOGO[myTeam()]) ? teamLogo(myTeam(), 'full', 120, true) : (NAVIC[s.ic] ? ph(NAVIC[s.ic], 64) : '');
-  return '<div class="story tour ' + s.c + '" role="dialog" aria-label="Recorrido de bienvenida" id="tourbox"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, k) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (k <= i ? 1 : .3) + '"></i>').join('') + '</div><div class="row between" style="margin-top:6px"><button type="button" class="x" data-a="tourBack"' + (i === 0 ? ' style="visibility:hidden"' : '') + '>Atrás</button><button type="button" class="x" data-a="tourClose">Saltar</button></div><div class="col g14" style="flex:1;justify-content:center"><div>' + ico + '</div><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + esc(s.k) + ' · ' + (i + 1) + ' de ' + sl.length + '</div><div style="font-family:var(--font-d);font-weight:700;font-size:clamp(36px,11vw,52px);line-height:1.05">' + esc(s.t) + '</div><p style="font-size:19px;line-height:1.45">' + esc(s.p) + '</p></div><button type="button" class="sbtn" data-a="tourNext">' + (last ? (s.btn || 'Empezar') : 'Siguiente') + '</button></div></div>';
+  const ico = (i === 0 && s.k !== 'Novedades' && myTeam() && TEAM_LOGO[myTeam()]) ? teamLogo(myTeam(), 'full', 120, true) : (NAVIC[s.ic] ? ph(NAVIC[s.ic], 64) : '');
+  return '<div class="story tour ' + s.c + '" role="dialog" aria-label="Recorrido de bienvenida" id="tourbox"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, k) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (k <= i ? 1 : .3) + '"></i>').join('') + '</div><div class="row between" style="margin-top:6px"><button type="button" class="x" data-a="tourBack"' + (i === 0 ? ' style="visibility:hidden"' : '') + '>Atrás</button><button type="button" class="x" data-a="tourClose">Saltar</button></div><div class="col g14" style="flex:1;justify-content:center"><div>' + ico + '</div><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + esc(s.k) + ' · ' + (i + 1) + ' de ' + sl.length + '</div><div style="font-family:var(--font-d);font-weight:700;font-size:clamp(36px,11vw,52px);line-height:1.05">' + esc(s.t) + '</div>' + (s.list ? '<ul style="font-size:18px;line-height:1.4;padding-left:20px;display:grid;gap:8px">' + s.list.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p style="font-size:19px;line-height:1.45">' + esc(s.p) + '</p>') + '</div><button type="button" class="sbtn" data-a="tourNext">' + (last ? (s.btn || 'Empezar') : 'Siguiente') + '</button></div></div>';
 }
 const tourKey = () => 'camino.tour.' + (ST.user ? ST.user.uid : '');
 function tourMaybeOpen() {
   if (UI.tourChecked === (ST.user && ST.user.uid) || !ST.ready || !ST.user || !ST.profile) return;
   UI.tourChecked = ST.user.uid;
-  let seen = null; try { seen = localStorage.getItem(tourKey()); } catch (e) { /* sin almacenamiento */ }
-  if (!seen) UI.tour = 0;
+  let seen = null, nv = null; try { seen = localStorage.getItem(tourKey()); nv = localStorage.getItem(newsKey()); } catch (e) { /* sin almacenamiento */ }
+  if (!seen) { UI.tour = 0; UI.tourNews = false; try { localStorage.setItem(newsKey(), String(APP_VER)); } catch (e) { /* sin almacenamiento */ } }
+  else if (Number(nv || 0) < APP_VER) { UI.tourNews = true; UI.tour = 0; }
 }
-function tourDone() { UI.tour = null; try { localStorage.setItem(tourKey(), '1'); } catch (e) { /* sin almacenamiento */ } render(); }
+function tourDone() { UI.tour = null; UI.tourNews = false; try { localStorage.setItem(tourKey(), '1'); localStorage.setItem(newsKey(), String(APP_VER)); } catch (e) { /* sin almacenamiento */ } render(); }
 
 /* ---------- Tutoriales animados (se pueden repetir desde Guía) ---------- */
 const tmN = (id) => '<span class="tmn" id="m-nav-' + id + '">' + (NAVIC[id] ? ph(NAVIC[id], 20) : '') + '</span>';
@@ -912,15 +926,27 @@ const TNAV = () => (isCoach() ? ['cabina', 'ajustes', 'guia'] : ['hoy', 'datos',
 const TUT = {
   hoy: {
     t: 'Hoy', ic: 'hoy', sub: 'Tu check-in y tu semana',
-    mock: () => tmTop() + '<div class="tmc row g10" id="m-score"><span class="tmring">78</span><div class="col g6" style="flex:1">' + tmL(70) + tmL(45) + '</div></div><div class="tmbtn" id="m-btn">Hacer check-in</div><div class="tmc col g6" id="m-chips"><div class="tml" style="width:35%"></div><div class="row g6"><span class="tmopt">Mal</span><span class="tmopt" data-on="3">Bien</span><span class="tmopt">Genial</span></div></div><div class="row g8"><div class="tmc" id="m-week" style="flex:1"><div class="tmwk"><i style="height:60%"></i><i style="height:35%"></i><i style="height:80%"></i><i style="height:20%"></i><i style="height:55%"></i></div></div><div class="tmc col g4" id="m-streak" style="width:34%"><b style="font-size:18px">5</b><span class="tml" style="width:80%"></span></div></div><div class="tmpill" id="m-edit">Corregir check-in</div>' + tmNav(TNAV()),
+    mock: () => tmTop() + '<div class="tmc row g10" id="m-score"><span class="tmring">78</span><div class="col g6" style="flex:1">' + tmL(70) + tmL(45) + '</div></div><div class="tmbtn" id="m-btn">Hacer check-in</div><div class="tmc col g6" id="m-chips"><div class="tml" style="width:35%"></div><div class="tmpo"><span>Mal</span><span data-on="3">Bien</span><span>Genial</span></div></div><div class="row g8"><div class="tmc" id="m-week" style="flex:1"><div class="tmwk"><i style="height:60%"></i><i style="height:35%"></i><i style="height:80%"></i><i style="height:20%"></i><i style="height:55%"></i></div></div><div class="tmc col g4" id="m-streak" style="width:34%"><b style="font-size:18px">5</b><span class="tml" style="width:80%"></span></div></div><div class="tmpill" id="m-edit">Corregir check-in</div>' + tmNav(TNAV()),
     steps: [
       { at: 'm-nav-hoy', say: 'Abajo, toca <b>Hoy</b>. Es tu pantalla de inicio.' },
       { at: 'm-score', say: 'Este círculo es tu puntaje de hoy, de 0 a 100. Se calcula con tu último check-in: en verde estás listo para rodar.' },
-      { at: 'm-btn', say: 'Toca <b>Hacer check-in</b>. Son pocas preguntas y toma 1 minuto.' },
-      { at: 'm-chips', say: 'Responde tocando una opción en cada pregunta. Al final toca <b>Enviar</b>.' },
+      { at: 'm-btn', say: 'Toca <b>Hacer check-in</b>. Son pocas preguntas y toma 1 minuto. Si entrenaste, también registras tu sesión (mira el tutorial <b>Registro</b>).' },
+      { at: 'm-chips', say: 'Responde tocando una opción de texto en cada pregunta: la que eliges se <b>hunde</b>, como un botón pulsado. Al final toca <b>Enviar</b>.' },
       { at: 'm-week', say: '<b>Tu semana</b>: el contorno es lo que dice tu plan y el relleno lo que ya hiciste. <b>Tócala</b> para ver el detalle de cada día y la próxima semana.' },
       { at: 'm-streak', say: 'La <b>racha</b> cuenta tus días seguidos con check-in. Si saltas un día, vuelve a 0.' },
       { at: 'm-edit', say: '¿Te equivocaste? Toca <b>Corregir check-in</b> para cambiarlo, o bórralo desde ahí.' }
+    ]
+  },
+  registro: {
+    t: 'Registro', ic: 'hoy', sub: 'Tu sesión: bici, gym u otra',
+    mock: () => tmTop() + '<div class="tmtiles" id="m-types"><span class="tmt">' + ph('bicycle', 16) + 'Bici</span><span class="tmt" data-on="0">' + ph('barbell', 16) + 'Gym</span><span class="tmt">' + ph('person-simple-run', 16) + 'Otra</span></div><div class="tmc col g6" id="m-dur"><div class="tml" style="width:50%"></div><div class="tmpo"><span>-30</span><span data-on="1">30-60</span><span>60-90</span><span>+90</span></div></div><div class="tmc col g6" id="m-rpe"><div class="tmrpe">' + [1,2,3,4,5,6,7,8,9,10].map((n) => '<i style="height:' + (14 + n * 5) + 'px"' + (n === 7 ? ' data-on="2"' : '') + '></i>').join('') + '</div></div><div class="tmc row g10" id="m-zones" style="align-items:center"><div class="tmfig">' + gzFigure('front', { chest: 1, quads: 1, shoulders: 1 }, null) + '</div><div class="col g6" style="flex:1">' + tmL(80) + tmL(55) + '</div></div><div class="tmc row g8" id="m-mol" style="align-items:center;justify-content:space-between"><span class="tml" style="width:45%"></span>' + tmSw('m-molsw', 4) + '</div><div class="tmpill" id="m-two">+ Segunda sesión</div>',
+    steps: [
+      { at: 'm-types', say: 'Elige el tipo de sesión: <b>Bici</b>, <b>Gym</b> u <b>Otra</b>. Cada tipo hace sus propias preguntas.' },
+      { at: 'm-dur', say: 'Las opciones son <b>texto sobre el fondo</b>: la que eliges se hunde. Va en verde si el dato es neutro (como la duración).' },
+      { at: 'm-rpe', say: 'Marca tu <b>esfuerzo</b> (RPE) tocando una barra: más alta, más duro. Debajo verás la descripción en palabras.' },
+      { at: 'm-zones', say: 'En Gym, toca la <b>figura humana</b> para marcar las zonas que trabajaste y su intensidad. Cambia entre Frente y Espalda.' },
+      { at: 'm-mol', say: 'Si una zona te molestó, activa el interruptor <b>Molestia</b> y descríbela. Tu coach recibe el aviso al instante.' },
+      { at: 'm-two', say: '¿Entrenaste dos veces hoy? Toca <b>Segunda sesión</b> y repite el registro. Quedan las dos en el mismo día.' }
     ]
   },
   datos: {
@@ -979,7 +1005,7 @@ const TUT = {
   }
 };
 const tutIc = (id) => ph(NAVIC[id] || 'calendar-check', 24, 'var(--accent)');
-const tutIds = () => ['hoy', 'datos', 'ruta', 'ajustes'].filter((k) => !isCoach() || k !== 'hoy' || true).concat(isCoach() ? ['cabina'] : []).concat(['guia']);
+const tutIds = () => ['hoy', 'registro', 'datos', 'ruta', 'ajustes'].filter((k) => !isCoach() || k !== 'hoy' || true).concat(isCoach() ? ['cabina'] : []).concat(['guia']);
 let TS = null;
 const tutReduced = () => !!(PREF.calm || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches));
 function tutDraw() {
@@ -1629,7 +1655,7 @@ const ACT = {
   story(v) { UI.story = Number(v) || 0; render(); },
   storyNext() { UI.story = UI.story >= 2 ? null : UI.story + 1; render(); },
   storyClose() { UI.story = null; render(); },
-  tour() { UI.tour = 0; render(); },
+  tour() { UI.tour = 0; UI.tourNews = true; render(); },
   tourNext() { if (UI.tour >= tourSlides().length - 1) tourDone(); else { UI.tour += 1; render(); } },
   tourBack() { if (UI.tour > 0) { UI.tour -= 1; render(); } },
   tourClose() { tourDone(); },
@@ -1722,4 +1748,25 @@ try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change
 be.setErrorHandler((where, err) => say(friendly(err) + (err && err.code ? ' [' + where + ': ' + String(err.code).replace('firestore/', '') + ']' : '')));
 render();
 be.onAuth((user) => startSession(user));
+
+/* ---------- Aviso de versión nueva ---------- */
+let updShown = false;
+async function checkUpdate() {
+  if (DEMO || updShown || location.protocol.indexOf('http') !== 0) return;
+  try {
+    const r = await fetch('./sw.js?v=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
+    const m = /camino-shell-v(\d+)/.exec(await r.text()); if (!m || Number(m[1]) <= APP_VER) return;
+    updShown = true;
+    const el = document.createElement('div'); el.className = 'updbar'; el.setAttribute('role', 'status');
+    el.innerHTML = '<span>Hay una versión nueva de Camino.</span><button type="button" id="updgo">Actualizar</button>';
+    document.body.appendChild(el);
+    document.getElementById('updgo').onclick = async () => {
+      try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((x) => x.unregister())); const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } catch (e) { /* igual se recarga */ }
+      location.reload();
+    };
+  } catch (e) { /* sin conexión: se reintenta luego */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+setInterval(checkUpdate, 30 * 60 * 1000);
+setTimeout(checkUpdate, 3000);
 if ('serviceWorker' in navigator && !DEMO && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(() => {});
