@@ -272,6 +272,7 @@ function dualChart(a) {
     + (t.length > 1 ? '<polyline class="ln-i" points="' + t.join(' ') + '" fill="none" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"></polyline>' : '')
     + (w.length > 1 ? '<polyline class="ln-a" points="' + w.join(' ') + '" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>' : '') + '</svg>';
 }
+const dualLegend = () => '<div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Bienestar</span><span class="row g6"><svg width="18" height="4" viewBox="0 0 18 4" aria-hidden="true"><line x1="1" y1="2" x2="17" y2="2" stroke="var(--info)" stroke-width="3" stroke-dasharray="4 3" stroke-linecap="round"></line></svg>Forma (aptitud − fatiga)</span></div>';
 const icon = (id, size, color) => ph(ICONS[id], size, color);
 const infoIcon = () => ph('info', 22, 'var(--info)').replace('<svg ', '<svg style="flex:none;margin-top:1px" ');
 const arrow = () => ph('arrow-right', 22);
@@ -362,7 +363,7 @@ function topHtml() {
   return '<div class="inner"><span class="brand row g8"><img class="brand-logo" src="' + logoSrc() + '" alt="" width="30" height="30">Camino</span><span class="row g8">' + pills + '</span></div>';
 }
 const head = (sub, title) => '<div class="col g4"><div class="muted" style="font-size:14px">' + esc(sub) + '</div><h1 class="title">' + esc(title) + '</h1></div>';
-const msgBanner = () => (UI.msg ? '<div class="banner" role="status">' + infoIcon() + '<span>' + esc(UI.msg) + '</span></div>' : '');
+const msgBanner = () => (UI.msg ? '<div class="banner toast" role="status" aria-live="polite">' + infoIcon() + '<span>' + esc(UI.msg) + '</span></div>' : '');
 
 /* ---------- Vista: ingreso y carga ---------- */
 function viewLogin() {
@@ -535,7 +536,7 @@ function viewCabina() {
   }
   { const ll = loadLine(loadInfo(a)); if (ll) out += '<p class="soft" style="font-size:14px">' + esc(ll) + '</p>'; }
   out += replyBlock(a, st, l, n);
-  out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div><div class="row g16 wrap soft" style="font-size:13px;margin-top:4px"><span class="row g6"><i style="display:block;width:18px;height:3px;border-radius:2px;background:var(--accent)"></i>Bienestar</span></div></div>' + histBlock(a);
+  out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div>' + dualLegend() + '</div>' + histBlock(a);
   out += '</section>';
   out += manageCard(a);
   out += fbInbox();
@@ -599,8 +600,9 @@ function loadInfo(a) {
   const base = prev.length >= 2 ? prev.reduce((t, x) => t + x.t, 0) / prev.length : null, ratio = base && base > 0 ? w7.t / base : null;
   const mean = w7.t / 7, sd = Math.sqrt(w7.vals.reduce((t, v) => t + (v - mean) * (v - mean), 0) / 7), mono = sd > 0 && w7.t > 0 ? mean / sd : null;
   const t = parse(off(0)), mon0 = new Date(t); mon0.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const weeks = [];
-  for (let i = 7; i >= 0; i--) { let tt = 0; for (let j = 0; j < 7; j++) { const d = new Date(mon0); d.setDate(mon0.getDate() - i * 7 + j); const k = diffDays(off(0), ymd(d)); if (k <= 0) tt += day(k).tss; } weeks.push({ k: i, t: tt }); }
-  const pl = a.plan && a.plan.sessions ? a.plan.sessions : null; let planWeek = 0; if (pl) for (let j = 0; j < 7; j++) { const d = new Date(mon0); d.setDate(mon0.getDate() + j); const x = pl[ymd(d)]; if (x && x.load) planWeek += x.load; }
+  const pl = a.plan && a.plan.sessions ? a.plan.sessions : null;
+  for (let i = 7; i >= 0; i--) { let tt = 0, pp = 0; for (let j = 0; j < 7; j++) { const d = new Date(mon0); d.setDate(mon0.getDate() - i * 7 + j); const k = diffDays(off(0), ymd(d)); if (k <= 0) tt += day(k).tss; const x = pl && pl[ymd(d)]; if (x && x.load) pp += x.load; } const m0 = new Date(mon0); m0.setDate(mon0.getDate() - i * 7); weeks.push({ k: i, m: ymd(m0), t: tt, p: pp }); }
+  const planWeek = weeks[7].p;
   const v = { w7, base, ratio, mono, strain: mono ? w7.t * mono : null, weeks, planWeek, weekT: weeks[7].t, has: w7.t > 0 || base != null || w7.ua > 0 };
   LOAD_CACHE[a.id] = { key, v }; return v;
 }
@@ -610,14 +612,44 @@ const rampWord = (r) => (r == null ? { n: 'Reuniendo datos', c: 'var(--muted)', 
   : (r <= 1 + RAMP_LABEL * 0.5 ? { n: 'Similar a tu promedio', c: 'var(--good)', t: 'Vas con un ritmo parejo y sostenible.' }
   : (r <= 1 + RAMP_LABEL ? { n: 'Algo más exigente', c: 'var(--soft)', t: 'Un poco por sobre tu promedio: cuida el sueño y la comida.' }
   : { n: 'Subió bastante', c: 'var(--warn)', t: 'Subió rápido respecto a tu promedio. Descansa bien y cuéntale a tu coach cómo te sientes.' }))));
+/* Medidor de carga: misma lectura y posicion que el de la forma (izquierda mas cargado, derecha mas suave). Sin verde ni rojo: la carga no es buena ni mala. Calido = mas que tu promedio, frio = menos. Zonas = frases (0,8 / 1,125 / 1,25). */
+function loadGauge(r) {
+  const pos = Math.max(0, Math.min(100, (1.5 - r) / 1.0 * 100)), n = rampWord(r).n;
+  return '<div style="position:relative;margin-top:6px" role="img" aria-label="Carga frente a tu promedio: ' + n + '"><div class="gauge" aria-hidden="true"><i style="flex:25;background:var(--accent)"></i><i style="flex:12.5;background:var(--accent);opacity:.55"></i><i style="flex:32.5;background:var(--track)"></i><i style="flex:30;background:var(--accent2);opacity:.6"></i></div><span class="gmk" style="left:calc(' + pos.toFixed(1) + '% - 2px)"></span></div><div class="gl" aria-hidden="true"><span>Subió bastante</span><span>Similar</span><span>Más suave</span></div>';
+}
+/* TSS por semana: mismo grafico y lectura al tocar que "Salidas por semana" (barras, plan punteado, promedio). */
+function tssBars(li) {
+  const weeks = li.weeks, FM = FC_MES;
+  const lab = (k) => { const d = parse(k); return d.getDate() + ' ' + FM[d.getMonth()]; };
+  const cur = weeks[7], done = weeks.slice(0, 7), avg = li.base != null ? li.base : 0;
+  const txt = (x, i) => 'Semana del ' + lab(x.m) + ': ' + Math.round(x.t) + ' TSS' + (x.p ? ' · plan ' + Math.round(x.p) : '') + (i === 7 ? ' (en curso)' : '');
+  const mxw = Math.max.apply(null, weeks.map((x) => Math.max(x.t, x.p)).concat([100])), step = mxw <= 300 ? 100 : (mxw <= 600 ? 200 : 300), top = Math.ceil(mxw / step) * step;
+  const W = 340, L = 34, R = 10, PW = W - L - R, T = 22, H = 96, B = T + H, slot = PW / 8, bw = Math.min(24, slot - 10), Y = (v) => B - v / top * H;
+  let s = '<svg viewBox="0 0 ' + W + ' ' + (B + 24) + '" width="100%" role="img" aria-label="TSS por semana. ' + esc(weeks.map(txt).join('. ')) + '" style="display:block">';
+  for (let v = 0; v <= top; v += step) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" stroke="var(--line)" stroke-width="1"></line><text x="' + (L - 6) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--muted)">' + v + '</text>';
+  weeks.forEach((x, i) => {
+    const c = i === 7, cx = L + slot * i + slot / 2, x0 = cx - bw / 2;
+    if (x.p) s += '<rect x="' + x0.toFixed(1) + '" y="' + Y(x.p).toFixed(1) + '" width="' + bw + '" height="' + (B - Y(x.p)).toFixed(1) + '" rx="4" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="3 3" opacity=".8"></rect>';
+    if (x.t > 0) { const y = Y(x.t), r = Math.min(4, (B - y) / 2); s += '<path class="wb-bar" d="M' + x0.toFixed(1) + ',' + B + 'L' + x0.toFixed(1) + ',' + (y + r).toFixed(1) + 'Q' + x0.toFixed(1) + ',' + y.toFixed(1) + ' ' + (x0 + r).toFixed(1) + ',' + y.toFixed(1) + 'L' + (x0 + bw - r).toFixed(1) + ',' + y.toFixed(1) + 'Q' + (x0 + bw).toFixed(1) + ',' + y.toFixed(1) + ' ' + (x0 + bw).toFixed(1) + ',' + (y + r).toFixed(1) + 'L' + (x0 + bw).toFixed(1) + ',' + B + 'Z" fill="' + (c ? 'var(--accent)' : 'var(--accent2)') + '" opacity="' + (c ? 1 : .55) + '"></path>'; }
+    if (c) s += '<text x="' + cx.toFixed(1) + '" y="' + (Y(Math.max(x.t, x.p)) - 5).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="700" fill="var(--accent)">' + Math.round(x.t) + '</text>';
+    if (i % 2 === 1 || c) s += '<text x="' + cx.toFixed(1) + '" y="' + (B + 16) + '" text-anchor="middle" font-size="10" fill="' + (c ? 'var(--text)' : 'var(--muted)') + '"' + (c ? ' font-weight="700"' : '') + '>' + (c ? 'Esta' : lab(x.m)) + '</text>';
+    s += '<rect class="wb-hit" x="' + (cx - slot / 2).toFixed(1) + '" y="' + (T - 14) + '" width="' + slot.toFixed(1) + '" height="' + (H + 40) + '" fill="transparent" data-t="' + esc(txt(x, i)) + '"></rect>';
+  });
+  if (avg > 0) s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(avg).toFixed(1) + '" y2="' + Y(avg).toFixed(1) + '" stroke="var(--text)" stroke-width="1" opacity=".55"></line>';
+  s += '</svg>';
+  const hasPlan = weeks.some((x) => x.p), sw = (st) => '<i style="display:block;width:12px;height:12px;border-radius:3px;' + st + '"></i>';
+  return '<div class="wbw"><div class="wb-read" aria-live="polite" style="font-size:13px;min-height:20px">' + esc(txt(cur, 7)) + '</div>' + s
+    + '<div class="row g16 wrap soft" style="font-size:12px;margin-top:4px"><span class="row g6">' + sw('background:var(--accent)') + 'Esta semana</span><span class="row g6">' + sw('background:var(--accent2);opacity:.55') + 'Semanas anteriores</span>' + (hasPlan ? '<span class="row g6">' + sw('border:1.5px dashed var(--muted)') + 'Plan</span>' : '') + (avg > 0 ? '<span class="row g6"><i style="display:block;width:14px;height:2px;background:var(--text);opacity:.55"></i>Promedio ' + Math.round(avg) + '</span>' : '') + '</div></div>';
+}
 function loadCard(li) {
   if (!li || !li.has) return '';
-  const w = rampWord(li.ratio), mx = Math.max.apply(null, li.weeks.map((x) => x.t).concat([50]));
-  const bars = '<div class="ldbars" role="img" aria-label="Carga semanal, últimas 8 semanas: ' + li.weeks.map((x) => Math.round(x.t)).join(', ') + '">' + li.weeks.map((x, i) => '<i class="' + (i === 7 ? 'cur' : '') + '" style="height:' + Math.max(4, Math.round(x.t / mx * 56)) + 'px"></i>').join('') + '</div>';
-  return '<section class="card col g10" aria-label="Tu carga"><div class="eyebrow">Tu carga · 7 días</div>'
-    + '<div class="row g12" style="align-items:flex-end"><div class="row g6" style="align-items:baseline"><span class="num" style="font-size:56px;color:var(--text)">' + Math.round(li.w7.t) + '</span><span class="muted" style="font-size:15px">TSS</span></div><span style="font-size:15px;font-weight:600;color:' + w.c + ';padding-bottom:10px">' + w.n + '</span></div>'
-    + '<p class="soft" style="font-size:15px">' + w.t + (li.base != null ? ' Tu promedio de las 4 semanas previas: <b>' + Math.round(li.base) + '</b>.' : '') + '</p>'
-    + bars + '<div class="row between muted" style="font-size:12px"><span>hace 8 semanas</span><span>esta semana (en curso)' + (li.planWeek ? ' · plan ' + Math.round(li.planWeek) : '') + '</span></div>'
+  const w = rampWord(li.ratio), pct = li.ratio != null ? Math.round((li.ratio - 1) * 100) : null;
+  const cols = [[String(Math.round(li.w7.t)), 'var(--accent)', '7 días', 38], [li.base != null ? String(Math.round(li.base)) : '–', 'var(--accent2)', 'Promedio', 38], [pct != null ? (pct > 0 ? '+' : '') + pct + '%' : '–', 'var(--text)', 'Variación', 34]];
+  return '<section class="card col g10" aria-label="Tu carga"><div class="eyebrow">Tu carga (TSS)</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr">' + cols.map(function (x, i) { return '<div class="col g6" style="align-items:center;text-align:center;padding:4px 4px;' + (i ? 'border-left:1px solid var(--line)' : '') + '"><span class="num" style="font-size:' + x[3] + 'px;line-height:1;color:' + x[1] + '">' + x[0] + '</span><span class="muted" style="font-size:13px">' + x[2] + '</span></div>'; }).join('') + '</div>'
+    + (li.ratio != null ? loadGauge(li.ratio) : '')
+    + '<p class="soft" style="font-size:15px;margin-top:4px"><b style="color:var(--text)">' + w.n + '.</b> ' + w.t + '</p>'
+    + '<div class="eyebrow" style="margin-top:6px">TSS por semana · últimas 8</div>' + tssBars(li)
     + (li.w7.ua ? '<p class="soft" style="font-size:14px">Fuerza y otras actividades: <b>' + Math.round(li.w7.ua) + ' UA</b> (esfuerzo × minutos). Se cuentan aparte porque cansan distinto que la bici.</p>' : '')
     + '<p class="muted" style="font-size:12px">Fuente: ' + srcLine(li.w7.by) + '.</p>'
     + '<details><summary class="muted" style="font-size:13px;cursor:pointer;min-height:32px">¿Qué es el TSS?</summary><p class="muted" style="font-size:13px;margin-top:6px">El TSS mide cuánto te costó entrenar: una hora rodando justo a tu umbral vale 100. Sube con más duración y más intensidad. Sirve para ver tu tendencia, no para juzgar un día: cuando es estimado con tus minutos es aproximado, y no mide el sueño, el estrés ni la comida.</p></details></section>';
@@ -844,7 +876,7 @@ function viewDatos() {
     out += '<section class="card" aria-label="Salidas por semana"><div class="eyebrow">Salidas por semana · últimas 8</div>' + weekBars(ST.myHist, ST.myPlan) + '<p class="muted" style="font-size:12px;margin-top:8px">Cuenta los días con actividad. La barra naranja es la semana en curso y el contorno punteado, lo que marcaba tu plan. Datos de intervals.icu' + (ST.myHist.updatedAt ? ', cargados ' + relTime(ST.myHist.updatedAt) : '') + '.</p></section>';
   }
   const cks = a.checkins.slice().sort((x, y) => (x.date < y.date ? 1 : (x.date > y.date ? -1 : 0))).slice(0, 10), sk = streak(a);
-  out += '<section class="card" aria-label="Bienestar"><div class="row between"><div class="eyebrow">Tu bienestar · 7 días</div><div class="muted" style="font-size:13px">Racha: ' + sk.n + (sk.n === 1 ? ' día' : ' días') + '</div></div><div style="margin-top:8px">' + dualChart(a) + '</div></section>';
+  out += '<section class="card" aria-label="Bienestar"><div class="row between"><div class="eyebrow">Tu bienestar · 7 días</div><div class="muted" style="font-size:13px">Racha: ' + sk.n + (sk.n === 1 ? ' día' : ' días') + '</div></div><div style="margin-top:8px">' + dualChart(a) + '</div>' + dualLegend() + '</section>';
   out += '<section class="card col g10" aria-label="Tus check-ins"><div class="eyebrow">Tus últimos check-ins</div>' + (cks.length ? cks.map((c) => {
     const d = parse(c.date), sc = score(c), b = band(sc);
     return '<div class="row between g12" style="align-items:flex-start;padding-top:8px;border-top:1px solid var(--line)"><div class="col g4" style="min-width:0"><span style="font-weight:600">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</span><span class="muted" style="font-size:13px">' + (c.type === 'actividad' ? (c.activity && c.activity.name ? esc(c.activity.name) : 'Actividad') : (c.type === 'descanso' ? 'Descanso' : 'Bienestar')) + ' · Ánimo ' + esc(at(MOODS, c.mood - 1).toLowerCase()) + (c.rpe ? ' · RPE ' + c.rpe : '') + '</span></div><span style="font-weight:600;font-size:14px;color:' + b.color + ';flex:none">' + (sc == null ? '–' : sc + ' · ' + b.label) + '</span></div>';
@@ -958,7 +990,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 40;
+const APP_VER = 41;
 const NEWS = [
   'Íconos nuevos y botones planos que se hunden al elegirlos.',
   'Opciones en texto, en verde cuando el dato es neutro.',
@@ -966,7 +998,9 @@ const NEWS = [
   'Registra dos sesiones el mismo día.',
   'Modo oscuro con luz y filete al elegir, y tutoriales renovados.',
   'Aviso automático cuando hay una versión nueva de la app.',
-  'Nueva tarjeta de carga (TSS) en Datos: cuánto te costó la semana, comparado con tu promedio.'
+  'Nueva tarjeta de carga (TSS) en Datos: cuánto te costó la semana, comparado con tu promedio.',
+  'Tu carga (TSS) ahora se lee igual que tu forma: tres cifras y un medidor.',
+  'Los avisos aparecen abajo, junto a donde tocas, y el gráfico de bienestar explica cada línea.'
 ];
 const newsKey = () => 'camino.news.' + (ST.user ? ST.user.uid : '');
 /* ---------- Recorrido de bienvenida (primera vez y desde Guía/Ajustes) ---------- */
@@ -1503,7 +1537,7 @@ function render() {
 }
 function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes') UI.asId = null; render(); }
 let msgTimer = null;
-function say(msg, kind) { UI.msg = msg; UI.msgKind = kind || 'err'; clearTimeout(msgTimer); if (msg) msgTimer = setTimeout(() => { UI.msg = ''; render(); }, 8000); render(); }
+function say(msg, kind) { UI.msg = msg; UI.msgKind = kind || 'err'; clearTimeout(msgTimer); if (msg) msgTimer = setTimeout(() => { UI.msg = ''; render(); }, (kind || 'err') === 'ok' ? 6000 : 10000); render(); }
 const friendly = (e) => {
   const c = e && e.code ? String(e.code) : '';
   if (c.indexOf('permission-denied') >= 0) return 'No tienes permiso para esa acción. Si crees que es un error, avísale a tu coach.';
