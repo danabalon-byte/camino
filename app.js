@@ -32,7 +32,7 @@ const LEVELS = ['Leve', 'Moderada', 'Fuerte'];
 const WD = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const WDL = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const NUMERIC = { gdur: 1, odur: 1, glegs: 1, sleepH: 1, sleepQ: 1, legs: 1, stress: 1, rpe: 1, heat: 1, mood: 1, carbs: 1, hydra: 1, energy: 1 };
+const NUMERIC = { gdur: 1, odur: 1, gfeel: 1, sleepH: 1, sleepQ: 1, legs: 1, stress: 1, rpe: 1, heat: 1, mood: 1, carbs: 1, hydra: 1, energy: 1 };
 const TONES = [
   { id: 'auto', name: 'Auto', sub: 'Sigue el tema de tu dispositivo', sw: ['#F3F4F7', '#0F1115', '#C2410C', '#FF7A3D'] },
   { id: 'noche', name: 'Noche', sub: 'Oscuro con naranja', sw: ['#0F1115', '#171A21', '#FF7A3D', '#4ADE9B'] },
@@ -91,7 +91,7 @@ if (!['auto', 'noche', 'tierra', 'dia'].includes(PREF.tone)) PREF.tone = 'auto';
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { ready: false, user: null, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const ST = { ready: false, user: null, myBio: null, athBio: {}, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
@@ -769,7 +769,7 @@ const fzLand = () => window.innerWidth > window.innerHeight;
 function fzHtml() {
   if (!UI.fz || !FZ.fi) return '';
   const land = fzLand(), size = land ? { W: 640, H1: 96, H2: 48, noNote: true } : { W: 340, H1: 210, H2: 100 };
-  return '<div class="inner fzin"><div class="row between"><div class="eyebrow">Aptitud y fatiga · ' + FZ.fi.ds.length + ' días</div><button type="button" class="x" data-a="fcZoomClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>'
+  return '<div class="inner fzin"><div class="row between"><div class="eyebrow">Aptitud y fatiga · ' + Math.min(FZ.fi.ds.length, UI.fr || 60) + ' días</div><button type="button" class="x" data-a="fcZoomClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>'
     + (land ? '' : '<p class="muted" style="font-size:13px">Gira el teléfono para verlo más ancho.</p>')
     + formaChart(FZ.fi.ds, Object.assign({}, fcOpts(FZ.plan, FZ.fi), size, { noTable: true })) + '</div>';
 }
@@ -871,7 +871,7 @@ function viewDatos() {
     out += formaCard(fi, false);
     out += loadCard(loadInfo(a));
     FZ = { fi: fi, plan: ST.myPlan };
-    out += '<section class="card" aria-label="Curva de forma"><div class="row between"><div class="eyebrow">Aptitud y fatiga · ' + fi.ds.length + ' días</div>' + zoomBtn() + '</div>' + formaChart(fi.ds, fcOpts(ST.myPlan, fi))
+    out += '<section class="card" aria-label="Curva de forma"><div class="row between"><div class="eyebrow">Aptitud y fatiga · ' + Math.min(fi.ds.length, UI.fr || 60) + ' días</div>' + zoomBtn() + '</div>' + formaChart(fi.ds, fcOpts(ST.myPlan, fi))
       + '<p class="muted" style="font-size:13px;margin-top:10px"><b>Aptitud</b>: la base que has construido entrenando. <b>Fatiga</b>: el cansancio de tus últimos días. <b>Forma</b>: aptitud menos fatiga; positiva significa piernas frescas, negativa significa que estás cargando trabajo.</p></section>';
     out += '<section class="card" aria-label="Salidas por semana"><div class="eyebrow">Salidas por semana · últimas 8</div>' + weekBars(ST.myHist, ST.myPlan) + '<p class="muted" style="font-size:12px;margin-top:8px">Cuenta los días con actividad. La barra naranja es la semana en curso y el contorno punteado, lo que marcaba tu plan. Datos de intervals.icu' + (ST.myHist.updatedAt ? ', cargados ' + relTime(ST.myHist.updatedAt) : '') + '.</p></section>';
   }
@@ -927,6 +927,10 @@ function manageCard(a) {
   dot = !h ? 'var(--muted)' : (age != null && age > 3 ? 'var(--warn)' : 'var(--good)');
   lines = h ? [nd + ' días de forma · ' + na + ' salidas', (h.updatedAt ? 'Sincronizado ' + relTime(h.updatedAt) : 'Cargado a mano') + (age != null && age > 3 ? ' · desactualizado' : '')] : ['Sin historial aún', 'Se sincroniza solo cada hora'];
   out += mrow(dot, 'Historial de forma', lines, '<button type="button" class="chip" data-a="histToggle">' + (UI.histOpen ? 'Cerrar' : 'Cargar a mano') + '</button>') + (UI.histOpen ? histForm(a) : '');
+  // perfil y medidas
+  { const b = ST.athBio[a.id] || {}, np = Object.keys((b.meas && b.meas.prop) || {}).length, lines2 = b.main ? [[ageOf(b.main.birthDate) != null ? ageOf(b.main.birthDate) + ' años' : '', b.main.heightCm ? b.main.heightCm + ' cm' : '', b.main.sport || ''].filter(Boolean).join(' · ') || 'Perfil iniciado'] : ['Aún no completa su perfil'];
+    if (np) lines2.push(np + (np === 1 ? ' propuesta' : ' propuestas') + ' por revisar');
+    out += mrow(np ? 'var(--accent)' : (b.main ? 'var(--good)' : 'var(--muted)'), 'Perfil y medidas', lines2, '<button type="button" class="chip" data-a="bioTgl" data-v="' + esc(a.id) + '">' + (UI.bioOpen === a.id ? 'Cerrar' : (np ? 'Revisar' : 'Ver')) + '</button>') + (UI.bioOpen === a.id ? bioPanel(a) : ''); }
   // vista del atleta
   out += mrow('var(--accent2)', 'Ver la app como ' + esc(a.first), ['Solo lectura: Hoy, Datos y Ruta tal como los ve'], '<button type="button" class="chip" data-a="verComo" data-v="' + esc(a.id) + '">Abrir</button>');
   out += mrow('var(--muted)', 'Historial de Tally', ['Trae sus check-ins anteriores a la app', 'No pisa los días que ya tiene'], '<button type="button" class="chip" data-a="importTally" data-v="' + esc(a.id) + '"' + (UI.busy ? ' disabled' : '') + '>Importar</button>');
@@ -990,8 +994,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 41;
+const APP_VER = 42;
 const NEWS = [
+  'Nuevo perfil: tus datos, medidas que confirma tu coach y control de tu información.',
+  'Gym más simple: todo en una pantalla y una pregunta de carga según lo que trabajaste.',
   'Íconos nuevos y botones planos que se hunden al elegirlos.',
   'Opciones en texto, en verde cuando el dato es neutro.',
   'En Gym, una figura humana para marcar las zonas que trabajaste y si hubo molestia.',
@@ -1234,6 +1240,7 @@ function viewAjustes() {
   let out = '<div class="inner"><div class="stack">' + head('Preferencias', 'Ajustes') + msgBanner();
   // perfil
   out += '<section class="card col g14" aria-label="Cuenta"><div class="row g14" style="align-items:center"><span class="avatar" aria-hidden="true">' + initial(p.name) + '</span><div class="col grow g4" style="min-width:0"><span style="font-weight:700;font-size:20px;overflow-wrap:anywhere">' + esc(p.name || '') + '</span><span class="muted" style="font-size:13px;overflow-wrap:anywhere">' + esc(p.email || (ST.user && ST.user.email) || '') + '</span></div></div><div class="row g8 wrap"><span class="tag out" style="color:var(--soft);border-color:var(--line)">' + (isCoach() ? 'Coach' : 'Atleta') + '</span>' + (p.team ? '<span class="tag out" style="color:var(--soft);border-color:var(--line)">Equipo ' + TEAMS[p.team] + '</span>' : '') + (p.pending ? '<span class="tag out" style="color:var(--warn);border-color:var(--warn)">Pendiente de asignación</span>' : '') + '</div></section>';
+  if (!isCoach()) { const bm = bioMain(), n = bioDone(bm); out += '<button type="button" class="card row g14" data-a="profOpen" style="text-align:left;width:100%;align-items:center;border:1.5px solid var(--line);font:inherit;color:inherit"><span class="col grow g4" style="min-width:0"><span class="eyebrow">Mi perfil</span><span style="font-weight:600">' + (bm ? 'Datos y medidas' : 'Completa tu perfil') + '</span><span class="muted" style="font-size:14px">' + (bm ? n + ' de 4 datos clave · medidas confirmadas por tu coach' : 'Edad, estatura, disciplina y contacto de emergencia') + '</span></span>' + arrow() + '</button>'; }
   // apariencia
   out += '<section class="card col g12" aria-label="Apariencia"><div class="eyebrow">Apariencia</div><div class="tones" role="group" aria-label="Tono visual">' + TONES.map((t) => '<button type="button" class="tone" data-a="tone" data-v="' + t.id + '" aria-pressed="' + (PREF.tone === t.id) + '"><span class="sw">' + t.sw.map((c) => '<i style="background:' + c + '"></i>').join('') + '</span><span class="col g4" style="text-align:left"><span style="font-weight:600">' + t.name + '</span><span class="muted" style="font-size:12px;font-weight:500">' + t.sub + '</span></span></button>').join('') + '</div>'
     + '<div class="setlist">' + setRow('Ampliar el gráfico al girar', 'Con el teléfono en horizontal, en Datos, el gráfico de forma se abre a pantalla completa', PREF.rotZoom !== false, 'pref', 'rotZoom') + setRow('Reducir animaciones', 'Quita transiciones y movimientos', !!PREF.calm, 'pref', 'calm') + '</div></section>';
@@ -1342,10 +1349,17 @@ function sessLine(S, a) {
   const k = kindOfAct(S, a) || 'otra', g = S.gym || {};
   let title = k === 'gym' ? 'Gym' + (g.focus ? ' · ' + String(g.focus).toLowerCase() : '') : (BKINDS[k] ? KIND_LABEL[k] : esc(S.name || 'Actividad'));
   if (S.min) title += ' · ' + minText(S.min);
-  const sub = [S.rpe ? 'Esfuerzo ' + S.rpe : '', k === 'gym' && g.legs != null ? 'piernas ' + String(at(GLEGS, g.legs)).toLowerCase() : '', (k === 'gym' && gzList(S).length ? 'zonas: ' + gzList(S).slice(0, 3).map((z) => z[1].toLowerCase()).join(', ') + (gzList(S).length > 3 ? ' +' + (gzList(S).length - 3) : '') : ''), (k === 'gym' && gzMol(S).length ? 'molestia en ' + gzMol(S).map((z) => z[1].toLowerCase()).join(', ') : ''), BKINDS[k] && S.heat != null ? String(at(HEAT, S.heat)).toLowerCase() : '', (() => { const L = sessLoad(S, a); return L.tss != null ? (L.src === 'rpe' ? '≈' : '') + L.tss + ' TSS' : ''; })()].filter(Boolean).join(' · ');
+  const sub = [S.rpe ? 'Esfuerzo ' + S.rpe : '', k === 'gym' && (g.feel != null || g.legs != null) ? (g.feel != null ? 'carga ' : 'piernas ') + (g.feel != null ? GFEEL_N[g.feel] : String(at(GLEGS, g.legs)).toLowerCase()) : '', (k === 'gym' && gzList(S).length ? 'zonas: ' + gzList(S).slice(0, 3).map((z) => z[1].toLowerCase()).join(', ') + (gzList(S).length > 3 ? ' +' + (gzList(S).length - 3) : '') : ''), (k === 'gym' && gzMol(S).length ? 'molestia en ' + gzMol(S).map((z) => z[1].toLowerCase()).join(', ') : ''), BKINDS[k] && S.heat != null ? String(at(HEAT, S.heat)).toLowerCase() : '', (() => { const L = sessLoad(S, a); return L.tss != null ? (L.src === 'rpe' ? '≈' : '') + L.tss + ' TSS' : ''; })()].filter(Boolean).join(' · ');
   return { k, title, sub };
 }
-const stepList = (f) => (f.kind === 'post' ? (f.needMood ? ['mood'] : []).concat(['sesion', 'how', 'fuel', 'molestia']) : (f.kind === 'skip' ? ['mood', 'skip', 'molestia'] : ['mood', 'infl', 'molestia']));
+const stepList = (f) => (f.kind === 'post' ? (f.needMood ? ['mood'] : []).concat(f.d && f.d.tipo === 'gym' ? ['sesion', 'fuel', 'molestia'] : ['sesion', 'how', 'fuel', 'molestia']) : (f.kind === 'skip' ? ['mood', 'skip', 'molestia'] : ['mood', 'infl', 'molestia']));
+const GFEEL_WHO = { 'Piernas': ['¿Cómo quedaron tus piernas?', ['Frescas', 'Algo cargadas', 'Muy cargadas']], 'Tren superior': ['¿Cómo quedaron brazos, pecho y espalda?', ['Frescos', 'Algo cargados', 'Muy cargados']], 'Core y movilidad': ['¿Cómo quedó tu zona media?', ['Fresca', 'Algo cargada', 'Muy cargada']] };
+const GFEEL_DEF = ['¿Cómo quedó tu cuerpo?', ['Fresco', 'Algo cargado', 'Muy cargado']];
+const GFEEL_N = ['fresco', 'algo cargado', 'muy cargado'];
+const gymFields = (d) => '<div class="col g10"><div style="font-weight:600">¿Qué trabajaste?</div>' + plainOpts('gfocus', GFOCUS, d.gfocus, 'Foco', 2, (i, l) => l) + '</div>' + gzBlock(d)
+  + '<div class="col g10"><div style="font-weight:600">¿Cuántos minutos trabajaste?</div>' + plainOpts('gdur', GDURS, d.gdur, 'Minutos', 4) + '</div>'
+  + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 muy suave, 10 máximo)</span></div>' + rpeBar(d.rpe) + '</div>'
+  + (() => { const q = GFEEL_WHO[d.gfocus] || GFEEL_DEF; return '<div class="col g10"><div style="font-weight:600">' + q[0] + '</div>' + chips('gfeel', q[1], d.gfeel, 'Carga tras el gym') + '<p class="muted" style="font-size:14px;margin:0">Si alguna zona quedó con molestia, márcala arriba: tu coach la ve.</p></div>'; })();
 function flowHtml() {
   const f = UI.flow, d = f.d; let out = '<div class="inner flowsel"><div class="stack" style="gap:18px">';
   if (f.step === 'alt') {
@@ -1378,6 +1392,7 @@ function flowHtml() {
       out += '<div class="col g8"><h2 class="title">' + (f.slot === 2 ? 'Tu segunda sesión' : '¿Qué hiciste?') + '</h2><p class="muted">Elige el tipo de sesión.</p></div><div class="row g10" style="align-items:stretch">' + tile('bici', 'Bici') + tile('gym', 'Gym') + '</div>'
         + (d.tipo === 'bici' ? '<div class="col g10"><div style="font-weight:600">¿Qué tipo de bici?</div><div class="po po3" role="group" aria-label="Tipo de bici">' + Object.keys(BKINDS).map((k) => '<button type="button" class="pob" data-a="pick" data-g="bkind" data-v="' + k + '" aria-pressed="' + (d.bkind === k) + '">' + BKINDS[k] + pdot(pk === k) + '</button>').join('') + '</div></div>' : '')
         + '<button type="button" data-a="pick" data-g="tipo" data-v="otra" aria-pressed="' + (d.tipo === 'otra') + '" class="opt ico">' + kIcon('otra', 24) + '<span>Otra</span><span class="sub" style="margin-left:auto">Trote, natación…</span></button>'
+        + (d.tipo === 'gym' ? gymFields(d) : '')
         + (pk ? '<div class="plegend"><span class="pdot" aria-hidden="true"></span>Sugerido por tu plan</div>' : '')
         + '<div class="col g8"><button type="button" class="btn primary" data-a="next" style="justify-content:center"' + (ok ? '' : ' disabled') + '>Continuar</button></div>';
     }
@@ -1390,12 +1405,6 @@ function flowHtml() {
           + '<div class="col g10"><div style="font-weight:600">¿Cómo estuvo el clima?</div>' + chips('heat', HEAT, d.heat, 'Clima') + '</div>'
           + '<div class="col g10"><div style="font-weight:600">¿Hubo un tramo bastante más duro que el resto?</div>' + chips('hard', ['No', 'Sí'], d.hard, 'Tramo duro', (i) => (i ? 'si' : 'no')) + '</div>'
           + (d.hard === 'si' ? '<div class="card col g14" style="background:var(--surface2);border:1.5px solid var(--line)" aria-label="Detalle del tramo duro"><div class="info" role="note">' + infoIcon() + '<span>Cuéntanos un poco más de ese tramo. Ayuda a tu coach a ajustar las próximas sesiones.</span></div><div class="col g10"><div style="font-weight:600">¿Qué lo hizo duro?</div>' + chips('hardType', HARDT, d.hardType, 'Tipo de tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cuánto duró?</div>' + chips('hardDur', HARDD, d.hardDur, 'Duración del tramo', (i, l) => l) + '</div><div class="col g10"><div style="font-weight:600">¿Cómo lo terminaste?</div>' + chips('hardEnd', HARDE, d.hardEnd, 'Cómo terminaste', (i, l) => l) + '</div><div class="col g8"><label for="hardText" style="font-weight:600">¿Qué tramo fue? <span class="muted" style="font-weight:500;font-size:14px">(opcional)</span></label><input class="field" id="hardText" type="text" maxlength="200" placeholder="Por ejemplo: los últimos 10 min del repecho" value="' + esc(UI.draft.hardText || '') + '"></div></div>' : '') + cont;
-      } else if (d.tipo === 'gym') {
-        out += '<div class="col g8"><h2 class="title">Tu sesión de gym</h2></div>'
-          + '<div class="col g10"><div style="font-weight:600">¿Qué trabajaste?</div>' + plainOpts('gfocus', GFOCUS, d.gfocus, 'Foco', 2, (i, l) => l) + '</div>' + gzBlock(d)
-          + '<div class="col g10"><div style="font-weight:600">¿Cuántos minutos trabajaste?</div>' + plainOpts('gdur', GDURS, d.gdur, 'Minutos', 4) + '</div>'
-          + '<div class="col g10"><div style="font-weight:600">¿Qué tan duro fue? <span class="muted" style="font-weight:500;font-size:14px">(1 muy suave, 10 máximo)</span></div>' + rpeBar(d.rpe) + '</div>'
-          + '<div class="col g10"><div style="font-weight:600">¿Cómo quedaron las piernas?</div>' + chips('glegs', GLEGS, d.glegs, 'Piernas') + '</div>' + cont;
       } else {
         out += '<div class="col g8"><h2 class="title">Tu sesión</h2></div>'
           + '<div class="col g8"><label for="oname" style="font-weight:600">¿Qué hiciste?</label><input class="field" id="oname" type="text" maxlength="80" placeholder="Por ejemplo: trote suave" value="' + esc(UI.draft.oname || '') + '"></div>'
@@ -1425,6 +1434,7 @@ function flowHtml() {
       out += '<div class="col g8"><label for="comment" style="font-weight:600">¿Algo más que quieras contarle a tu coach?</label><textarea id="comment" placeholder="Opcional">' + esc(UI.draft.comment) + '</textarea></div><div class="col g8"><button type="button" class="btn primary" data-a="send" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>' + (UI.busy ? 'Enviando…' : (f.kind === 'post' ? 'Enviar sesión' : 'Enviar check-in')) + '</button>' + (f.kind === 'post' && f.slot === 1 && !(on(meA(), off(0)) || {}).act2 ? '<button type="button" class="btn ghost" data-a="sendMore"' + (UI.busy ? ' disabled' : '') + '>Guardar y agregar otra sesión</button>' : '') + '</div>';
     }
   }
+  if (f.step !== 'alt' && stepList(f)[f.i] === 'molestia') out = out.replace('class="inner flowsel"', 'class="inner flowsel nopos"');
   return out + '</div></div>';
 }
 
@@ -1433,6 +1443,62 @@ const ckActions = () => {
   if (UI.confirmDel) return '<section class="card col g10" aria-label="Borrar check-in" style="border:1.5px solid var(--bad)"><div class="h3">¿Borrar el check-in de hoy?</div><p class="soft" style="font-size:14px">Se elimina de tu historial y tu coach dejará de verlo. Después puedes hacer uno nuevo.</p><div class="row g8 wrap"><button type="button" class="chip" data-a="delCk" style="border-color:var(--bad);color:var(--bad)">Sí, borrar</button><button type="button" class="chip" data-a="delNo">Cancelar</button></div></section>';
   return '<div class="row g8 wrap"><button type="button" class="chip" data-a="editCk">Corregir check-in</button><button type="button" class="chip" data-a="delAsk">Borrar check-in</button></div>';
 };
+/* ---------- Perfil del atleta (datos propios + medidas que aprueba el coach) ---------- */
+const PF_SEX = [['f', 'Mujer'], ['m', 'Hombre'], ['o', 'Prefiero no decirlo']];
+const PF_SPORT = ['Ruta', 'MTB', 'Gravel', 'Fuerza / Gym', 'Otra'];
+const PF_MEAS = [['weightKg', 'Peso', 'kg', 30, 200], ['ftp', 'FTP', 'W', 50, 600], ['fcmax', 'FC máx', 'ppm', 120, 230], ['lthr', 'LTHR', 'ppm', 100, 220]];
+const ageOf = (b) => { if (!b || !/^\d{4}-\d{2}-\d{2}$/.test(b)) return null; const d = parse(b), t = new Date(); let a = t.getFullYear() - d.getFullYear(); if (t.getMonth() < d.getMonth() || (t.getMonth() === d.getMonth() && t.getDate() < d.getDate())) a--; return a >= 10 && a <= 100 ? a : null; };
+const bioMain = () => (ST.myBio && ST.myBio.main) || null;
+const bioMeas = () => (ST.myBio && ST.myBio.meas) || {};
+const bioDone = (m) => { if (!m) return 0; const h = m.health || {}; return [m.birthDate, m.heightCm, m.sport, (m.emergency || {}).name && (m.emergency || {}).phone].filter(Boolean).length; };
+function profDraft() {
+  const m = bioMain() || {}, h = m.health || {}, e = m.emergency || {};
+  return { birth: m.birthDate || '', height: m.heightCm != null ? String(m.heightCm) : '', sex: m.sex || null, sport: m.sport || null, cond: h.conditions || '', meds: h.meds || '', inj: h.injuries || '', alle: h.allergies || '', ename: e.name || '', ephone: e.phone || '', showW: !!m.showWeight };
+}
+function profHtml() {
+  const P = UI.prof, d = P.d, meas = bioMeas(), prop = meas.prop || {};
+  const fld = (id, lbl, val, extra) => '<div class="col g8"><label for="pf-' + id + '" style="font-weight:600">' + lbl + '</label><input class="field" id="pf-' + id + '" value="' + esc(val) + '" ' + (extra || '') + '></div>';
+  const area = (id, lbl, val) => '<div class="col g8"><label for="pf-' + id + '" style="font-weight:600">' + lbl + '</label><textarea id="pf-' + id + '" maxlength="300" rows="2">' + esc(val) + '</textarea></div>';
+  let out = '<div class="inner flowsel"><div class="stack" style="gap:18px"><div class="row between"><button type="button" class="link" data-a="profClose">Cerrar</button><span class="muted" style="font-size:13px">Mi perfil</span></div>'
+    + '<div class="col g8"><h2 class="title">Tu perfil</h2><p class="muted">Ayuda a tu coach a ajustar el entrenamiento contigo. Todo es opcional y puedes cambiarlo cuando quieras.</p></div>'
+    + '<section class="card col g14" aria-label="Datos básicos"><div class="eyebrow">Datos básicos</div>'
+    + fld('birth', 'Fecha de nacimiento', d.birth, 'type="date" max="' + off(0) + '"') + fld('height', 'Estatura (cm)', d.height, 'type="number" inputmode="numeric" min="100" max="230"')
+    + '<div class="col g10"><div style="font-weight:600">Sexo <span class="muted" style="font-weight:500;font-size:14px">(opcional, ajusta algunas referencias fisiológicas)</span></div><div class="chips" role="group" aria-label="Sexo">' + PF_SEX.map((x) => '<button type="button" class="chip" data-a="pfSet" data-g="sex" data-v="' + x[0] + '" aria-pressed="' + (d.sex === x[0]) + '">' + x[1] + '</button>').join('') + '</div></div>'
+    + '<div class="col g10"><div style="font-weight:600">Disciplina principal</div><div class="chips" role="group" aria-label="Disciplina">' + PF_SPORT.map((x) => '<button type="button" class="chip" data-a="pfSet" data-g="sport" data-v="' + esc(x) + '" aria-pressed="' + (d.sport === x) + '">' + esc(x) + '</button>').join('') + '</div></div></section>';
+  // medidas aprobadas por el coach
+  out += '<section class="card col g12" aria-label="Medidas"><div class="eyebrow">Medidas de tu coach</div><p class="soft" style="font-size:14px">Las confirma tu coach para que sus cálculos sean consistentes. Si cambiaron, propón el nuevo valor y él lo revisa.</p><div class="setlist">'
+    + PF_MEAS.map((x) => {
+      const k = x[0], cur = meas[k], pr = prop[k], hide = k === 'weightKg' && !d.showW && cur != null;
+      const val = cur == null ? 'Sin dato' : (hide ? 'Oculto' : cur + ' ' + x[2]);
+      let row = '<div class="col g8" style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row between g10" style="align-items:center"><span class="col g4" style="min-width:0"><span style="font-weight:600">' + x[1] + '</span><span class="muted" style="font-size:14px">' + val + (cur != null && meas.updatedAt ? ' · ' + relTime(meas.updatedAt) : '') + '</span></span>'
+        + (pr ? '<span class="tag">En revisión · ' + pr.v + ' ' + x[2] + '</span>' : '<button type="button" class="chip" data-a="pfOpen" data-v="' + k + '" aria-pressed="' + (P.open === k) + '">Proponer cambio</button>') + '</div>';
+      if (pr) row += '<div class="row g10 wrap" style="align-items:center"><span class="muted" style="font-size:13px">Enviado ' + relTime(pr.ts) + (pr.note ? ' · “' + esc(pr.note) + '”' : '') + '</span><button type="button" class="link" data-a="pfWithdraw" data-v="' + k + '">Retirar</button></div>';
+      if (!pr && P.open === k) row += '<div class="col g10"><input class="field" id="pp-' + k + '" type="number" inputmode="decimal" placeholder="Nuevo valor (' + x[2] + ')" min="' + x[3] + '" max="' + x[4] + '"><input class="field" id="pp-note" type="text" maxlength="120" placeholder="Nota para tu coach (opcional)"><button type="button" class="btn primary" data-a="pfProp" data-v="' + k + '" style="justify-content:center"><span>Enviar a mi coach</span></button></div>';
+      return row + '</div>';
+    }).join('') + setRow('Mostrar mi peso en pantalla', d.showW ? 'Tu peso se ve en esta pantalla' : 'Oculto por defecto: tu coach igual lo usa en sus cálculos', d.showW, 'pfSw') + '</div></section>';
+  // salud
+  out += '<section class="card col g14" aria-label="Salud"><div class="eyebrow">Salud (opcional)</div><div class="info" role="note">' + infoIcon() + '<span>Solo lo ve tu coach y sirve para cuidarte mejor. No reemplaza una evaluación médica. Comparte solo lo que quieras.</span></div>'
+    + area('inj', 'Lesiones o molestias de largo plazo', d.inj) + area('cond', 'Condiciones que tu coach deba considerar', d.cond) + area('meds', 'Medicamentos habituales', d.meds) + area('alle', 'Alergias', d.alle) + '</section>';
+  out += '<section class="card col g14" aria-label="Contacto de emergencia"><div class="eyebrow">Contacto de emergencia (opcional)</div>' + fld('ename', 'Nombre y relación', d.ename, 'type="text" maxlength="80"') + fld('ephone', 'Teléfono', d.ephone, 'type="tel" inputmode="tel" maxlength="30"') + '</section>';
+  out += '<section class="card col g10" aria-label="Tus datos"><div class="eyebrow">Tus datos, tu control</div><p class="soft" style="font-size:14px">Puedes descargar todo lo que Camino guarda de ti o pedir que se elimine tu cuenta.</p><div class="col g8"><button type="button" class="btn ghost" data-a="pfExport" style="justify-content:center;border:1.5px solid var(--line)"><span>Descargar mis datos</span></button>'
+    + (P.confirmDel ? '<p class="soft" style="font-size:14px">Se enviará una solicitud a tu coach para eliminar tu cuenta y todos tus registros. ¿Confirmas?</p><div class="row g10"><button type="button" class="btn primary" data-a="pfDelReq" style="flex:1;justify-content:center"><span>Sí, solicitar</span></button><button type="button" class="btn ghost" data-a="pfDelNo" style="flex:1;justify-content:center"><span>Cancelar</span></button></div>' : '<button type="button" class="btn ghost" data-a="pfDelAsk" style="justify-content:center;border:1.5px solid var(--line)"><span>Solicitar eliminar mi cuenta</span></button>') + '</div></section>';
+  return out + '<div class="col g8"><button type="button" class="btn primary" data-a="profSave" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '><span>Guardar perfil</span></button><button type="button" class="btn ghost" data-a="profClose">Cancelar</button></div></div></div>';
+}
+function bioPanel(a) {
+  const b = ST.athBio[a.id] || {}, m = b.main, ms = b.meas || {}, prop = ms.prop || {}, h = (m && m.health) || {}, e = (m && m.emergency) || {};
+  const row = (l, v) => v ? '<div class="col g4"><span class="eyebrow">' + l + '</span><span style="overflow-wrap:anywhere">' + esc(v) + '</span></div>' : '';
+  let out = '<div class="col g12" style="padding:6px 0 12px">';
+  if (!m) out += '<p class="soft" style="font-size:14px">' + esc(a.first) + ' aún no completa su perfil.</p>';
+  else out += row('Edad y estatura', [ageOf(m.birthDate) != null ? ageOf(m.birthDate) + ' años' : '', m.heightCm ? m.heightCm + ' cm' : '', m.sport || ''].filter(Boolean).join(' · ')) + row('Lesiones', h.injuries) + row('Condiciones', h.conditions) + row('Medicamentos', h.meds) + row('Alergias', h.allergies) + row('Emergencia', [e.name, e.phone].filter(Boolean).join(' · '));
+  out += '<div class="col g10"><span class="eyebrow">Medidas confirmadas</span>' + PF_MEAS.map((x) => {
+    const k = x[0], pr = prop[k];
+    return '<div class="col g8" style="padding:6px 0;border-bottom:1px solid var(--line)"><div class="row between g10" style="align-items:center"><span style="font-weight:600">' + x[1] + ' <span class="muted" style="font-weight:500">' + (ms[k] != null ? ms[k] + ' ' + x[2] : 'sin dato') + '</span></span>'
+      + (pr ? '<span class="row g8"><button type="button" class="chip" data-a="bioOk" data-v="' + esc(a.id) + '|' + k + '">Aprobar ' + pr.v + '</button><button type="button" class="chip" data-a="bioNo" data-v="' + esc(a.id) + '|' + k + '">Rechazar</button></span>' : '') + '</div>'
+      + (pr && pr.note ? '<span class="muted" style="font-size:13px">“' + esc(pr.note) + '”</span>' : '')
+      + '<div class="row g8"><input class="field" id="bm-' + k + '" type="number" inputmode="decimal" placeholder="Fijar ' + x[1] + ' (' + x[2] + ')" style="min-height:40px"><button type="button" class="chip" data-a="bioSet" data-v="' + esc(a.id) + '|' + k + '">Guardar</button></div></div>';
+  }).join('') + '</div></div>';
+  return out;
+}
 function feedbackHtml() {
   const a = meA(), c = UI.feedback && UI.feedback.checkin ? UI.feedback.checkin : on(a, off(0)), newB = UI.feedback ? UI.feedback.newBadges : [];
   if (!c) return '';
@@ -1444,14 +1510,14 @@ function feedbackHtml() {
     dots += '<i style="flex:1;height:10px;border-radius:5px;border:1.5px solid ' + bd + ';background:' + bg + '"></i>';
   }
   const n = lastNote(a);
-  let out = '<div class="inner"><div class="stack"><div class="row g14 pop"><div class="row" style="width:56px;height:56px;border-radius:50%;justify-content:center;background:var(--good-soft);border:1.5px solid var(--good);flex:none">' + check('var(--good)', 28) + '</div><div class="col g4"><h2 class="h2" style="font-size:34px">Listo, gracias ' + esc(a.first) + '</h2><div class="muted" style="font-size:14px">Check-in enviado a tu coach</div></div></div><section class="card"><div class="eyebrow">Lo que vemos</div><p style="margin-top:8px;font-size:17px">' + esc(insightFor(c)) + '</p></section>';
+  let out = '<div class="inner"><div class="stack"><div class="row g14 pop"><div class="row" style="width:56px;height:56px;border-radius:50%;justify-content:center;background:var(--good-soft);border:1.5px solid var(--good);flex:none">' + check('var(--good)', 28) + '</div><div class="col g4"><h2 class="h2" style="font-size:34px">Listo, gracias, ' + esc(a.first) + '</h2><div class="muted" style="font-size:14px">Check-in enviado a tu coach</div></div></div><section class="card"><div class="eyebrow">Lo que vemos</div><p style="margin-top:8px;font-size:17px">' + esc(insightFor(c)) + '</p></section>';
   if (newB && newB.length) out += newB.map((b) => '<section class="card row g14 pop" style="border:1.5px solid var(--accent);background:var(--accent-soft)"><div class="row" style="width:56px;height:56px;border-radius:50%;justify-content:center;border:2px solid var(--accent);flex:none">' + icon(b.id, 28, 'var(--accent)') + '</div><div class="col g4"><div class="eyebrow" style="color:var(--accent)">Nueva insignia</div><div class="h3">' + esc(b.label) + '</div></div></section>').join('');
   out += '<section class="card"><div class="row between g8" style="align-items:baseline"><div class="eyebrow">Tu ánimo · 7 días</div><div class="muted" style="font-size:13px">hoy: ' + (c.mood != null ? at(MOODS, c.mood - 1).toLowerCase() : 'sin registrar') + '</div></div><div style="margin-top:10px">' + spark(a) + '</div></section><section class="card"><div class="eyebrow">Tu constancia</div><div class="row g8" style="margin-top:12px" aria-hidden="true">' + dots + '</div><p class="soft" style="margin-top:12px">' + st.n + (st.n === 1 ? ' día' : ' días') + ' seguidos. Los días de descanso cuentan.</p></section>';
   if (n) out += '<section class="card"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p></section>';
   out += ckActions();
   return out + '<div class="col g8"><a href="#ruta" data-a="closeFb" class="btn primary"><span>Ver mi ruta</span>' + arrow() + '</a><button type="button" class="btn ghost" data-a="closeFb">Volver a Hoy</button></div></div></div>';
 }
-const overlayHtml = () => (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : (UI.wk ? weekSheetHtml() : '')))));
+const overlayHtml = () => (UI.prof ? profHtml() : (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : (UI.wk ? weekSheetHtml() : ''))))));
 
 /* ---------- Historia: tu camino recorrido ---------- */
 function bestWeekMin(a) {
@@ -1565,7 +1631,7 @@ function setupData() {
       ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
       const ids = ST.athletes.map((r) => r.id);
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
-      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); })]; });
+      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); })]; });
       soft();
     }));
     dataUnsubs.push(be.listenPending((rows) => { ST.pending = rows; soft(); }));
@@ -1573,7 +1639,7 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; ST.myBio = null; ST.athBio = {}; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e) + ' [' + ((e && e.step) || 'perfil') + ': ' + String((e && e.code) || '').replace('firestore/', '') + ' | ' + (user.email || 'sin correo') + ' | ' + String(user.uid).slice(0, 6) + ']'));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
@@ -1581,6 +1647,7 @@ function startSession(user) {
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));
   ownUnsubs.push(be.listenPlan(user.uid, (pl) => { ST.myPlan = pl; soft(); }));
   ownUnsubs.push(be.listenHistory(user.uid, (h) => { ST.myHist = h; soft(); }));
+  ownUnsubs.push(be.listenBio(user.uid, (b) => { ST.myBio = b; soft(); }));
 }
 
 /* ---------- Acciones ---------- */
@@ -1602,7 +1669,7 @@ async function finishFlow(more) {
     const planOk = f.slot !== 2 && p && ((tipo === 'gym' && pk === 'gym') || (bike && pk && pk !== 'gym'));
     let name, min = null, km = 0, load = null, gym = null;
     if (bike) { if (planOk || (d.activity && d.activity.name && d.activity.kind === undefined && f.slot === 1 && ex.activity && kindOfAct(ex.activity, a) === kind)) { const A = d.activity || { name: p.name, min: p.min || null, km: p.km || 0, load: p.load == null ? null : p.load }; name = A.name; min = A.min || null; km = A.km || 0; load = A.load == null ? null : A.load; } else { name = 'Salida en ' + KIND_LABEL[kind]; } }
-    else if (tipo === 'gym') { name = 'Gym' + (d.gfocus ? ' · ' + d.gfocus : ''); min = d.gdur != null ? DURMIN[d.gdur] : (planOk && p.min ? p.min : null); load = planOk && p.load != null ? p.load : null; gym = { focus: d.gfocus || null, dur: d.gdur != null ? d.gdur : null, legs: d.glegs != null ? d.glegs : null }; const zo = {}; Object.keys(d.gzones || {}).forEach((k) => { const v = d.gzones[k]; if (GZN[k] && v) { zo[k] = { i: v.i == null ? 1 : v.i, m: v.m ? 1 : 0 }; if (v.m && tx(v.t)) zo[k].t = tx(v.t).slice(0, 200); } }); if (Object.keys(zo).length) gym.zones = zo; }
+    else if (tipo === 'gym') { name = 'Gym' + (d.gfocus ? ' · ' + d.gfocus : ''); min = d.gdur != null ? DURMIN[d.gdur] : (planOk && p.min ? p.min : null); load = planOk && p.load != null ? p.load : null; gym = { focus: d.gfocus || null, dur: d.gdur != null ? d.gdur : null, feel: d.gfeel != null ? d.gfeel : null }; const zo = {}; Object.keys(d.gzones || {}).forEach((k) => { const v = d.gzones[k]; if (GZN[k] && v) { zo[k] = { i: v.i == null ? 1 : v.i, m: v.m ? 1 : 0 }; if (v.m && tx(v.t)) zo[k].t = tx(v.t).slice(0, 200); } }); if (Object.keys(zo).length) gym.zones = zo; }
     else { name = tx(dr.oname) || 'Otra actividad'; min = d.odur != null ? DURMIN[d.odur] : null; }
     const S = { kind, name, min, km, load, rpe: d.rpe || null, heat: bike && d.heat != null ? d.heat : null, hard: bike ? (d.hard || null) : null, hardInfo: bike && d.hard === 'si' ? { type: d.hardType || null, dur: d.hardDur || null, end: d.hardEnd || null, text: tx(dr.hardText) || null } : null };
     if (gym) S.gym = gym; if (tipo === 'otra') S.dur = d.odur != null ? d.odur : null;
@@ -1721,7 +1788,7 @@ const ACT = {
         d.rpe = S.rpe || undefined; d.heat = S.heat == null ? undefined : S.heat; d.hard = S.hard || undefined;
         if (S.hardInfo) { d.hardType = S.hardInfo.type || undefined; d.hardDur = S.hardInfo.dur || undefined; d.hardEnd = S.hardInfo.end || undefined; }
         d.activity = { name: S.name, min: S.min || null, km: S.km || 0, load: S.load == null ? null : S.load };
-        if (k === 'gym') { d.tipo = 'gym'; const g = S.gym || {}; d.gfocus = g.focus || undefined; d.gdur = g.dur == null ? undefined : g.dur; d.glegs = g.legs == null ? undefined : g.legs; if (g.zones) { d.gzones = {}; Object.keys(g.zones).forEach((k) => { if (GZN[k]) d.gzones[k] = { i: g.zones[k].i == null ? 1 : g.zones[k].i, m: g.zones[k].m ? 1 : 0, t: g.zones[k].t || '' }; }); } }
+        if (k === 'gym') { d.tipo = 'gym'; const g = S.gym || {}; d.gfocus = g.focus || undefined; d.gdur = g.dur == null ? undefined : g.dur; { const fv = g.feel != null ? g.feel : g.legs; d.gfeel = fv == null ? undefined : fv; } if (g.zones) { d.gzones = {}; Object.keys(g.zones).forEach((k) => { if (GZN[k]) d.gzones[k] = { i: g.zones[k].i == null ? 1 : g.zones[k].i, m: g.zones[k].m ? 1 : 0, t: g.zones[k].t || '' }; }); } }
         else if (BKINDS[k]) { d.tipo = 'bici'; d.bkind = k; }
         else { d.tipo = 'otra'; oname = S.name || ''; d.odur = S.dur == null ? undefined : S.dur; }
       } else if (slot === 1 && pk) {
@@ -1757,6 +1824,49 @@ const ACT = {
   back() { const f = UI.flow; if (f.step === 'run' && f.i > 0) f.i--; else { f.step = 'tipo'; f.i = 0; } render(); },
   send() { if (!UI.busy) finishFlow(); },
   feedback() { UI.feedback = { checkin: on(meA(), off(0)), newBadges: [] }; render(); },
+  profOpen() { UI.prof = { d: profDraft(), open: null, confirmDel: false }; render(); },
+  profClose() { UI.prof = null; render(); const ov = document.getElementById('overlay'); if (ov) ov.scrollTop = 0; },
+  pfSet(v, t) { if (!UI.prof) return; const g = t.dataset.g; UI.prof.d[g] = UI.prof.d[g] === v ? null : v; render(); },
+  pfSw() { if (!UI.prof) return; UI.prof.d.showW = !UI.prof.d.showW; render(); },
+  pfOpen(v) { if (!UI.prof) return; UI.prof.open = UI.prof.open === v ? null : v; render(); },
+  pfDelAsk() { if (UI.prof) { UI.prof.confirmDel = true; render(); } },
+  pfDelNo() { if (UI.prof) { UI.prof.confirmDel = false; render(); } },
+  async profSave() {
+    const P = UI.prof; if (!P || !ST.user || UI.busy) return; const d = P.d, t = (x) => String(x || '').trim();
+    const h = d.height === '' ? null : Number(d.height); if (h != null && !(h >= 100 && h <= 230)) { say('La estatura debe estar entre 100 y 230 cm.'); return; }
+    if (d.birth && ageOf(d.birth) == null) { say('Revisa la fecha de nacimiento.'); return; }
+    const old = bioMain() || {};
+    const main = { birthDate: d.birth || null, heightCm: h, sex: d.sex || null, sport: d.sport || null, health: { conditions: t(d.cond).slice(0, 300), meds: t(d.meds).slice(0, 300), injuries: t(d.inj).slice(0, 300), allergies: t(d.alle).slice(0, 300) }, emergency: { name: t(d.ename).slice(0, 80), phone: t(d.ephone).slice(0, 30) }, showWeight: !!d.showW, consentTs: old.consentTs || Date.now(), updatedAt: Date.now() };
+    UI.busy = true; render();
+    try { await be.saveBio(ST.user.uid, main); UI.prof = null; say('Perfil guardado', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  async pfProp(v) {
+    const P = UI.prof, m = PF_MEAS.find((x) => x[0] === v), el = document.getElementById('pp-' + v), nt = document.getElementById('pp-note'); if (!P || !m || !el || !ST.user) return;
+    const n = Number(String(el.value).replace(',', '.')); if (!(n >= m[3] && n <= m[4])) { say('Ingresa un valor entre ' + m[3] + ' y ' + m[4] + ' ' + m[2] + '.'); return; }
+    const prop = Object.assign({}, bioMeas().prop || {}); prop[v] = { v: Math.round(n * 10) / 10, note: nt ? String(nt.value || '').trim().slice(0, 120) : '', ts: Date.now() };
+    try { await be.propose(ST.user.uid, prop); P.open = null; say('Enviado a tu coach', 'ok'); } catch (e) { say(friendly(e)); }
+    render();
+  },
+  async pfWithdraw(v) { if (!ST.user) return; const prop = Object.assign({}, bioMeas().prop || {}); delete prop[v]; try { await be.propose(ST.user.uid, prop); } catch (e) { say(friendly(e)); } },
+  pfExport() {
+    const data = { exportado: new Date().toISOString(), cuenta: ST.profile ? { nombre: ST.profile.name, correo: ST.profile.email || null, equipo: ST.profile.team || null } : null, perfil: ST.myBio || null, checkins: ST.myCk || [], notasDelCoach: ST.myNotes || [] };
+    try { const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })), a = document.createElement('a'); a.href = url; a.download = 'camino-mis-datos.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); say('Descarga lista', 'ok'); } catch (e) { say('No se pudo descargar. Intenta de nuevo.'); }
+  },
+  async pfDelReq() {
+    if (!ST.user || UI.busy) return; UI.busy = true; render();
+    try { await be.sendFeedback({ uid: ST.user.uid, name: String((ST.profile && ST.profile.name) || 'Atleta').slice(0, 80), team: String((ST.profile && ST.profile.team) || ''), kind: 'consulta', text: 'Solicito eliminar mi cuenta y todos mis datos de Camino.', ts: Date.now(), read: false }); if (UI.prof) UI.prof.confirmDel = false; say('Solicitud enviada a tu coach', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  bioTgl(v) { UI.bioOpen = UI.bioOpen === v ? null : v; render(); },
+  async bioOk(v) { const [id, k] = String(v).split('|'), b = ST.athBio[id] || {}, ms = Object.assign({}, b.meas || {}), pr = Object.assign({}, ms.prop || {}); if (!pr[k] || !ST.user) return; ms[k] = pr[k].v; delete pr[k]; ms.prop = pr; ms.updatedAt = Date.now(); ms.by = ST.user.uid; try { await be.saveMeas(id, ms); say('Medida aprobada', 'ok'); } catch (e) { say(friendly(e)); } },
+  async bioNo(v) { const [id, k] = String(v).split('|'), b = ST.athBio[id] || {}, ms = Object.assign({}, b.meas || {}), pr = Object.assign({}, ms.prop || {}); if (!pr[k] || !ST.user) return; delete pr[k]; ms.prop = pr; ms.by = ST.user.uid; try { await be.saveMeas(id, ms); say('Propuesta rechazada', 'ok'); } catch (e) { say(friendly(e)); } },
+  async bioSet(v) {
+    const [id, k] = String(v).split('|'), m = PF_MEAS.find((x) => x[0] === k), el = document.getElementById('bm-' + k); if (!m || !el || !ST.user) return;
+    const n = Number(String(el.value).replace(',', '.')); if (!(n >= m[3] && n <= m[4])) { say('Ingresa un valor entre ' + m[3] + ' y ' + m[4] + ' ' + m[2] + '.'); return; }
+    const ms = Object.assign({}, (ST.athBio[id] || {}).meas || {}); ms[k] = Math.round(n * 10) / 10; ms.updatedAt = Date.now(); ms.by = ST.user.uid;
+    try { await be.saveMeas(id, ms); say('Medida guardada', 'ok'); } catch (e) { say(friendly(e)); }
+  },
   closeFb() { UI.feedback = null; render(); },
   wkOpen(v) { const t0 = parse(off(0)); t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)); const sh = v ? Math.floor(diffDays(ymd(t0), v) / 7) : 0; UI.wk = { shift: sh, focus: v || null }; render(); if (v) { const el = document.getElementById('wkd-' + v); if (el) el.scrollIntoView({ block: 'center' }); } },
   wkClose() { UI.wk = null; render(); },
@@ -1827,7 +1937,7 @@ const ACT = {
     try { await be.saveTeamMeta(team, { goal: goal > 0 ? goal : KM_GOAL_DEFAULT, hito: String(hito || '').slice(0, 200) }); UI.metaDraft = null; say('Guardado para ' + TEAMS[team] + '.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
-  resetDemo() { try { localStorage.removeItem('camino-demo-v3'); sessionStorage.removeItem('camino-demo-user'); } catch (e) {} location.reload(); }
+  resetDemo() { try { localStorage.removeItem('camino-demo-v4'); sessionStorage.removeItem('camino-demo-user'); } catch (e) {} location.reload(); }
 };
 function guiaSync() {
   const tr = document.getElementById('gtrack'); if (!tr) return;
@@ -1846,6 +1956,7 @@ document.addEventListener('click', (e) => { const t = e.target.closest('[data-a]
 document.addEventListener('input', (e) => {
   const id = e.target.id;
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
+  if (id && id.indexOf('pf-') === 0 && UI.prof) UI.prof.d[id.slice(3)] = e.target.value;
   if (id === 'comment') UI.draft.comment = e.target.value;
   if (id && id.indexOf('gzt-') === 0 && UI.flow && UI.flow.d.gzones && UI.flow.d.gzones[id.slice(4)]) { UI.flow.d.gzones[id.slice(4)].t = e.target.value; const cc = document.getElementById('gzc-' + id.slice(4)); if (cc) cc.textContent = e.target.value.length + '/200'; }
   if (id === 'prevText') UI.draft.prevText = e.target.value;

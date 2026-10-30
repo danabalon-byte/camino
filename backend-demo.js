@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v3';
+const KEY = 'camino-demo-v4';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -61,7 +61,7 @@ function mkRichCheckins(hist, days) {
     const c = { id: date, date, type: act ? 'actividad' : (L > 0 ? 'bienestar' : 'descanso'), mood, sleepH: 1 + ((k * 3) % 3), sleepQ: 1 + ((k * 5) % 4), legs: tsb < -12 ? 0 : (tsb < 0 ? 1 : 2), stress: (k * 7) % 3 === 0 ? 1 : 0, rpe: act ? Math.max(3, Math.min(9, Math.round(L / 18))) : null, heat: act ? 1 : null, hard: act ? (L > 120 ? 'si' : 'no') : null, pain: null, comment: comments[k] || '', activity: act ? { name: p ? p[0] : 'Salida', min: Math.round(L * 0.95 + 15), km: Math.round((L * 0.95 + 15) * (wd === 6 ? 0.5 : 0.36)), load: L } : null, ts: tsOf(date, 8, 10 + (k % 40)) };
     if (c.hard === 'si') c.hardInfo = { type: 'Subida larga', dur: '20 min', end: 'Ok' };
     if (k === 10) c.pain = { zone: 'Rodilla', side: 'Izquierdo', level: 'Leve' };
-    if (k === 2) { c.type = 'actividad'; c.rpe = 6; c.activity = { name: 'Gym · piernas', min: 60, km: 0, load: null, kind: 'gym', gym: { focus: 'Piernas', dur: 2, legs: 1, zones: { quads: { i: 2, m: 1, t: 'Tirón leve al bajar escaleras' }, glutes: { i: 1, m: 0 }, hamstrings: { i: 1, m: 0 } } } }; c.heat = null; c.hard = null; }
+    if (k === 2) { c.type = 'actividad'; c.rpe = 6; c.activity = { name: 'Gym · piernas', min: 60, km: 0, load: null, kind: 'gym', gym: { focus: 'Piernas', dur: 2, feel: 1, zones: { quads: { i: 2, m: 1, t: 'Tirón leve al bajar escaleras' }, glutes: { i: 1, m: 0 }, hamstrings: { i: 1, m: 0 } } } }; c.heat = null; c.hard = null; }
     if (k === 4) { c.type = 'actividad'; c.act2 = { kind: 'gym', name: 'Gym · tren superior', min: 45, km: 0, load: null, rpe: 6, gym: { focus: 'Tren superior', dur: 1, zones: { chest: { i: 1, m: 0 }, shoulders: { i: 1, m: 0 }, upper_back: { i: 2, m: 0 } } } }; if (!c.activity) { c.activity = { name: 'Rodaje', min: 50, km: 20, load: null, kind: 'ruta' }; c.rpe = 4; c.heat = 1; c.hard = 'no'; } }
     list.push(c);
   }
@@ -88,6 +88,10 @@ function seed() {
   ath('joaquin', 'Joaquín P.', 'zn', [4, 4, 3, 3, 2, 2, 2], { sleepH: 1, sleepQ: 3, legs: 0, stress: 2, rpe: 7, comment: 'Me molesta un poco el muslo al pedalear fuerte.', ts: tsOf(off(0), 7, 45) }, { zone: 'Muslo', side: 'Derecho', level: 'Leve' }, 1.5, ['Cuesta Barriga', '40 km · 1.100 m D+', 28]);
   ath('matias', 'Matías S.', 'grnt', [3, 3, 4, 4, 3, 4, null], { sleepH: 3, sleepQ: 1, legs: 2, stress: 0, rpe: 5, ts: tsOf(off(-1), 21, 30) }, null, 0.85);
   ath('valentina', 'Valentina T.', 'zn', [4, 4, 3, 4, null, null, null], { sleepH: 2, sleepQ: 2, legs: 1, stress: 1, rpe: 4, ts: tsOf(off(-3), 19, 50) }, null, 0.7);
+  users.demoAtleta.bioMain = { birthDate: '1988-04-12', heightCm: 176, sex: null, sport: 'Ruta', health: { conditions: '', meds: '', injuries: 'Tendón rotuliano derecho (2024), ya recuperado', allergies: '' }, emergency: { name: 'Marta (pareja)', phone: '+56 9 1234 5678' }, showWeight: false, consentTs: tsOf(off(-10), 9, 0), updatedAt: tsOf(off(-10), 9, 0) };
+  users.demoAtleta.bioMeas = { weightKg: 72, ftp: 245, fcmax: 188, lthr: 168, updatedAt: tsOf(off(-20), 10, 0), by: 'demoCoach' };
+  users.camila.bioMain = { birthDate: '1992-09-03', heightCm: 165, sex: 'f', sport: 'Gravel', health: { conditions: '', meds: '', injuries: '', allergies: '' }, emergency: { name: '', phone: '' }, showWeight: false, consentTs: tsOf(off(-30), 9, 0), updatedAt: tsOf(off(-30), 9, 0) };
+  users.camila.bioMeas = { weightKg: 58, ftp: 205, fcmax: 191, updatedAt: tsOf(off(-30), 9, 0), by: 'demoCoach', prop: { weightKg: { v: 57, note: 'Me pesé esta mañana', ts: tsOf(off(-1), 8, 0) }, ftp: { v: 212, note: 'Test de 20 min del domingo', ts: tsOf(off(-1), 8, 0) } } };
   users.nuevo = { profile: { id: 'nuevo', name: 'Atleta nuevo (demo)', role: 'athlete', pending: true }, checkins: [], notes: [] };
   const mo = ymd(new Date()).slice(0, 7), k = (name, km) => ({ name, month: mo, km });
   return { users, km: { grnt: { demoAtleta: k('Tomás (demo)', 412), camila: k('Camila R.', 520), matias: k('Matías S.', 380), lucas: k('Lucas V.', 290), sofia: k('Sofía M.', 345) }, zn: { joaquin: k('Joaquín P.', 310), valentina: k('Valentina T.', 260), emilia: k('Emilia C.', 405), nicolas: k('Nicolás A.', 220) } }, meta: { grnt: { goal: 2500, hito: 'Salida grupal del sábado: 70 km por el camino costero, ritmo conversado.' }, zn: { goal: 1800, hito: 'Semana de recuperación activa: rodajes suaves y movilidad.' } },
@@ -126,6 +130,10 @@ const be = {
   },
   async signOut() { try { sessionStorage.removeItem('camino-demo-user'); } catch (e) {} current = null; authCb && authCb(null); },
   async ensureProfile() {},
+  listenBio(uid, cb) { return live(() => { const u = store.users[uid] || {}; cb(JSON.parse(JSON.stringify({ main: u.bioMain || null, meas: u.bioMeas || null }))); }); },
+  async saveBio(uid, data) { store.users[uid].bioMain = data; notify(); },
+  async propose(uid, prop) { const u = store.users[uid]; u.bioMeas = Object.assign({}, u.bioMeas || {}, { prop }); notify(); },
+  async saveMeas(uid, data) { store.users[uid].bioMeas = data; notify(); },
   listenProfile(uid, cb) { return live(() => cb({ ...store.users[uid].profile })); },
   async saveProfile(uid, patch) { Object.assign(store.users[uid].profile, patch); notify(); },
   listenCheckins(uid, cb) { return live(() => cb([...store.users[uid].checkins].sort(byDateDesc).map(c => ({ ...c })))); },

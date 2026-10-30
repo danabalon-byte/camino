@@ -64,6 +64,18 @@ const be = {
   },
   saveProfile(uid, patch) { return updateDoc(doc(db, 'users', uid), clean(patch)); },
 
+  // Perfil del atleta: datos que él mismo completa (main) y medidas que aprueba su coach (meas, con propuestas en meas.prop)
+  listenBio(uid, cb) {
+    let main = null, meas = null; const emit = () => cb({ main, meas });
+    const u1 = onSnapshot(doc(db, 'users', uid, 'profile', 'main'), (s) => { main = s.exists() ? s.data() : null; emit(); }, fail('perfil del atleta'));
+    const u2 = onSnapshot(doc(db, 'users', uid, 'profile', 'measures'), (s) => { meas = s.exists() ? s.data() : null; emit(); }, fail('medidas'));
+    return () => { u1(); u2(); };
+  },
+  saveBio(uid, data) { return setDoc(doc(db, 'users', uid, 'profile', 'main'), clean(data)); },
+  // El atleta solo propone (campo prop); el coach aprueba y escribe las medidas.
+  propose(uid, prop) { return setDoc(doc(db, 'users', uid, 'profile', 'measures'), clean({ prop }), { merge: true }); },
+  saveMeas(uid, data) { return setDoc(doc(db, 'users', uid, 'profile', 'measures'), clean(data)); },
+
   listenCheckins(uid, cb, n = 120) {
     const q = query(collection(db, 'users', uid, 'checkins'), orderBy('date', 'desc'), limit(n));
     return onSnapshot(q, (s) => cb(rows(s)), fail('check-ins'));
