@@ -95,7 +95,9 @@ const ST = { ready: false, user: null, myBio: null, athBio: {}, profile: null, m
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
-const isCoach = () => !!(ST.profile && ST.profile.role === 'coach');
+const isViewer = () => !!(ST.profile && ST.profile.role === 'viewer');
+const canEdit = () => !!(ST.profile && ST.profile.role === 'coach');
+const isCoach = () => !!(ST.profile && (ST.profile.role === 'coach' || ST.profile.role === 'viewer'));
 const myTeam = () => (ST.profile && ST.profile.team) || null;
 
 function meA() {
@@ -295,7 +297,7 @@ const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCo
 const NAVIC = { hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
 const TABLBL = { guia: 'Guía' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
-const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
+const coachMode = () => { if (!isCoach()) return false; if (isViewer()) return true; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
 const tabs = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']).map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id] }));
 const navHtml = () => '<div class="inner">' + tabs().map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id ? ' aria-current="page"' : '') + '>' + ph(t.ic, 26, 'currentColor', UI.view === t.id) + '<span>' + t.label + '</span></a>').join('') + '</div>';
 /* Logo segun el fondo: ciclista blanco sobre fondos oscuros, negro sobre fondos claros. */
@@ -355,7 +357,8 @@ function topHtml() {
   if (ST.profile) {
     const t = myTeam();
     if (t && !TEAM_LOGO[t]) pills += '<span class="pill">' + TEAMS[t] + '</span>';
-    if (isCoach()) { const cm = coachMode(); pills += '<div class="modesw" role="group" aria-label="Cambiar de vista"><button type="button" data-a="mode" data-v="coach" aria-pressed="' + cm + '">Coach</button><button type="button" data-a="mode" data-v="atleta" aria-pressed="' + !cm + '">Atleta</button></div>'; }
+    if (isViewer()) pills += '<span class="pill role">Solo lectura</span>';
+    else if (isCoach()) { const cm = coachMode(); pills += '<div class="modesw" role="group" aria-label="Cambiar de vista"><button type="button" data-a="mode" data-v="coach" aria-pressed="' + cm + '">Coach</button><button type="button" data-a="mode" data-v="atleta" aria-pressed="' + !cm + '">Atleta</button></div>'; }
     else pills += '<span class="pill role">Atleta</span>';
     pills += bellHtml();
     if (t && TEAM_LOGO[t] && UI.view !== 'ruta') pills += teamLogo(t, 'mark', 30);
@@ -500,7 +503,7 @@ function viewCabina() {
   const list = athleteObjs(), cnt = { ok: 0, warn: 0, none: 0 }; let queue = 0;
   list.forEach((a) => { cnt[statusOf(a).k]++; if (needsReply(a)) queue++; });
   let out = '<div class="inner"><div class="stack">' + head('Vista del coach', 'Cabina') + msgBanner();
-  if (ST.pending.filter((p) => p.id !== (ST.user && ST.user.uid)).length) {
+  if (canEdit() && ST.pending.filter((p) => p.id !== (ST.user && ST.user.uid)).length) {
     out += '<section class="card col g12" aria-label="Solicitudes nuevas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Solicitudes nuevas</div>' + ST.pending.filter((p) => p.id !== ST.user.uid).map((p) => '<div class="col g10"><div style="font-weight:600">' + esc(p.name) + '</div><div class="row g8 wrap"><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="grnt">Aceptar en GRNT</button><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="zn">Aceptar en ZN</button></div></div>').join('') + '</section>';
   }
   out += '<section class="row g10" aria-label="Resumen del equipo">' + [['Al día', cnt.ok, 'var(--good)'], ['Atención', cnt.warn, 'var(--warn)'], ['Sin check-in', cnt.none, 'var(--muted)']].map((x) => '<div class="card tight grow"><div class="num" style="font-size:40px;color:' + x[2] + '">' + x[1] + '</div><div class="soft" style="font-size:13px;margin-top:4px">' + x[0] + '</div></div>').join('') + '</section>';
@@ -535,11 +538,10 @@ function viewCabina() {
     out += '<div class="col g6"><div class="eyebrow">Último check-in · ' + relTime(l.ts) + '</div><p class="soft" style="font-size:15px">' + esc(bits.join(' · ')) + '</p>' + (l.comment ? '<p class="muted" style="font-size:14px">“' + esc(l.comment) + '”</p>' : '') + '</div>';
   }
   { const ll = loadLine(loadInfo(a)); if (ll) out += '<p class="soft" style="font-size:14px">' + esc(ll) + '</p>'; }
-  out += replyBlock(a, st, l, n);
+  if (canEdit()) out += replyBlock(a, st, l, n);
   out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div>' + dualLegend() + '</div>' + histBlock(a);
   out += '</section>';
-  out += manageCard(a);
-  out += fbInbox();
+  if (canEdit()) { out += manageCard(a); out += fbInbox(); } else if (ST.athBio[a.id] && ST.athBio[a.id].main) out += '<section class="card col g4" aria-label="Perfil"><div class="eyebrow">Perfil</div>' + bioPanel(a, true) + '</section>';
   return out + '</div></div>';
 }
 
@@ -994,7 +996,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 42;
+const APP_VER = 43;
 const NEWS = [
   'Nuevo perfil: tus datos, medidas que confirma tu coach y control de tu información.',
   'Gym más simple: todo en una pantalla y una pregunta de carga según lo que trabajaste.',
@@ -1250,16 +1252,16 @@ function viewAjustes() {
     + setRow('Vibración al enviar', 'Un toque suave al terminar tu check-in', PREF.haptic !== false, 'pref', 'haptic') + '</div></section>';
   // grafico
   out += '<section class="card col g12" aria-label="Datos y gráficos"><div class="eyebrow">Datos y gráficos</div><div class="setlist">' + setRow('Proyección del plan', 'Muestra en el gráfico de forma cómo llegarías a tu meta', fcProjOn(), 'fcProj') + '</div></section>';
-  if (isCoach()) {
+  if (canEdit()) {
     const team = UI.metaTeam, m = ST.teamMeta[team] || {}, d = UI.metaDraft && UI.metaDraft.team === team ? UI.metaDraft : { team, goal: m.goal || KM_GOAL_DEFAULT, hito: m.hito || '' };
     out += '<section class="card col g12" aria-label="Meta del equipo"><div class="eyebrow">Meta e hito del equipo</div><div class="seggroup" role="group" aria-label="Equipo">' + Object.keys(TEAMS).map((t) => '<button type="button" data-a="metaTeam" data-v="' + t + '" aria-pressed="' + (team === t) + '">' + TEAMS[t] + '</button>').join('') + '</div><label for="metaGoal" class="soft">Meta del mes (km)</label><input class="field" id="metaGoal" type="number" inputmode="numeric" min="0" value="' + esc(d.goal) + '"><label for="metaHito" class="soft">Hito de la semana (opcional)</label><textarea id="metaHito" placeholder="Por ejemplo: Camila hizo su rodaje más largo">' + esc(d.hito) + '</textarea><button type="button" class="btn primary" data-a="saveMeta" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar para ' + TEAMS[team] + '</button></section>';
   }
   if (p.team && !isCoach()) out += '<section class="card col g12" aria-label="Compartir kilómetros"><div class="eyebrow">Tu equipo</div><div class="setlist">' + setRow('Compartir mis km con el equipo', sharesKm() ? 'Tu nombre y tus km del mes suman a la meta de ' + TEAMS[p.team] : 'Tus km no aparecen ni suman a la meta del equipo', sharesKm(), 'shareKm') + '</div></section>';
-  if (isCoach() && !DEMO) {
+  if (canEdit() && !DEMO) {
     const dRow = (r, ttl, sub) => { const dl = demoLink(r); return '<div class="col g8"><div><b>' + ttl + '</b><div class="muted" style="font-size:13px">' + sub + '</div></div><div class="demolink" id="demolink-' + r + '" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" data-v="' + r + '" style="flex:1;min-width:130px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button><a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:130px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>Abrir demo</span></a></div></div>'; };
     out += '<section class="card col g14" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
   }
-  if (isCoach() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
+  if (canEdit() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
   out += '<section class="card col g8" aria-label="Créditos"><div class="eyebrow">Créditos</div><p class="soft" style="font-size:14px">Iconos: Phosphor Icons (licencia MIT). Figura del cuerpo: body-muscles de Ivan Vulović (licencia Apache-2.0), adaptada por Camino. Los textos de licencia están junto a la app, en los archivos LICENSE-phosphor-icons.txt, LICENSE-body-muscles.txt y NOTICE-body-muscles.txt.</p></section>';
   if (!isCoach() || !DEMO) { const tc = ST.user ? on(meA(), off(0)) : null; if (tc) out += '<section class="card col g10" aria-label="Mis datos"><div class="eyebrow">Mis datos</div>' + (UI.confirmDel ? '<p class="soft" style="font-size:14px">¿Borrar el registro de hoy? Se elimina de tu historial y tu coach dejará de verlo.</p><div class="row g8 wrap"><button type="button" class="chip" data-a="delCk" style="border-color:var(--bad);color:var(--bad)">Sí, borrar</button><button type="button" class="chip" data-a="delNo">Cancelar</button></div>' : '<button type="button" class="btn ghost" data-a="delAsk" style="border:1.5px solid var(--line);color:var(--bad)"><span>Borrar el registro de hoy</span></button>') + '</section>'; }
   out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
@@ -1484,18 +1486,18 @@ function profHtml() {
     + (P.confirmDel ? '<p class="soft" style="font-size:14px">Se enviará una solicitud a tu coach para eliminar tu cuenta y todos tus registros. ¿Confirmas?</p><div class="row g10"><button type="button" class="btn primary" data-a="pfDelReq" style="flex:1;justify-content:center"><span>Sí, solicitar</span></button><button type="button" class="btn ghost" data-a="pfDelNo" style="flex:1;justify-content:center"><span>Cancelar</span></button></div>' : '<button type="button" class="btn ghost" data-a="pfDelAsk" style="justify-content:center;border:1.5px solid var(--line)"><span>Solicitar eliminar mi cuenta</span></button>') + '</div></section>';
   return out + '<div class="col g8"><button type="button" class="btn primary" data-a="profSave" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '><span>Guardar perfil</span></button><button type="button" class="btn ghost" data-a="profClose">Cancelar</button></div></div></div>';
 }
-function bioPanel(a) {
+function bioPanel(a, ro) {
   const b = ST.athBio[a.id] || {}, m = b.main, ms = b.meas || {}, prop = ms.prop || {}, h = (m && m.health) || {}, e = (m && m.emergency) || {};
   const row = (l, v) => v ? '<div class="col g4"><span class="eyebrow">' + l + '</span><span style="overflow-wrap:anywhere">' + esc(v) + '</span></div>' : '';
   let out = '<div class="col g12" style="padding:6px 0 12px">';
   if (!m) out += '<p class="soft" style="font-size:14px">' + esc(a.first) + ' aún no completa su perfil.</p>';
-  else out += row('Edad y estatura', [ageOf(m.birthDate) != null ? ageOf(m.birthDate) + ' años' : '', m.heightCm ? m.heightCm + ' cm' : '', m.sport || ''].filter(Boolean).join(' · ')) + row('Lesiones', h.injuries) + row('Condiciones', h.conditions) + row('Medicamentos', h.meds) + row('Alergias', h.allergies) + row('Emergencia', [e.name, e.phone].filter(Boolean).join(' · '));
+  else out += row('Edad y estatura', [ageOf(m.birthDate) != null ? ageOf(m.birthDate) + ' años' : '', m.heightCm ? m.heightCm + ' cm' : '', m.sport || ''].filter(Boolean).join(' · ')) + (ro ? '' : row('Lesiones', h.injuries) + row('Condiciones', h.conditions) + row('Medicamentos', h.meds) + row('Alergias', h.allergies) + row('Emergencia', [e.name, e.phone].filter(Boolean).join(' · ')));
   out += '<div class="col g10"><span class="eyebrow">Medidas confirmadas</span>' + PF_MEAS.map((x) => {
     const k = x[0], pr = prop[k];
     return '<div class="col g8" style="padding:6px 0;border-bottom:1px solid var(--line)"><div class="row between g10" style="align-items:center"><span style="font-weight:600">' + x[1] + ' <span class="muted" style="font-weight:500">' + (ms[k] != null ? ms[k] + ' ' + x[2] : 'sin dato') + '</span></span>'
-      + (pr ? '<span class="row g8"><button type="button" class="chip" data-a="bioOk" data-v="' + esc(a.id) + '|' + k + '">Aprobar ' + pr.v + '</button><button type="button" class="chip" data-a="bioNo" data-v="' + esc(a.id) + '|' + k + '">Rechazar</button></span>' : '') + '</div>'
+      + (pr && !ro ? '<span class="row g8"><button type="button" class="chip" data-a="bioOk" data-v="' + esc(a.id) + '|' + k + '">Aprobar ' + pr.v + '</button><button type="button" class="chip" data-a="bioNo" data-v="' + esc(a.id) + '|' + k + '">Rechazar</button></span>' : '') + '</div>'
       + (pr && pr.note ? '<span class="muted" style="font-size:13px">“' + esc(pr.note) + '”</span>' : '')
-      + '<div class="row g8"><input class="field" id="bm-' + k + '" type="number" inputmode="decimal" placeholder="Fijar ' + x[1] + ' (' + x[2] + ')" style="min-height:40px"><button type="button" class="chip" data-a="bioSet" data-v="' + esc(a.id) + '|' + k + '">Guardar</button></div></div>';
+      + (ro ? '' : '<div class="row g8"><input class="field" id="bm-' + k + '" type="number" inputmode="decimal" placeholder="Fijar ' + x[1] + ' (' + x[2] + ')" style="min-height:40px"><button type="button" class="chip" data-a="bioSet" data-v="' + esc(a.id) + '|' + k + '">Guardar</button></div>') + '</div>';
   }).join('') + '</div></div>';
   return out;
 }
@@ -1620,21 +1622,21 @@ function setupData() {
   const key = [ST.user.uid, p.role, p.team || ''].join('|'); if (key === dataKey) return;
   stopData(); // se reinician solo las lecturas de equipo y de coach
   dataKey = key;
-  const teams = p.role === 'coach' ? ['grnt', 'zn'] : (p.team ? [p.team] : []);
+  const teams = (p.role === 'coach' || p.role === 'viewer') ? ['grnt', 'zn'] : (p.team ? [p.team] : []);
   teams.forEach((t) => {
     dataUnsubs.push(be.listenTeamKm(t, (rows) => { ST.teamKm[t] = rows; soft(); }));
     dataUnsubs.push(be.listenTeamMeta(t, (m) => { ST.teamMeta[t] = m || {}; soft(); }));
   });
-  if (p.role === 'coach') {
-    dataUnsubs.push(be.listenFeedback((rows) => { ST.fbk = rows; soft(); }));
-    dataUnsubs.push(be.listenAthletes(ST.user.uid, (rows) => {
-      ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
+  if (p.role === 'coach' || p.role === 'viewer') {
+    if (p.role === 'coach') dataUnsubs.push(be.listenFeedback((rows) => { ST.fbk = rows; soft(); }));
+    dataUnsubs.push(be.listenAthletes(p.role === 'viewer' ? p.coachId : ST.user.uid, (rows) => {
+      rows = rows.filter((r) => r.role !== 'viewer'); ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
       const ids = ST.athletes.map((r) => r.id);
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
       ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); })]; });
       soft();
     }));
-    dataUnsubs.push(be.listenPending((rows) => { ST.pending = rows; soft(); }));
+    if (p.role === 'coach') dataUnsubs.push(be.listenPending((rows) => { ST.pending = rows; soft(); }));
   }
 }
 function startSession(user) {
@@ -1952,6 +1954,8 @@ document.addEventListener('pointermove', wbMove);
 document.addEventListener('pointerdown', wbMove);
 document.addEventListener('pointerdown', fcMove);
 document.addEventListener('scroll', (e) => { if (e.target && e.target.id === 'gtrack') guiaSync(); }, true);
+
+['sendReply','nextReply','saveHist','savePlan','accept','saveMeta','importTally','bioOk','bioNo','bioSet','fbMark','fbDel','preset','copyDemo'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (isViewer()) { say('Cuenta de solo lectura: no puedes modificar datos.'); return; } return f.apply(this, arguments); }; });
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-a]'); if (!t) return; const fn = ACT[t.dataset.a]; if (fn) fn(t.dataset.v, t); });
 document.addEventListener('input', (e) => {
   const id = e.target.id;

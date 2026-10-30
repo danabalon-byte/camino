@@ -92,6 +92,7 @@ function seed() {
   users.demoAtleta.bioMeas = { weightKg: 72, ftp: 245, fcmax: 188, lthr: 168, updatedAt: tsOf(off(-20), 10, 0), by: 'demoCoach' };
   users.camila.bioMain = { birthDate: '1992-09-03', heightCm: 165, sex: 'f', sport: 'Gravel', health: { conditions: '', meds: '', injuries: '', allergies: '' }, emergency: { name: '', phone: '' }, showWeight: false, consentTs: tsOf(off(-30), 9, 0), updatedAt: tsOf(off(-30), 9, 0) };
   users.camila.bioMeas = { weightKg: 58, ftp: 205, fcmax: 191, updatedAt: tsOf(off(-30), 9, 0), by: 'demoCoach', prop: { weightKg: { v: 57, note: 'Me pesé esta mañana', ts: tsOf(off(-1), 8, 0) }, ftp: { v: 212, note: 'Test de 20 min del domingo', ts: tsOf(off(-1), 8, 0) } } };
+  users.demoLector = { profile: { id: 'demoLector', name: 'Leo (demo, solo lectura)', role: 'viewer', coachId: 'demoCoach', team: null, pending: false }, checkins: [], notes: [] };
   users.nuevo = { profile: { id: 'nuevo', name: 'Atleta nuevo (demo)', role: 'athlete', pending: true }, checkins: [], notes: [] };
   const mo = ymd(new Date()).slice(0, 7), k = (name, km) => ({ name, month: mo, km });
   return { users, km: { grnt: { demoAtleta: k('Tomás (demo)', 412), camila: k('Camila R.', 520), matias: k('Matías S.', 380), lucas: k('Lucas V.', 290), sofia: k('Sofía M.', 345) }, zn: { joaquin: k('Joaquín P.', 310), valentina: k('Valentina T.', 260), emilia: k('Emilia C.', 405), nicolas: k('Nicolás A.', 220) } }, meta: { grnt: { goal: 2500, hito: 'Salida grupal del sábado: 70 km por el camino costero, ritmo conversado.' }, zn: { goal: 1800, hito: 'Semana de recuperación activa: rodajes suaves y movilidad.' } },
@@ -117,7 +118,7 @@ const be = {
     try { saved = sessionStorage.getItem('camino-demo-user'); } catch (e) {}
     // Enlaces directos: ?demo=atleta entra solo como atleta y ?demo=coach solo como coach (sin pantalla de ingreso)
     const q = new URLSearchParams(location.search).get('demo');
-    const forced = (q === 'coach') ? 'demoCoach' : ((q === 'atleta' || q === 'athlete') ? 'demoAtleta' : null);
+    const forced = (q === 'lector') ? 'demoLector' : (q === 'coach') ? 'demoCoach' : ((q === 'atleta' || q === 'athlete') ? 'demoAtleta' : null);
     if (forced) { saved = forced; try { sessionStorage.setItem('camino-demo-user', forced); } catch (e) {} }
     setTimeout(() => cb(saved && store.users[saved] ? { uid: saved, name: store.users[saved].profile.name } : null), 0);
     return () => { authCb = null; };
