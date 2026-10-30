@@ -996,7 +996,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 43;
+const APP_VER = 44;
 const NEWS = [
   'Nuevo perfil: tus datos, medidas que confirma tu coach y control de tu información.',
   'Gym más simple: todo en una pantalla y una pregunta de carga según lo que trabajaste.',
@@ -1630,7 +1630,7 @@ function setupData() {
   if (p.role === 'coach' || p.role === 'viewer') {
     if (p.role === 'coach') dataUnsubs.push(be.listenFeedback((rows) => { ST.fbk = rows; soft(); }));
     dataUnsubs.push(be.listenAthletes(p.role === 'viewer' ? p.coachId : ST.user.uid, (rows) => {
-      rows = rows.filter((r) => r.role !== 'viewer'); ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
+      if (p.role === 'viewer') rows = rows.filter((r) => r.role !== 'viewer'); ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
       const ids = ST.athletes.map((r) => r.id);
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
       ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); })]; });
@@ -1995,6 +1995,7 @@ async function checkUpdate() {
     document.body.appendChild(el);
     document.getElementById('updgo').onclick = async () => {
       try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((x) => x.unregister())); const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } catch (e) { /* igual se recarga */ }
+      try { await Promise.all(['./', './index.html', './app.js', './styles.css', './backend-firebase.js', './backend-demo.js', './sw.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null))); } catch (e) { /* igual se recarga */ }
       location.reload();
     };
   } catch (e) { /* sin conexión: se reintenta luego */ }
