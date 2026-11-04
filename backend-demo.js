@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v4';
+const KEY = 'camino-demo-v5';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -92,7 +92,7 @@ function seed() {
   users.demoAtleta.bioMeas = { weightKg: 72, ftp: 245, fcmax: 188, lthr: 168, updatedAt: tsOf(off(-20), 10, 0), by: 'demoCoach' };
   users.camila.bioMain = { birthDate: '1992-09-03', heightCm: 165, sex: 'f', sport: 'Gravel', health: { conditions: '', meds: '', injuries: '', allergies: '' }, emergency: { name: '', phone: '' }, showWeight: false, consentTs: tsOf(off(-30), 9, 0), updatedAt: tsOf(off(-30), 9, 0) };
   users.camila.bioMeas = { weightKg: 58, ftp: 205, fcmax: 191, updatedAt: tsOf(off(-30), 9, 0), by: 'demoCoach', prop: { weightKg: { v: 57, note: 'Me pesé esta mañana', ts: tsOf(off(-1), 8, 0) }, ftp: { v: 212, note: 'Test de 20 min del domingo', ts: tsOf(off(-1), 8, 0) } } };
-  users.demoLector = { profile: { id: 'demoLector', name: 'Leo (demo, solo lectura)', role: 'viewer', coachId: 'demoCoach', team: null, pending: false }, checkins: [], notes: [] };
+  users.demoLector = { profile: { id: 'demoLector', name: 'Leo (demo, coach de apoyo)', role: 'viewer', coachId: 'demoCoach', team: null, pending: false, access: { teams: ['zn'], athletes: ['camila'], edit: false, profile: true } }, checkins: [], notes: [] };
   users.nuevo = { profile: { id: 'nuevo', name: 'Atleta nuevo (demo)', role: 'athlete', pending: true }, checkins: [], notes: [] };
   const mo = ymd(new Date()).slice(0, 7), k = (name, km) => ({ name, month: mo, km });
   return { users, km: { grnt: { demoAtleta: k('Tomás (demo)', 412), camila: k('Camila R.', 520), matias: k('Matías S.', 380), lucas: k('Lucas V.', 290), sofia: k('Sofía M.', 345) }, zn: { joaquin: k('Joaquín P.', 310), valentina: k('Valentina T.', 260), emilia: k('Emilia C.', 405), nicolas: k('Nicolás A.', 220) } }, meta: { grnt: { goal: 2500, hito: 'Salida grupal del sábado: 70 km por el camino costero, ritmo conversado.' }, zn: { goal: 1800, hito: 'Semana de recuperación activa: rodajes suaves y movilidad.' } },
@@ -131,7 +131,8 @@ const be = {
   },
   async signOut() { try { sessionStorage.removeItem('camino-demo-user'); } catch (e) {} current = null; authCb && authCb(null); },
   async ensureProfile() {},
-  listenBio(uid, cb) { return live(() => { const u = store.users[uid] || {}; cb(JSON.parse(JSON.stringify({ main: u.bioMain || null, meas: u.bioMeas || null }))); }); },
+  // Igual que las reglas reales: el coach de apoyo no ve salud ni emergencia, y perfil/medidas solo con nivel "perfil".
+  listenBio(uid, cb, opts = {}) { return live(() => { const u = store.users[uid] || {}; let main = u.bioMain ? JSON.parse(JSON.stringify(u.bioMain)) : null; if (main && !opts.priv) { delete main.health; delete main.emergency; } cb(JSON.parse(JSON.stringify({ main, meas: u.bioMeas || null }))); }); },
   async saveBio(uid, data) { store.users[uid].bioMain = data; notify(); },
   async propose(uid, prop) { const u = store.users[uid]; u.bioMeas = Object.assign({}, u.bioMeas || {}, { prop }); notify(); },
   async saveMeas(uid, data) { store.users[uid].bioMeas = data; notify(); },
@@ -152,6 +153,12 @@ const be = {
   listenTeamMeta(team, cb) { return live(() => cb(store.meta[team] ? { ...store.meta[team] } : null)); },
   async saveTeamMeta(team, data) { store.meta[team] = { ...(store.meta[team] || {}), ...data }; notify(); },
   listenAthletes(coachUid, cb) { return live(() => cb(Object.values(store.users).filter(u => u.profile.coachId === coachUid).map(u => ({ ...u.profile })))); },
+  listenAthletesScoped(coachUid, access, cb) { const a = access || {}; return live(() => cb(Object.values(store.users).filter(u => u.profile.coachId === coachUid && u.profile.role === 'athlete' && ((a.teams || []).includes(u.profile.team) || (a.athletes || []).includes(u.profile.id))).map(u => ({ ...u.profile })))); },
+  async setAccess(viewerUid, access) { store.users[viewerUid].profile.access = JSON.parse(JSON.stringify(access)); notify(); },
+  async sendProposal(p) { (store.proposals = store.proposals || []).unshift({ id: 'p' + Date.now(), ...p }); notify(); },
+  listenProposals(cb, byUid) { return live(() => cb((store.proposals || []).filter(x => !byUid || x.by === byUid).map(x => ({ ...x })))); },
+  async resolveProposal(id, status) { const x = (store.proposals || []).find(p => p.id === id); if (x) { x.status = status; x.decidedAt = Date.now(); } notify(); },
+  async removeProposal(id) { store.proposals = (store.proposals || []).filter(p => p.id !== id); notify(); },
   listenPending(cb) { return live(() => cb(Object.values(store.users).filter(u => u.profile.pending === true).map(u => ({ ...u.profile })))); },
   async acceptAthlete(uid, coachUid, team) { Object.assign(store.users[uid].profile, { coachId: coachUid, team, pending: false }); notify(); },
   async sendNote(uid, note) { store.users[uid].notes.push({ id: 'n' + Date.now(), ...note }); notify(); },

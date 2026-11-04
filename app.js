@@ -91,12 +91,15 @@ if (!['auto', 'noche', 'tierra', 'dia'].includes(PREF.tone)) PREF.tone = 'auto';
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { ready: false, user: null, myBio: null, athBio: {}, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const ST = { props: [], ready: false, user: null, myBio: null, athBio: {}, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
 
 const isViewer = () => !!(ST.profile && ST.profile.role === 'viewer');
-const canEdit = () => !!(ST.profile && ST.profile.role === 'coach');
+const isOwner = () => !!(ST.profile && ST.profile.role === 'coach');
+const vAcc = () => (ST.profile && ST.profile.access) || {};
+const canEdit = () => isOwner() || (isViewer() && vAcc().edit === true);
+const canProfile = () => isOwner() || (isViewer() && vAcc().profile === true);
 const isCoach = () => !!(ST.profile && (ST.profile.role === 'coach' || ST.profile.role === 'viewer'));
 const myTeam = () => (ST.profile && ST.profile.team) || null;
 
@@ -357,7 +360,7 @@ function topHtml() {
   if (ST.profile) {
     const t = myTeam();
     if (t && !TEAM_LOGO[t]) pills += '<span class="pill">' + TEAMS[t] + '</span>';
-    if (isViewer()) pills += '<span class="pill role">Solo lectura</span>';
+    if (isViewer()) pills += '<span class="pill role">' + (canEdit() ? 'Coach de apoyo' : 'Solo lectura') + '</span>';
     else if (isCoach()) { const cm = coachMode(); pills += '<div class="modesw" role="group" aria-label="Cambiar de vista"><button type="button" data-a="mode" data-v="coach" aria-pressed="' + cm + '">Coach</button><button type="button" data-a="mode" data-v="atleta" aria-pressed="' + !cm + '">Atleta</button></div>'; }
     else pills += '<span class="pill role">Atleta</span>';
     pills += bellHtml();
@@ -519,8 +522,8 @@ function viewCabina() {
   const list = athleteObjs().sort((x, y) => urgency(y) - urgency(x) || String(x.name).localeCompare(String(y.name), 'es')), cnt = { ok: 0, warn: 0, none: 0 }; let queue = 0;
   list.forEach((a) => { cnt[statusOf(a).k]++; if (needsReply(a)) queue++; });
   let out = '<div class="inner"><div class="stack">' + head('Vista del coach', 'Cabina') + msgBanner();
-  if (canEdit() && ST.pending.filter((p) => p.id !== (ST.user && ST.user.uid)).length) {
-    out += '<section class="card col g12" aria-label="Solicitudes nuevas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Solicitudes nuevas</div>' + ST.pending.filter((p) => p.id !== ST.user.uid).map((p) => '<div class="col g10"><div style="font-weight:600">' + esc(p.name) + '</div><div class="row g8 wrap"><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="grnt">Aceptar en GRNT</button><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="zn">Aceptar en ZN</button></div></div>').join('') + '</section>';
+  if (isOwner() && ST.pending.filter((p) => p.id !== (ST.user && ST.user.uid)).length) {
+    out += '<section class="card col g12" aria-label="Solicitudes nuevas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Solicitudes nuevas</div>' + ST.pending.filter((p) => p.id !== ST.user.uid).map((p) => '<div class="col g10"><div style="font-weight:600">' + esc(p.name) + '</div>' + propBadge(p) + '<div class="row g8 wrap"><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="grnt">Aceptar en GRNT</button><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="zn">Aceptar en ZN</button></div></div>').join('') + '</section>';
   }
   out += '<section class="row g10" aria-label="Resumen del equipo">' + [['Al día', cnt.ok, 'var(--good)'], ['Atención', cnt.warn, 'var(--warn)'], ['Sin check-in', cnt.none, 'var(--muted)']].map((x) => '<div class="card tight grow"><div class="num" style="font-size:40px;color:' + x[2] + '">' + x[1] + '</div><div class="soft" style="font-size:13px;margin-top:4px">' + x[0] + '</div></div>').join('') + '</section>';
   out += '<button type="button" class="row between g12" data-a="nextReply" ' + (queue === 0 ? 'disabled' : '') + ' style="width:100%;min-height:52px;text-align:left;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:16px;padding:12px 16px"><span style="font-weight:600">' + (queue === 0 ? 'Todo respondido por hoy' : queue + ' por responder') + '</span><span class="muted" style="font-size:13px">' + (queue === 0 ? 'Cola de respuestas' : 'Ir a responder ›') + '</span></button>';
@@ -558,7 +561,7 @@ function viewCabina() {
   if (canEdit()) out += replyBlock(a, st, l, n);
   out += '<div><div class="eyebrow">Bienestar · 7 días</div><div style="margin-top:8px">' + dualChart(a) + '</div>' + dualLegend() + '</div>' + histBlock(a);
   out += '</section>';
-  if (canEdit()) { out += manageCard(a); out += fbInbox(); } else if (ST.athBio[a.id] && ST.athBio[a.id].main) out += '<section class="card col g4" aria-label="Perfil"><div class="eyebrow">Perfil</div>' + bioPanel(a, true) + '</section>';
+  if (canEdit()) { out += manageCard(a); if (isOwner()) out += fbInbox(); } else if (canProfile() && ST.athBio[a.id] && ST.athBio[a.id].main) out += '<section class="card col g4" aria-label="Perfil"><div class="eyebrow">Perfil</div>' + bioPanel(a, true) + '</section>';
   return out + '</div></div>';
 }
 
@@ -948,12 +951,12 @@ function manageCard(a) {
   lines = h ? [nd + ' días de forma · ' + na + ' salidas', (h.updatedAt ? 'Sincronizado ' + relTime(h.updatedAt) : 'Cargado a mano') + (age != null && age > 3 ? ' · desactualizado' : '')] : ['Sin historial aún', 'Se sincroniza solo cada hora'];
   out += mrow(dot, 'Historial de forma', lines, '<button type="button" class="chip" data-a="histToggle">' + (UI.histOpen ? 'Cerrar' : 'Cargar a mano') + '</button>') + (UI.histOpen ? histForm(a) : '');
   // perfil y medidas
-  { const b = ST.athBio[a.id] || {}, np = Object.keys((b.meas && b.meas.prop) || {}).length, lines2 = b.main ? [[ageOf(b.main.birthDate) != null ? ageOf(b.main.birthDate) + ' años' : '', b.main.heightCm ? b.main.heightCm + ' cm' : '', b.main.sport || ''].filter(Boolean).join(' · ') || 'Perfil iniciado'] : ['Aún no completa su perfil'];
+  if (canProfile()) { const b = ST.athBio[a.id] || {}, np = Object.keys((b.meas && b.meas.prop) || {}).length, lines2 = b.main ? [[ageOf(b.main.birthDate) != null ? ageOf(b.main.birthDate) + ' años' : '', b.main.heightCm ? b.main.heightCm + ' cm' : '', b.main.sport || ''].filter(Boolean).join(' · ') || 'Perfil iniciado'] : ['Aún no completa su perfil'];
     if (np) lines2.push(np + (np === 1 ? ' propuesta' : ' propuestas') + ' por revisar');
     out += mrow(np ? 'var(--accent)' : (b.main ? 'var(--good)' : 'var(--muted)'), 'Perfil y medidas', lines2, '<button type="button" class="chip" data-a="bioTgl" data-v="' + esc(a.id) + '">' + (UI.bioOpen === a.id ? 'Cerrar' : (np ? 'Revisar' : 'Ver')) + '</button>') + (UI.bioOpen === a.id ? bioPanel(a) : ''); }
   // vista del atleta
   out += mrow('var(--accent2)', 'Ver la app como ' + esc(a.first), ['Solo lectura: Hoy, Datos y Ruta tal como los ve'], '<button type="button" class="chip" data-a="verComo" data-v="' + esc(a.id) + '">Abrir</button>');
-  out += mrow('var(--muted)', 'Historial de Tally', ['Trae sus check-ins anteriores a la app', 'No pisa los días que ya tiene'], '<button type="button" class="chip" data-a="importTally" data-v="' + esc(a.id) + '"' + (UI.busy ? ' disabled' : '') + '>Importar</button>');
+  if (isOwner()) out += mrow('var(--muted)', 'Historial de Tally', ['Trae sus check-ins anteriores a la app', 'No pisa los días que ya tiene'], '<button type="button" class="chip" data-a="importTally" data-v="' + esc(a.id) + '"' + (UI.busy ? ' disabled' : '') + '>Importar</button>');
   return out + '</section>';
 }
 function parsePlan(text) {
@@ -1016,9 +1019,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 45;
+const APP_VER = 46;
 const NEWS = [
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Coaches de apoyo: el coach principal define qué equipos y atletas ve cada uno, si puede editar y si ve perfiles. Tu salud y tu contacto de emergencia ahora van en un lugar aparte, solo para ti y tu coach principal.',
   'Hoy empieza por lo que toca hoy y te pregunta si hubo un cambio entre tu plan y tu check-in.',
   'Tu forma ahora dice su estado con palabras y rangos, no solo con color.',
   'Cabina ordena a los atletas por urgencia y muestra el motivo de cada uno.',
@@ -1263,12 +1267,46 @@ const dayNoteFor = (date) => dayNote(date);
 /* Fila de ajuste con interruptor: titulo y ayuda a la izquierda, interruptor a la derecha. */
 const setRow = (title, sub, on, act, val) => '<button type="button" class="setrow" role="switch" aria-checked="' + !!on + '" data-a="' + act + '"' + (val != null ? ' data-v="' + val + '"' : '') + '><span class="col grow g4" style="min-width:0"><span style="font-weight:600;font-size:16px">' + title + '</span>' + (sub ? '<span class="muted" style="font-size:13px;font-weight:500">' + sub + '</span>' : '') + '</span><span class="fcsw-t" aria-hidden="true"><i></i></span></button>';
 const initial = (n) => esc(String(n || '?').trim().charAt(0).toUpperCase() || '?');
+
+/* ---------- Coach de apoyo (v46): permisos que define el coach principal + propuestas ---------- */
+const propBadge = (p) => { const m = (ST.props || []).filter((x) => x.kind === 'athlete' && x.status !== 'no' && p.email && String(x.email || '').toLowerCase() === String(p.email).toLowerCase())[0]; return m ? '<div class="muted" style="font-size:13px">Propuesto por ' + esc(firstName(m.byName)) + ' para ' + esc(TEAMS[m.team] || '') + (m.status === 'ok' ? ' · ya aprobado' : '') + '</div>' : ''; };
+const viewersList = () => ST.athletes.filter((r) => r.role === 'viewer');
+const accOf = (v) => { const a = v.access || {}; return { teams: (a.teams || []).slice(), athletes: (a.athletes || []).slice(), edit: a.edit === true, profile: a.profile === true }; };
+function supportCard() {
+  if (!isOwner()) return '';
+  const vs = viewersList(), openProps = (ST.props || []).filter((x) => x.status === 'open');
+  if (!vs.length && !openProps.length) return '';
+  let out = '';
+  if (openProps.length) out += '<section class="card col g12" aria-label="Propuestas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Propuestas por autorizar</div>' + openProps.map((x) => '<div class="col g8" style="padding:6px 0"><div style="font-weight:600">' + (x.kind === 'athlete' ? 'Atleta nuevo: ' : 'Grupo nuevo: ') + esc(x.name) + '</div><div class="muted" style="font-size:13px">De ' + esc(x.byName) + (x.kind === 'athlete' ? ' · ' + esc(x.email || '') + ' · equipo ' + esc(TEAMS[x.team] || x.team || '') : '') + (x.note ? ' · “' + esc(x.note) + '”' : '') + '</div><div class="row g8 wrap"><button type="button" class="chip" data-a="propOk" data-v="' + esc(x.id) + '">Autorizar</button><button type="button" class="chip" data-a="propNo" data-v="' + esc(x.id) + '">Rechazar</button></div></div>').join('') + '<p class="muted" style="font-size:13px">Al autorizar un atleta, cuando se registre con ese correo te aparecerá en Solicitudes nuevas marcado como propuesto. Los grupos nuevos quedan anotados y los activas tú.</p></section>';
+  vs.forEach((v) => {
+    const a = accOf(v), others = ST.athletes.filter((r) => r.role === 'athlete' && a.teams.indexOf(r.team) < 0).sort((x, y) => String(x.name).localeCompare(String(y.name), 'es'));
+    out += '<section class="card col g12" aria-label="Equipo de apoyo"><div class="eyebrow">Equipo de apoyo · ' + esc(v.name) + '</div><p class="soft" style="font-size:14px">Tú mantienes el control total. Aquí eliges qué ve ' + esc(firstName(v.name)) + ' y qué puede hacer.</p>'
+      + '<div class="col g8"><span class="eyebrow">Equipos que ve</span><div class="chips" role="group" aria-label="Equipos visibles">' + Object.keys(TEAMS).map((t) => '<button type="button" class="chip" data-a="accTeam" data-v="' + esc(v.id) + '|' + t + '" aria-pressed="' + (a.teams.indexOf(t) >= 0) + '">' + TEAMS[t] + '</button>').join('') + '</div></div>'
+      + (others.length ? '<div class="col g8"><span class="eyebrow">Atletas sueltos (de otros equipos)</span><div class="chips" role="group" aria-label="Atletas visibles">' + others.map((r) => '<button type="button" class="chip" data-a="accAth" data-v="' + esc(v.id) + '|' + esc(r.id) + '" aria-pressed="' + (a.athletes.indexOf(r.id) >= 0) + '">' + esc(firstName(r.name)) + ' · ' + esc(TEAMS[r.team] || '') + '</button>').join('') + '</div></div>' : '')
+      + '<div class="setlist">' + setRow('Puede editar', a.edit ? 'Responde, edita planes y gestiona a sus atletas como tú' : 'Solo lectura: ve, pero no cambia nada', a.edit, 'accEdit', esc(v.id)) + setRow('Ve perfil y medidas', a.profile ? 'Edad, estatura, deporte y medidas (peso, FTP, FC)' : 'No ve el perfil de los atletas', a.profile, 'accProf', esc(v.id)) + '</div>'
+      + '<p class="muted" style="font-size:13px">La salud y el contacto de emergencia los ves solo tú. Los cambios aplican en segundos.</p></section>';
+  });
+  return out;
+}
+function proposeCard() {
+  if (!isViewer()) return '';
+  const a = vAcc(), teams = (a.teams || []).filter((t) => TEAMS[t]), pr = UI.prop || (UI.prop = { kind: 'athlete', name: '', email: '', note: '', team: teams[0] || '' });
+  const mine = (ST.props || []).slice(0, 6), stTxt = { open: 'Pendiente', ok: 'Autorizada', no: 'Rechazada' };
+  let out = '<section class="card col g12" aria-label="Proponer"><div class="eyebrow">Proponer al coach principal</div><p class="soft" style="font-size:14px">Puedes proponer un atleta nuevo o un grupo nuevo. El coach principal lo autoriza antes de que exista.</p><div class="seggroup" role="group" aria-label="Qué propones"><button type="button" data-a="propKind" data-v="athlete" aria-pressed="' + (pr.kind === 'athlete') + '">Atleta</button><button type="button" data-a="propKind" data-v="group" aria-pressed="' + (pr.kind === 'group') + '">Grupo</button></div>'
+    + '<input class="field" id="propName" type="text" maxlength="80" placeholder="' + (pr.kind === 'athlete' ? 'Nombre del atleta' : 'Nombre del grupo') + '" value="' + esc(pr.name) + '">'
+    + (pr.kind === 'athlete' ? '<input class="field" id="propEmail" type="email" maxlength="120" placeholder="Correo con el que se registrará" value="' + esc(pr.email) + '">' + (teams.length > 1 ? '<div class="chips" role="group" aria-label="Equipo">' + teams.map((t) => '<button type="button" class="chip" data-a="propTeam" data-v="' + t + '" aria-pressed="' + (pr.team === t) + '">' + TEAMS[t] + '</button>').join('') + '</div>' : '<p class="muted" style="font-size:13px">Equipo: ' + esc(TEAMS[pr.team] || 'sin equipo asignado') + '</p>') : '')
+    + '<input class="field" id="propNote" type="text" maxlength="300" placeholder="Nota para el coach (opcional)" value="' + esc(pr.note) + '">'
+    + '<button type="button" class="btn" data-a="propSend"' + (UI.busy ? ' disabled' : '') + '><span>Enviar propuesta</span></button>';
+  if (mine.length) out += '<div class="col g6" style="margin-top:4px"><span class="eyebrow">Tus propuestas</span>' + mine.map((x) => '<div class="row between g10"><span>' + (x.kind === 'athlete' ? 'Atleta' : 'Grupo') + ': ' + esc(x.name) + '</span><span class="muted" style="font-size:13px">' + stTxt[x.status] + '</span></div>').join('') + '</div>';
+  return out + '</section>';
+}
 function viewAjustes() {
   const p = ST.profile || {}, remOn = !!p.reminder, rem = p.reminder || PREF.lastRem || '19:30';
   let out = '<div class="inner"><div class="stack">' + head('Preferencias', 'Ajustes') + msgBanner();
   // perfil
   out += '<section class="card col g14" aria-label="Cuenta"><div class="row g14" style="align-items:center"><span class="avatar" aria-hidden="true">' + initial(p.name) + '</span><div class="col grow g4" style="min-width:0"><span style="font-weight:700;font-size:20px;overflow-wrap:anywhere">' + esc(p.name || '') + '</span><span class="muted" style="font-size:13px;overflow-wrap:anywhere">' + esc(p.email || (ST.user && ST.user.email) || '') + '</span></div></div><div class="row g8 wrap"><span class="tag out" style="color:var(--soft);border-color:var(--line)">' + (isCoach() ? 'Coach' : 'Atleta') + '</span>' + (p.team ? '<span class="tag out" style="color:var(--soft);border-color:var(--line)">Equipo ' + TEAMS[p.team] + '</span>' : '') + (p.pending ? '<span class="tag out" style="color:var(--warn);border-color:var(--warn)">Pendiente de asignación</span>' : '') + '</div></section>';
   if (!isCoach()) { const bm = bioMain(), n = bioDone(bm); out += '<button type="button" class="card row g14" data-a="profOpen" style="text-align:left;width:100%;align-items:center;border:1.5px solid var(--line);font:inherit;color:inherit"><span class="col grow g4" style="min-width:0"><span class="eyebrow">Mi perfil</span><span style="font-weight:600">' + (bm ? 'Datos y medidas' : 'Completa tu perfil') + '</span><span class="muted" style="font-size:14px">' + (bm ? n + ' de 4 datos clave · medidas confirmadas por tu coach' : 'Edad, estatura, disciplina y contacto de emergencia') + '</span></span>' + arrow() + '</button>'; }
+  out += supportCard() + proposeCard();
   // apariencia
   out += '<section class="card col g12" aria-label="Apariencia"><div class="eyebrow">Apariencia</div><div class="tones" role="group" aria-label="Tono visual">' + TONES.map((t) => '<button type="button" class="tone" data-a="tone" data-v="' + t.id + '" aria-pressed="' + (PREF.tone === t.id) + '"><span class="sw">' + t.sw.map((c) => '<i style="background:' + c + '"></i>').join('') + '</span><span class="col g4" style="text-align:left"><span style="font-weight:600">' + t.name + '</span><span class="muted" style="font-size:12px;font-weight:500">' + t.sub + '</span></span></button>').join('') + '</div>'
     + '<div class="setlist">' + setRow('Ampliar el gráfico al girar', 'Con el teléfono en horizontal, en Datos, el gráfico de forma se abre a pantalla completa', PREF.rotZoom !== false, 'pref', 'rotZoom') + setRow('Reducir animaciones', 'Quita transiciones y movimientos', !!PREF.calm, 'pref', 'calm') + '</div></section>';
@@ -1278,16 +1316,16 @@ function viewAjustes() {
     + setRow('Vibración al enviar', 'Un toque suave al terminar tu check-in', PREF.haptic !== false, 'pref', 'haptic') + '</div></section>';
   // grafico
   out += '<section class="card col g12" aria-label="Datos y gráficos"><div class="eyebrow">Datos y gráficos</div><div class="setlist">' + setRow('Proyección del plan', 'Muestra en el gráfico de forma cómo llegarías a tu meta', fcProjOn(), 'fcProj') + '</div></section>';
-  if (canEdit()) {
+  if (isOwner()) {
     const team = UI.metaTeam, m = ST.teamMeta[team] || {}, d = UI.metaDraft && UI.metaDraft.team === team ? UI.metaDraft : { team, goal: m.goal || KM_GOAL_DEFAULT, hito: m.hito || '' };
     out += '<section class="card col g12" aria-label="Meta del equipo"><div class="eyebrow">Meta e hito del equipo</div><div class="seggroup" role="group" aria-label="Equipo">' + Object.keys(TEAMS).map((t) => '<button type="button" data-a="metaTeam" data-v="' + t + '" aria-pressed="' + (team === t) + '">' + TEAMS[t] + '</button>').join('') + '</div><label for="metaGoal" class="soft">Meta del mes (km)</label><input class="field" id="metaGoal" type="number" inputmode="numeric" min="0" value="' + esc(d.goal) + '"><label for="metaHito" class="soft">Hito de la semana (opcional)</label><textarea id="metaHito" placeholder="Por ejemplo: Camila hizo su rodaje más largo">' + esc(d.hito) + '</textarea><button type="button" class="btn primary" data-a="saveMeta" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '>Guardar para ' + TEAMS[team] + '</button></section>';
   }
   if (p.team && !isCoach()) out += '<section class="card col g12" aria-label="Compartir kilómetros"><div class="eyebrow">Tu equipo</div><div class="setlist">' + setRow('Compartir mis km con el equipo', sharesKm() ? 'Tu nombre y tus km del mes suman a la meta de ' + TEAMS[p.team] : 'Tus km no aparecen ni suman a la meta del equipo', sharesKm(), 'shareKm') + '</div></section>';
-  if (canEdit() && !DEMO) {
+  if (isOwner() && !DEMO) {
     const dRow = (r, ttl, sub) => { const dl = demoLink(r); return '<div class="col g8"><div><b>' + ttl + '</b><div class="muted" style="font-size:13px">' + sub + '</div></div><div class="demolink" id="demolink-' + r + '" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" data-v="' + r + '" style="flex:1;min-width:130px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button><a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:130px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>Abrir demo</span></a></div></div>'; };
     out += '<section class="card col g14" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
   }
-  if (canEdit() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
+  if (isOwner() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
   out += '<section class="card col g8" aria-label="Créditos"><div class="eyebrow">Créditos</div><p class="soft" style="font-size:14px">Iconos: Phosphor Icons (licencia MIT). Figura del cuerpo: body-muscles de Ivan Vulović (licencia Apache-2.0), adaptada por Camino. Los textos de licencia están junto a la app, en los archivos LICENSE-phosphor-icons.txt, LICENSE-body-muscles.txt y NOTICE-body-muscles.txt.</p></section>';
   if (!isCoach() || !DEMO) { const tc = ST.user ? on(meA(), off(0)) : null; if (tc) out += '<section class="card col g10" aria-label="Mis datos"><div class="eyebrow">Mis datos</div>' + (UI.confirmDel ? '<p class="soft" style="font-size:14px">¿Borrar el registro de hoy? Se elimina de tu historial y tu coach dejará de verlo.</p><div class="row g8 wrap"><button type="button" class="chip" data-a="delCk" style="border-color:var(--bad);color:var(--bad)">Sí, borrar</button><button type="button" class="chip" data-a="delNo">Cancelar</button></div>' : '<button type="button" class="btn ghost" data-a="delAsk" style="border:1.5px solid var(--line);color:var(--bad)"><span>Borrar el registro de hoy</span></button>') + '</section>'; }
   out += '<section class="card col g12" aria-label="Ayuda"><div class="eyebrow">Ayuda</div><button type="button" class="btn ghost" data-a="tour" style="border:1.5px solid var(--line);color:var(--text)"><span>Ver recorrido de bienvenida</span></button></section>';
@@ -1517,7 +1555,7 @@ function bioPanel(a, ro) {
   const row = (l, v) => v ? '<div class="col g4"><span class="eyebrow">' + l + '</span><span style="overflow-wrap:anywhere">' + esc(v) + '</span></div>' : '';
   let out = '<div class="col g12" style="padding:6px 0 12px">';
   if (!m) out += '<p class="soft" style="font-size:14px">' + esc(a.first) + ' aún no completa su perfil.</p>';
-  else out += row('Edad y estatura', [ageOf(m.birthDate) != null ? ageOf(m.birthDate) + ' años' : '', m.heightCm ? m.heightCm + ' cm' : '', m.sport || ''].filter(Boolean).join(' · ')) + (ro ? '' : row('Lesiones', h.injuries) + row('Condiciones', h.conditions) + row('Medicamentos', h.meds) + row('Alergias', h.allergies) + row('Emergencia', [e.name, e.phone].filter(Boolean).join(' · ')));
+  else out += row('Edad y estatura', [ageOf(m.birthDate) != null ? ageOf(m.birthDate) + ' años' : '', m.heightCm ? m.heightCm + ' cm' : '', m.sport || ''].filter(Boolean).join(' · ')) + ((ro || !isOwner()) ? '' : row('Lesiones', h.injuries) + row('Condiciones', h.conditions) + row('Medicamentos', h.meds) + row('Alergias', h.allergies) + row('Emergencia', [e.name, e.phone].filter(Boolean).join(' · ')));
   out += '<div class="col g10"><span class="eyebrow">Medidas confirmadas</span>' + PF_MEAS.map((x) => {
     const k = x[0], pr = prop[k];
     return '<div class="col g8" style="padding:6px 0;border-bottom:1px solid var(--line)"><div class="row between g10" style="align-items:center"><span style="font-weight:600">' + x[1] + ' <span class="muted" style="font-weight:500">' + (ms[k] != null ? ms[k] + ' ' + x[2] : 'sin dato') + '</span></span>'
@@ -1645,23 +1683,27 @@ function stopData() { dataUnsubs.forEach((u) => { try { u(); } catch (e) {} }); 
 function stopAll() { ownUnsubs.forEach((u) => { try { u(); } catch (e) {} }); ownUnsubs = []; stopData(); }
 function setupData() {
   const p = ST.profile; if (!p || !ST.user) return;
-  const key = [ST.user.uid, p.role, p.team || ''].join('|'); if (key === dataKey) return;
+  const key = [ST.user.uid, p.role, p.team || '', p.role === 'viewer' ? JSON.stringify(p.access || {}) : ''].join('|'); if (key === dataKey) return;
   stopData(); // se reinician solo las lecturas de equipo y de coach
+  if (p.role === 'viewer') { ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.athBio = {}; ST.teamKm = {}; ST.teamMeta = {}; }
   dataKey = key;
-  const teams = (p.role === 'coach' || p.role === 'viewer') ? ['grnt', 'zn'] : (p.team ? [p.team] : []);
+  const teams = p.role === 'coach' ? ['grnt', 'zn'] : p.role === 'viewer' ? ((p.access && p.access.teams) || []).filter((t) => TEAMS[t]) : (p.team ? [p.team] : []);
   teams.forEach((t) => {
     dataUnsubs.push(be.listenTeamKm(t, (rows) => { ST.teamKm[t] = rows; soft(); }));
     dataUnsubs.push(be.listenTeamMeta(t, (m) => { ST.teamMeta[t] = m || {}; soft(); }));
   });
   if (p.role === 'coach' || p.role === 'viewer') {
     if (p.role === 'coach') dataUnsubs.push(be.listenFeedback((rows) => { ST.fbk = rows; soft(); }));
-    dataUnsubs.push(be.listenAthletes(p.role === 'viewer' ? p.coachId : ST.user.uid, (rows) => {
+    dataUnsubs.push(p.role === 'viewer' ? be.listenProposals((rows) => { ST.props = rows; soft(); }, ST.user.uid) : be.listenProposals((rows) => { ST.props = rows; soft(); }));
+    const onAth = (rows) => {
       if (p.role === 'viewer') rows = rows.filter((r) => r.role !== 'viewer'); ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
       const ids = ST.athletes.map((r) => r.id);
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
-      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); })]; });
+      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), ].concat(p.role === 'coach' || (p.role === 'viewer' && (p.access || {}).profile === true) ? [be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); }, p.role === 'coach' ? { priv: true } : { quiet: true })] : []); });
       soft();
-    }));
+    };
+    if (p.role === 'viewer') dataUnsubs.push(be.listenAthletesScoped(p.coachId, p.access || {}, (rows) => { const seen = {}; onAth(rows.filter((r) => r.role === 'athlete' && !seen[r.id] && (seen[r.id] = 1))); }));
+    else dataUnsubs.push(be.listenAthletes(ST.user.uid, onAth));
     if (p.role === 'coach') dataUnsubs.push(be.listenPending((rows) => { ST.pending = rows; soft(); }));
   }
 }
@@ -1675,7 +1717,7 @@ function startSession(user) {
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));
   ownUnsubs.push(be.listenPlan(user.uid, (pl) => { ST.myPlan = pl; soft(); }));
   ownUnsubs.push(be.listenHistory(user.uid, (h) => { ST.myHist = h; soft(); }));
-  ownUnsubs.push(be.listenBio(user.uid, (b) => { ST.myBio = b; soft(); }));
+  ownUnsubs.push(be.listenBio(user.uid, (b) => { ST.myBio = b; soft(); }, { priv: true, migrate: true }));
 }
 
 /* ---------- Acciones ---------- */
@@ -1963,6 +2005,23 @@ const ACT = {
     try { await be.savePlan(a.id, Object.assign(r.plan, { updatedAt: Date.now() })); UI.planDraft = null; UI.planOpen = false; say('Plan guardado para ' + a.first + '.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
+  async accSave(vid, fn) { const v = ST.athletes.filter((r) => r.id === vid)[0]; if (!v) return; const a = accOf(v); fn(a); try { await be.setAccess(vid, a); } catch (e) { say(friendly(e)); } },
+  accTeam(v) { const [vid, t] = String(v).split('|'); ACT.accSave(vid, (a) => { const i = a.teams.indexOf(t); if (i >= 0) a.teams.splice(i, 1); else a.teams.push(t); }); },
+  accAth(v) { const [vid, id] = String(v).split('|'); ACT.accSave(vid, (a) => { const i = a.athletes.indexOf(id); if (i >= 0) a.athletes.splice(i, 1); else a.athletes.push(id); }); },
+  accEdit(v) { ACT.accSave(v, (a) => { a.edit = !a.edit; }); },
+  accProf(v) { ACT.accSave(v, (a) => { a.profile = !a.profile; }); },
+  async propOk(id) { try { await be.resolveProposal(id, 'ok'); say('Propuesta autorizada', 'ok'); } catch (e) { say(friendly(e)); } },
+  async propNo(id) { try { await be.resolveProposal(id, 'no'); say('Propuesta rechazada', 'ok'); } catch (e) { say(friendly(e)); } },
+  propKind(v) { UI.prop = Object.assign(UI.prop || {}, { kind: v === 'group' ? 'group' : 'athlete' }); render(); },
+  propTeam(v) { UI.prop = Object.assign(UI.prop || {}, { team: v }); render(); },
+  async propSend() {
+    const pr = UI.prop || {}, name = String(pr.name || '').trim().slice(0, 80), email = String(pr.email || '').trim().toLowerCase().slice(0, 120), a = vAcc(), team = pr.team || ((a.teams || [])[0] || '');
+    if (!name) { say('Escribe un nombre.'); return; }
+    if (pr.kind !== 'group' && (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !team)) { say(!team ? 'Aún no tienes un equipo asignado para proponer atletas.' : 'Escribe un correo válido.'); return; }
+    const o = { by: ST.user.uid, byName: ST.user.name || 'Coach', kind: pr.kind === 'group' ? 'group' : 'athlete', name, ts: Date.now(), status: 'open' };
+    if (o.kind === 'athlete') { o.email = email; o.team = team; } if (pr.note && pr.note.trim()) o.note = pr.note.trim().slice(0, 300);
+    UI.busy = true; render(); try { await be.sendProposal(o); UI.prop = null; say('Propuesta enviada. Tu coach la revisará.', 'ok'); } catch (e) { say(friendly(e)); } UI.busy = false; render();
+  },
   async accept(v, t) { try { await be.acceptAthlete(v, ST.user.uid, t.dataset.t); } catch (e) { say(friendly(e)); } },
   tone(v) { PREF.tone = v; savePref(); applyTone(); render(); },
   metaTeam(v) { UI.metaTeam = v; UI.metaDraft = null; render(); },
@@ -1988,13 +2047,16 @@ document.addEventListener('pointerdown', wbMove);
 document.addEventListener('pointerdown', fcMove);
 document.addEventListener('scroll', (e) => { if (e.target && e.target.id === 'gtrack') guiaSync(); }, true);
 
-['sendReply','nextReply','saveHist','savePlan','accept','saveMeta','importTally','bioOk','bioNo','bioSet','fbMark','fbDel','preset','copyDemo'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (isViewer()) { say('Cuenta de solo lectura: no puedes modificar datos.'); return; } return f.apply(this, arguments); }; });
+['accept','saveMeta','importTally','fbMark','fbDel','preset','copyDemo','accTeam','accAth','accEdit','accProf','propOk','propNo'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (!isOwner()) { say('Solo el coach principal puede hacer esto.'); return; } return f.apply(this, arguments); }; });
+['sendReply','nextReply','saveHist','savePlan'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (!canEdit()) { say('Tu cuenta está en solo lectura: pídele al coach principal el permiso para editar.'); return; } return f.apply(this, arguments); }; });
+['bioOk','bioNo','bioSet'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (!(canEdit() && canProfile())) { say('Necesitas permiso de edición y de perfil para cambiar medidas.'); return; } return f.apply(this, arguments); }; });
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-a]'); if (!t) return; const fn = ACT[t.dataset.a]; if (fn) fn(t.dataset.v, t); });
 document.addEventListener('input', (e) => {
   const id = e.target.id;
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id && id.indexOf('pf-') === 0 && UI.prof) UI.prof.d[id.slice(3)] = e.target.value;
   if (id === 'comment') UI.draft.comment = e.target.value;
+  if (id === 'propName' || id === 'propEmail' || id === 'propNote') { UI.prop = UI.prop || { kind: 'athlete' }; UI.prop[id.slice(4).toLowerCase()] = e.target.value; }
   if (id && id.indexOf('gzt-') === 0 && UI.flow && UI.flow.d.gzones && UI.flow.d.gzones[id.slice(4)]) { UI.flow.d.gzones[id.slice(4)].t = e.target.value; const cc = document.getElementById('gzc-' + id.slice(4)); if (cc) cc.textContent = e.target.value.length + '/200'; }
   if (id === 'prevText') UI.draft.prevText = e.target.value;
   if (id === 'preText' || id === 'postText' || id === 'hardText' || id === 'skipText' || id === 'oname') UI.draft[id] = e.target.value;

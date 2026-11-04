@@ -3,7 +3,7 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { initializeFirestore, terminate, clearIndexedDbPersistence, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromServer, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { initializeFirestore, terminate, clearIndexedDbPersistence, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, getDocFromServer, setDoc, updateDoc, deleteDoc, writeBatch, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -15,7 +15,7 @@ try {
 }
 
 let onError = () => {};
-const fail = (where) => (err) => { console.warn(where, err && err.code); onError(where, err); };
+const fail = (where, quiet) => (err) => { console.warn(where, err && err.code); if (!quiet) onError(where, err); };
 const rows = (snap) => snap.docs.map(d => ({ id: d.id, ...d.data() }));
 const clean = (o) => JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? null : v)));
 
@@ -65,13 +65,37 @@ const be = {
   saveProfile(uid, patch) { return updateDoc(doc(db, 'users', uid), clean(patch)); },
 
   // Perfil del atleta: datos que él mismo completa (main) y medidas que aprueba su coach (meas, con propuestas en meas.prop)
-  listenBio(uid, cb) {
-    let main = null, meas = null; const emit = () => cb({ main, meas });
-    const u1 = onSnapshot(doc(db, 'users', uid, 'profile', 'main'), (s) => { main = s.exists() ? s.data() : null; emit(); }, fail('perfil del atleta'));
-    const u2 = onSnapshot(doc(db, 'users', uid, 'profile', 'measures'), (s) => { meas = s.exists() ? s.data() : null; emit(); }, fail('medidas'));
-    return () => { u1(); u2(); };
+  // opts.priv: leer también salud/emergencia (profile/private); solo la persona y el coach principal.
+  // opts.quiet: un coach de apoyo puede no tener permiso (nivel perfil apagado): se trata como vacío, sin avisos.
+  // opts.migrate: la propia persona mueve health/emergency desde main a private (una sola vez, automático).
+  listenBio(uid, cb, opts = {}) {
+    let main = null, meas = null, priv = null, migrating = false; const emit = () => cb({ main: main ? { ...main, ...(priv || {}) } : (priv ? { ...priv } : null), meas });
+    const q = !!opts.quiet;
+    const u1 = onSnapshot(doc(db, 'users', uid, 'profile', 'main'), (s) => {
+      main = s.exists() ? s.data() : null;
+      if (opts.migrate && main && (main.health || main.emergency) && !migrating) {
+        migrating = true;
+        const { health, emergency, ...rest } = main;
+        const wb = writeBatch(db);
+        wb.set(doc(db, 'users', uid, 'profile', 'private'), clean({ health: health || null, emergency: emergency || null, updatedAt: Date.now() }));
+        wb.set(doc(db, 'users', uid, 'profile', 'main'), clean(rest));
+        wb.commit()
+          .catch((e) => { migrating = false; console.warn('migrar perfil', e && e.code); });
+      }
+      emit();
+    }, fail('perfil del atleta', q));
+    const u2 = onSnapshot(doc(db, 'users', uid, 'profile', 'measures'), (s) => { meas = s.exists() ? s.data() : null; emit(); }, fail('medidas', q));
+    const u3 = opts.priv ? onSnapshot(doc(db, 'users', uid, 'profile', 'private'), (s) => { priv = s.exists() ? s.data() : null; emit(); }, fail('datos privados', q)) : () => {};
+    return () => { u1(); u2(); u3(); };
   },
-  saveBio(uid, data) { return setDoc(doc(db, 'users', uid, 'profile', 'main'), clean(data)); },
+  // main (sin salud ni emergencia) + private (salud y emergencia) en dos documentos.
+  async saveBio(uid, data) {
+    const { health, emergency, ...main } = data || {};
+    const wb = writeBatch(db);
+    wb.set(doc(db, 'users', uid, 'profile', 'private'), clean({ health: health || null, emergency: emergency || null, updatedAt: Date.now() }));
+    wb.set(doc(db, 'users', uid, 'profile', 'main'), clean(main));
+    return wb.commit();
+  },
   // El atleta solo propone (campo prop); el coach aprueba y escribe las medidas.
   propose(uid, prop) { return setDoc(doc(db, 'users', uid, 'profile', 'measures'), clean({ prop }), { merge: true }); },
   saveMeas(uid, data) { return setDoc(doc(db, 'users', uid, 'profile', 'measures'), clean(data)); },
@@ -115,6 +139,30 @@ const be = {
     const q = query(collection(db, 'users'), where('coachId', '==', coachUid));
     return onSnapshot(q, (s) => cb(rows(s)), fail('atletas'));
   },
+  // Coach de apoyo: solo los equipos y atletas que el coach principal le abrió (access). Una consulta por equipo y un documento por atleta suelto.
+  listenAthletesScoped(coachUid, access, cb) {
+    const acc = access || {}; const parts = {}; const emit = () => cb(Object.values(parts).flat());
+    const unsubs = [];
+    (acc.teams || []).forEach((t) => {
+      const q = query(collection(db, 'users'), where('coachId', '==', coachUid), where('role', '==', 'athlete'), where('team', '==', t));
+      unsubs.push(onSnapshot(q, (s) => { parts['t:' + t] = rows(s); emit(); }, fail('atletas del equipo ' + t, true)));
+    });
+    (acc.athletes || []).forEach((id) => {
+      unsubs.push(onSnapshot(doc(db, 'users', id), (s) => { parts['a:' + id] = s.exists() ? [{ id: s.id, ...s.data() }] : []; emit(); }, fail('atleta', true)));
+    });
+    if (!unsubs.length) cb([]);
+    return () => unsubs.forEach((u) => u());
+  },
+  // Permisos del coach de apoyo (solo los escribe el coach principal)
+  setAccess(viewerUid, access) { return updateDoc(doc(db, 'users', viewerUid), { access: clean(access) }); },
+  // Propuestas del coach de apoyo (atleta o grupo nuevo); las resuelve el coach principal
+  sendProposal(p) { return setDoc(doc(collection(db, 'proposals')), clean(p)); },
+  listenProposals(cb, byUid) {
+    const q = byUid ? query(collection(db, 'proposals'), where('by', '==', byUid)) : query(collection(db, 'proposals'), orderBy('ts', 'desc'), limit(50));
+    return onSnapshot(q, (s) => cb(rows(s).sort((a, b) => b.ts - a.ts)), fail('propuestas'));
+  },
+  resolveProposal(id, status) { return updateDoc(doc(db, 'proposals', id), { status, decidedAt: Date.now() }); },
+  removeProposal(id) { return deleteDoc(doc(db, 'proposals', id)); },
   listenPending(cb) {
     const q = query(collection(db, 'users'), where('pending', '==', true));
     return onSnapshot(q, (s) => cb(rows(s)), fail('solicitudes'));
