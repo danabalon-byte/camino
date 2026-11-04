@@ -1018,23 +1018,23 @@ function viewGuia() {
 /* ---------- Versión y novedades ---------- */
 const APP_VER = 45;
 const NEWS = [
+  // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Hoy empieza por lo que toca hoy y te pregunta si hubo un cambio entre tu plan y tu check-in.',
+  'Tu forma ahora dice su estado con palabras y rangos, no solo con color.',
+  'Cabina ordena a los atletas por urgencia y muestra el motivo de cada uno.',
+  'Las notas del coach con más de una semana se marcan como antiguas.',
+  'Botones más grandes y bordes más visibles en todos los temas.',
   'Nuevo perfil: tus datos, medidas que confirma tu coach y control de tu información.',
   'Gym más simple: todo en una pantalla y una pregunta de carga según lo que trabajaste.',
   'Íconos nuevos y botones planos que se hunden al elegirlos.',
-  'Opciones en texto, en verde cuando el dato es neutro.',
   'En Gym, una figura humana para marcar las zonas que trabajaste y si hubo molestia.',
   'Registra dos sesiones el mismo día.',
   'Modo oscuro con luz y filete al elegir, y tutoriales renovados.',
   'Aviso automático cuando hay una versión nueva de la app.',
   'Nueva tarjeta de carga (TSS) en Datos: cuánto te costó la semana, comparado con tu promedio.',
-  'Tu carga (TSS) ahora se lee igual que tu forma: tres cifras y un medidor.',
-  'Los avisos aparecen abajo, junto a donde tocas, y el gráfico de bienestar explica cada línea.',
-  'Hoy empieza por lo que toca hoy y te pregunta si hubo un cambio entre tu plan y tu check-in.',
-  'Tu forma ahora dice su estado con palabras y rangos, no solo con color.',
-  'Las notas del coach con más de una semana se marcan como antiguas.',
-  'Cabina ordena a los atletas por urgencia y muestra el motivo de cada uno.',
-  'Botones más grandes y bordes más visibles en todos los temas.'
+  'Los avisos aparecen abajo, junto a donde tocas, y el gráfico de bienestar explica cada línea.'
 ];
+const NEWS_SHOW = 4;
 const newsKey = () => 'camino.news.' + (ST.user ? ST.user.uid : '');
 /* ---------- Recorrido de bienvenida (primera vez y desde Guía/Ajustes) ---------- */
 function tourSlides() {
@@ -1046,7 +1046,7 @@ function tourSlides() {
     { c: 's1', ic: 'ajustes', k: 'Ajustes', t: 'Hazla tuya', p: 'Cambia el tono visual, activa el recordatorio diario y decide con un interruptor si compartes tus km con el equipo.' },
     { c: 's2', ic: 'guia', k: 'Guía', t: 'Si te queda una duda', p: 'En la pestaña Guía desliza las tarjetas para ver cómo se llena cada dato. Puedes volver a este recorrido cuando quieras desde ahí.', btn: 'Empezar' }
   ];
-  if (UI.tourNews) sl.unshift({ c: 's1', ic: 'hoy', k: 'Novedades', t: 'Camino se actualizó', p: '', list: NEWS, btn: 'Ver el recorrido' });
+  if (UI.tourNews) sl.unshift({ c: 's1', ic: 'hoy', k: 'Novedades', t: 'Camino se actualizó', p: '', list: NEWS.slice(0, NEWS_SHOW), btn: 'Ver el recorrido' });
   if (isCoach()) sl.splice(UI.tourNews ? 5 : 4, 0, { c: 's0', ic: 'cabina', k: 'Cabina', t: 'Tu panel de coach', p: 'En Cabina ves a los atletas ordenados por urgencia, con el motivo de cada uno, abres a cada atleta, cargas su plan e historial y usas "Ver la app como" para ver lo que ve cada uno. El interruptor de arriba cambia entre tu vista de coach y la tuya.' });
   return sl;
 }
@@ -1054,7 +1054,7 @@ function tourHtml() {
   if (UI.tour == null) return '';
   const sl = tourSlides(), i = Math.min(UI.tour, sl.length - 1), s = sl[i], last = i === sl.length - 1;
   const ico = (i === 0 && s.k !== 'Novedades' && myTeam() && TEAM_LOGO[myTeam()]) ? teamLogo(myTeam(), 'full', 120, true) : (NAVIC[s.ic] ? ph(NAVIC[s.ic], 64) : '');
-  return '<div class="story tour ' + s.c + '" role="dialog" aria-label="Recorrido de bienvenida" id="tourbox"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, k) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (k <= i ? 1 : .3) + '"></i>').join('') + '</div><div class="row between" style="margin-top:6px"><button type="button" class="x" data-a="tourBack"' + (i === 0 ? ' style="visibility:hidden"' : '') + '>Atrás</button><button type="button" class="x" data-a="tourClose">Saltar</button></div><div class="col g14" style="flex:1;justify-content:center"><div>' + ico + '</div><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + esc(s.k) + ' · ' + (i + 1) + ' de ' + sl.length + '</div><div style="font-family:var(--font-d);font-weight:700;font-size:clamp(36px,11vw,52px);line-height:1.05">' + esc(s.t) + '</div>' + (s.list ? '<ul style="font-size:18px;line-height:1.4;padding-left:20px;display:grid;gap:8px">' + s.list.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p style="font-size:19px;line-height:1.45">' + esc(s.p) + '</p>') + '</div><button type="button" class="sbtn" data-a="tourNext">' + (last ? (s.btn || 'Empezar') : 'Siguiente') + '</button></div></div>';
+  return '<div class="story tour ' + s.c + '" role="dialog" aria-label="Recorrido de bienvenida" id="tourbox"><div class="inner"><div class="row g8" aria-hidden="true">' + sl.map((x, k) => '<i style="flex:1;height:4px;border-radius:2px;background:currentColor;opacity:' + (k <= i ? 1 : .3) + '"></i>').join('') + '</div><div class="row between" style="margin-top:6px"><button type="button" class="x" data-a="tourBack"' + (i === 0 ? ' style="visibility:hidden"' : '') + '>Atrás</button><button type="button" class="x" data-a="tourClose">Saltar</button></div><div class="col g14" style="flex:1;min-height:0;' + (s.list ? 'overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 0' : 'justify-content:center') + '"><div>' + ico + '</div><div style="font-size:13px;letter-spacing:.12em;font-weight:600;text-transform:uppercase">' + esc(s.k) + ' · ' + (i + 1) + ' de ' + sl.length + '</div><div style="font-family:var(--font-d);font-weight:700;font-size:clamp(36px,11vw,52px);line-height:1.05">' + esc(s.t) + '</div>' + (s.list ? '<ul style="font-size:18px;line-height:1.4;padding-left:20px;display:grid;gap:8px">' + s.list.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p style="font-size:19px;line-height:1.45">' + esc(s.p) + '</p>') + '</div><button type="button" class="sbtn" data-a="tourNext">' + (last ? (s.btn || 'Empezar') : 'Siguiente') + '</button></div></div>';
 }
 const tourKey = () => 'camino.tour.' + (ST.user ? ST.user.uid : '');
 function tourMaybeOpen() {
