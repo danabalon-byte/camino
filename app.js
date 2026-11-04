@@ -390,6 +390,7 @@ function viewHoy() {
   let out = '<div class="inner"><div class="stack">' + head(sub, 'Hola, ' + a.first) + msgBanner();
   if (ST.profile && ST.profile.pending) out += '<div class="banner" role="note">' + infoIcon() + '<span>Tu coach todavía no te asigna a un equipo. Puedes hacer tus check-ins desde ya; él los verá cuando te acepte.</span></div>';
 
+  out += tocaCard(a, todayC);
   out += '<section class="card row g16" aria-label="Estado de hoy"><div style="position:relative;width:128px;height:128px;flex:none"><svg width="128" height="128" viewBox="0 0 128 128" aria-hidden="true"><circle cx="64" cy="64" r="54" fill="none" style="stroke:var(--track)" stroke-width="12"></circle><circle class="ring-fg" cx="64" cy="64" r="54" fill="none" style="stroke:' + b.color + '" stroke-width="12" stroke-linecap="round" stroke-dasharray="' + dash + ' ' + circ + '" transform="rotate(-90 64 64)"></circle></svg><div class="col" style="position:absolute;inset:0;align-items:center;justify-content:center"><span class="num" style="font-size:50px">' + (sc == null ? '–' : sc) + '</span><span class="muted" style="font-size:12px">de 100</span></div></div>'
     + '<div class="col g6 grow"><div class="eyebrow">Estado de hoy</div><div class="h2" style="color:' + b.color + '">' + b.label + '</div>'
     + (l ? '<p class="soft" style="font-size:14px">' + esc(summaryText(l, b)) + '</p><p class="muted" style="font-size:12px">' + basis + '</p>' : '<p class="soft" style="font-size:14px">Haz tu primer check-in para ver tu estado.</p>') + '</div></section>';
@@ -411,26 +412,36 @@ function viewHoy() {
   });
   const pToday = planFor(off(0)); let wkLine;
   if (todayC && todayC.type === 'actividad') wkLine = 'Hoy registraste ' + (todayC.activity ? todayC.activity.name.toLowerCase() : 'tu actividad') + '. Vas al día con el plan.';
-  else if (pToday) wkLine = 'Hoy: ' + pToday.name + (pToday.min ? ' de ' + minText(pToday.min) : '') + '. Llevas ' + wk.done + ' de ' + wk.planned + ' sesiones de la semana.';
+  else if (pToday) wkLine = 'Llevas ' + wk.done + ' de ' + wk.planned + ' sesiones de la semana.';
   else wkLine = 'Hoy es día de descanso. Llevas ' + wk.done + ' de ' + wk.planned + ' sesiones de la semana.';
   const nTxt = dayNote(off(0));
-  if (nTxt && !(todayC && todayC.type === 'actividad')) wkLine += ' ' + nTxt;
   out += '<section class="card wkcard" role="button" tabindex="0" data-a="wkOpen" aria-label="Tu semana: toca para ver el detalle del plan"><div class="row between"><div class="eyebrow">Tu semana</div><div class="muted" style="font-size:13px">' + (DEMO && !ST.myPlan ? 'Plan de ejemplo y lo hecho' : 'Tu plan y lo hecho') + '</div></div><div class="row g8" style="align-items:flex-start;margin-top:14px">' + cols + '</div><p class="soft" style="margin-top:14px;font-size:15px">' + esc(wkLine) + '</p><div class="wkmore">Ver el detalle de la semana <span aria-hidden="true">›</span></div></section>';
 
   const n = lastNote(a);
-  if (n) out += '<section class="card" aria-label="Nota de tu coach"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p></section>';
+  if (n) { const age = Math.floor((Date.now() - Number(n.at)) / 86400000), old = age >= 7; out += '<section class="card' + (old ? ' oldnote' : '') + '" aria-label="Nota de tu coach"><div class="eyebrow">Nota de tu coach · ' + relTime(n.at) + '</div><p class="soft" style="margin-top:8px">“' + esc(n.text) + '”</p>' + (old ? '<p class="muted" style="font-size:13px;margin-top:8px">Es una nota antigua (hace ' + age + ' días): puede no reflejar tu plan de ahora.</p>' : '') + '</section>'; }
   out += dayCard(a, todayC);
   return out + '</div></div>';
 }
 
 /* ---------- Tarjeta "Tu día" (Hoy) ---------- */
+/* Tarjeta "Hoy toca": la sesión del plan primero; si el check-in dice descanso y el plan pide entrenar, lo pregunta en vez de mostrar dos mensajes opuestos. */
+function tocaCard(a, c) {
+  const p = planFor(off(0)); if (!p) return '';
+  const did = !!(c && c.type === 'actividad'), skip = !!(c && c.skip), rested = !!(c && c.type === 'descanso' && !c.skip);
+  const nt = dayNote(off(0));
+  let out = '<section class="card col g12" aria-label="Hoy toca"><div class="row between g8"><div class="eyebrow">Hoy toca</div>' + (did ? '<span class="dbadge">Hecho</span>' : '') + '</div><div class="h2" style="font-size:26px">' + esc(p.name) + '</div><div class="muted" style="font-size:14px">' + esc((p.min ? minText(p.min) : '') + (p.km ? (p.min ? ' · ' : '') + p.km + ' km' : '')) + '</div>' + (nt ? '<p class="soft" style="font-size:15px">' + esc(nt) + '</p>' : '');
+  if (rested && !(c && c.restOk)) out += '<div class="conflict" role="group" aria-label="Tu plan y tu check-in no coinciden"><p style="font-weight:600">Tu check-in dice descanso, pero tu plan marcaba esta sesión. ¿Qué pasó?</p><div class="row g8 wrap"><button type="button" class="chip" data-a="kind" data-v="post" data-s="1">Sí la hice</button><button type="button" class="chip" data-a="restOk" data-v="' + off(0) + '"' + (UI.busy ? ' disabled' : '') + '>Descansé, no la hice</button></div></div>';
+  else if (rested) out += '<p class="muted" style="font-size:13px">Confirmaste que hoy descansaste, aunque el plan marcaba entrenar. Tu coach lo ve.</p>';
+  else if (skip) out += '<p class="muted" style="font-size:13px">Hoy no entrenaste. Lo ve tu coach.</p>';
+  return out + '</section>';
+}
 function dayCard(a, c) {
   const hasD = !!(c && c.mood != null), S1 = sessOf(c, 1), S2 = sessOf(c, 2), hasP = !!S1, isSkip = !!(c && c.skip), isRest = !!(c && c.type === 'descanso' && !c.skip), p = planFor(off(0));
   const complete = hasD && (hasP || isSkip || isRest), st = streak(a);
   const ring = (done, ic) => '<span class="dring ' + (done ? 'done' : 'todo') + '" aria-hidden="true">' + (done ? check('currentColor', 22) : ic) + '</span>';
   let dsum = '';
   if (hasD) { const bits = []; if (c.sleepH != null) bits.push('Dormiste ' + String(at(SLEEPH, c.sleepH)).toLowerCase()); if (c.legs != null) bits.push('piernas ' + String(at(LEGS, c.legs)).toLowerCase()); if (!bits.length) bits.push('Ánimo: ' + String(at(MOODS, c.mood - 1)).toLowerCase()); dsum = bits.join(' · '); }
-  let out = '<section class="card dcard" aria-label="Tu día"><div class="row between"><div class="eyebrow">Tu día</div>' + (complete ? '<span class="dbadge">Día completo</span>' : (!hasP ? '<button type="button" class="link" data-a="alt" style="min-height:36px;font-size:14px">Hoy fue distinto</button>' : '')) + '</div><div class="dnodes">';
+  let out = '<section class="card dcard" aria-label="Tu día"><div class="row between"><div class="eyebrow">Tu día</div>' + (complete ? '<span class="dbadge">Día completo</span>' : (!hasP ? '<button type="button" class="link" data-a="alt" style="min-height:44px;font-size:14px">Hoy fue distinto</button>' : '')) + '</div><div class="dnodes">';
   // nodo 1
   out += '<div class="dnode ' + (hasP || true ? 'dl' : '') + '">' + ring(hasD, kIcon('otra', 22).replace('<path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6L12 16.7 6.7 19.6l1.1-6L3.4 9.4l6-.8z"></path>', '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path>')) + '<div class="col grow g4" style="min-width:0"><div class="row between g8"><span class="dt1">Estado del día</span>' + (hasD ? '<button type="button" class="dedit" data-a="kind" data-v="diario" aria-label="Editar el estado del día">Editar</button>' : '') + '</div>'
     + (hasD ? '<span class="dt2">' + esc(dsum) + '</span>' : '<span class="dt2">Sueño, piernas, estrés y ánimo · 1 minuto</span><button type="button" class="btn primary dbtn" data-a="kind" data-v="diario"><span>Hacer mi estado del día</span>' + arrow() + '</button>') + '</div></div>';
@@ -492,15 +503,20 @@ function replyBlock(a, st, l, n) {
   out += '<div class="col g10" id="replyBox"><div class="row between g8" style="align-items:center"><div class="eyebrow">Responder a ' + esc(a.first) + '</div><span class="tag out" style="' + (need ? 'color:var(--accent);border-color:var(--accent)' : '') + '">' + (need ? 'Pendiente' : 'Al día') + '</span></div>';
   if (un) {
     const el = Math.max(0, (Date.now() - un.start) / 1000);
-    out += '<div class="undo" role="status"><div class="row between g12" style="align-items:center"><span class="soft" style="font-size:14px">Se enviará a ' + esc(a.first) + ' en unos segundos.</span><button type="button" class="chip" data-a="qrUndo" style="min-height:40px">Deshacer</button></div><div class="undo-bar" aria-hidden="true"><i style="animation-delay:-' + el.toFixed(2) + 's"></i></div></div>';
+    out += '<div class="undo" role="status"><div class="row between g12" style="align-items:center"><span class="soft" style="font-size:14px">Se enviará a ' + esc(a.first) + ' en unos segundos.</span><button type="button" class="chip" data-a="qrUndo" style="min-height:44px">Deshacer</button></div><div class="undo-bar" aria-hidden="true"><i style="animation-delay:-' + el.toFixed(2) + 's"></i></div></div>';
   } else {
     out += '<div class="col g8" role="group" aria-label="Respuestas rápidas">' + pr.map((p, i) => '<div class="qr"><button type="button" class="qr-main" data-a="qrSend" data-v="' + i + '"><span>' + esc(p) + '</span><span class="qr-go" aria-hidden="true">Enviar</span></button><button type="button" class="qr-edit" data-a="preset" data-v="' + i + '" aria-label="Editar antes de enviar">' + pencil() + '</button></div>').join('') + '</div><p class="muted" style="font-size:12px">Toca una respuesta para enviarla (puedes deshacer unos segundos) o el lápiz para editarla antes.</p>';
   }
   out += '<label for="replyText" class="muted" style="font-size:13px">O escribe tu propio mensaje</label><textarea id="replyText" rows="3" maxlength="600" placeholder="Escribe aquí">' + esc(UI.reply.text) + '</textarea><div class="row between g8" style="align-items:center"><span class="muted" style="font-size:12px" id="replyCount">' + len + ' / 600</span><button type="button" class="btn primary" data-a="sendReply" style="width:auto;min-height:48px;padding:0 20px;justify-content:center" ' + (UI.reply.text.trim() && !UI.busy ? '' : 'disabled') + '>' + (UI.reply.text.trim() ? 'Enviar a ' + esc(a.first) : 'Enviar') + '</button></div></div>';
   return out;
 }
+/* Urgencia: quien espera respuesta y está en alerta primero; luego sin check-in (más días = más arriba); al final los que están al día. */
+function urgency(a) {
+  const st = statusOf(a), l = latest(a), gap = l ? Math.max(0, diffDays(l.date, off(0))) : 99;
+  return (needsReply(a) ? 1000 : 0) + (st.k === 'warn' ? 500 : (st.k === 'none' ? 300 + Math.min(gap, 60) : 0)) + st.reasons.length;
+}
 function viewCabina() {
-  const list = athleteObjs(), cnt = { ok: 0, warn: 0, none: 0 }; let queue = 0;
+  const list = athleteObjs().sort((x, y) => urgency(y) - urgency(x) || String(x.name).localeCompare(String(y.name), 'es')), cnt = { ok: 0, warn: 0, none: 0 }; let queue = 0;
   list.forEach((a) => { cnt[statusOf(a).k]++; if (needsReply(a)) queue++; });
   let out = '<div class="inner"><div class="stack">' + head('Vista del coach', 'Cabina') + msgBanner();
   if (canEdit() && ST.pending.filter((p) => p.id !== (ST.user && ST.user.uid)).length) {
@@ -510,10 +526,10 @@ function viewCabina() {
   out += '<button type="button" class="row between g12" data-a="nextReply" ' + (queue === 0 ? 'disabled' : '') + ' style="width:100%;min-height:52px;text-align:left;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:16px;padding:12px 16px"><span style="font-weight:600">' + (queue === 0 ? 'Todo respondido por hoy' : queue + ' por responder') + '</span><span class="muted" style="font-size:13px">' + (queue === 0 ? 'Cola de respuestas' : 'Ir a responder ›') + '</span></button>';
   if (!list.length) { out += '<section class="card"><p class="soft">Aún no tienes atletas asignados. Cuando alguien entre con Google aparecerá arriba como solicitud nueva.</p></section></div></div>'; return out; }
   if (!UI.sel || !list.some((a) => a.id === UI.sel)) UI.sel = list[0].id;
-  out += '<section class="col g10" aria-label="Atletas"><div class="eyebrow">Atletas · toca uno para ver el detalle</div>';
+  out += '<section class="col g10" aria-label="Atletas"><div class="eyebrow">Atletas · los más urgentes primero</div>';
   list.forEach((a) => {
     const st = statusOf(a), l = latest(a), col = st.k === 'ok' ? 'var(--good)' : (st.k === 'warn' ? 'var(--warn)' : 'var(--muted)'), lab = st.k === 'ok' ? 'Al día' : (st.k === 'warn' ? 'Atención' : 'Sin check-in');
-    out += '<button type="button" data-a="sel" data-v="' + esc(a.id) + '" aria-pressed="' + (UI.sel === a.id) + '" class="row g12" style="width:100%;min-height:72px;padding:12px 14px;border-radius:18px;text-align:left;border:1.5px solid ' + (UI.sel === a.id ? 'var(--accent)' : 'var(--line)') + ';background:' + (UI.sel === a.id ? 'var(--surface2)' : 'var(--surface)') + '"><span class="dot" style="background:' + col + '" aria-hidden="true"></span><span class="col grow g4"><span style="font-weight:600;font-size:16px">' + esc(a.name) + (a.team ? ' <span class="muted" style="font-weight:500;font-size:13px">· ' + TEAMS[a.team] + '</span>' : '') + '</span><span style="font-size:13px;color:' + col + '">' + lab + '</span><span class="muted" style="font-size:12px">Último check-in: ' + (l ? relTime(l.ts) : 'ninguno') + '</span></span>' + miniSpark(a) + '</button>';
+    out += '<button type="button" data-a="sel" data-v="' + esc(a.id) + '" aria-pressed="' + (UI.sel === a.id) + '" class="row g12" style="width:100%;min-height:72px;padding:12px 14px;border-radius:18px;text-align:left;border:1.5px solid ' + (UI.sel === a.id ? 'var(--accent)' : 'var(--line)') + ';background:' + (UI.sel === a.id ? 'var(--surface2)' : 'var(--surface)') + '"><span class="dot" style="background:' + col + '" aria-hidden="true"></span><span class="col grow g4"><span style="font-weight:600;font-size:16px">' + esc(a.name) + (a.team ? ' <span class="muted" style="font-weight:500;font-size:13px">· ' + TEAMS[a.team] + '</span>' : '') + '</span><span style="font-size:13px;color:' + col + '">' + lab + '</span>' + (st.k === 'none' ? '' : '<span class="soft" style="font-size:13px">' + esc(st.reasons[0] || 'Todo en orden') + '</span>') + '<span class="muted" style="font-size:12px">Último check-in: ' + (l ? relTime(l.ts) : 'ninguno') + (needsReply(a) ? ' · espera respuesta' : '') + '</span></span>' + miniSpark(a) + '</button>';
   });
   out += '</section>';
   const a = list.find((x) => x.id === UI.sel), st = statusOf(a), l = latest(a), n = lastNote(a), col = st.k === 'ok' ? 'var(--good)' : (st.k === 'warn' ? 'var(--warn)' : 'var(--muted)'), lab = st.k === 'ok' ? 'Al día' : (st.k === 'warn' ? 'Atención' : 'Sin check-in');
@@ -532,6 +548,7 @@ function viewCabina() {
     if (l.rpe) bits.push('RPE ' + l.rpe);
     if (l.hard === 'si') { const hi = l.hardInfo || {}, hp = [hi.type, hi.dur, hi.end].filter(Boolean).map((x) => String(x).toLowerCase()); bits.push('Tramo duro' + (hp.length ? ': ' + hp.join(', ') : '')); }
     if (l.fuel) { const F = l.fuel, fp = []; if (F.carbs != null) fp.push('carbos: ' + at(CARBS, F.carbs).toLowerCase()); if (F.hydra != null) fp.push('hidratación: ' + at(HYDRA, F.hydra).toLowerCase()); if (F.energy != null) fp.push('energía: ' + at(ENERGY, F.energy).toLowerCase()); if (F.gi === 'si') fp.push('molestias digestivas'); if (F.pre) fp.push('antes: ' + F.pre); if (F.post) fp.push('después: ' + F.post); if (fp.length) bits.push('Nutrición — ' + fp.join(', ')); }
+    if (l.restOk) bits.push('Confirmó que descansó, aunque el plan marcaba entrenar');
     if (l.skip) bits.push('No entrenó' + ((l.skip.items || []).length ? ': ' + l.skip.items.map((x) => String(x).toLowerCase()).join(', ') : '') + (l.skip.text ? ' ("' + l.skip.text + '")' : ''));
     if (l.hardInfo && l.hardInfo.text) bits.push('Tramo: ' + l.hardInfo.text);
     if (l.prevInfo) { const pi = l.prevInfo, pp = (pi.items || []).map((x) => String(x).toLowerCase()).join(', '); bits.push('Ayer fuera de lo habitual' + (pp ? ': ' + pp : '') + (pi.text ? ' ("' + pi.text + '")' : '')); }
@@ -855,14 +872,15 @@ function histBlock(a) {
 }
 const formaLectura = (tsb) => (tsb <= -25 ? 'Vienes con mucha carga. Prioriza dormir, comer bien y bajar la intensidad.' : (tsb <= -10 ? 'Vienes cargado, y es normal cuando se entrena: tu cuerpo está asimilando el trabajo.' : (tsb <= 5 ? 'Carga y descanso están en un buen equilibrio.' : (tsb <= 20 ? 'Tus piernas vienen frescas: buen momento para rendir.' : 'Vienes muy fresco. Mantén algo de actividad suave para no enfriarte.'))));
 /* Zona de la forma: el numero toma el color de su estado; aptitud y fatiga, los del grafico. */
+const FZ_RNG = { 'Muy cargado': 'menos de −25', 'Cargado': '−25 a −10', 'Equilibrio': '−10 a +5', 'Fresco': '+5 a +20', 'Muy fresco': 'más de +20' };
 const formaZona = (t) => (t <= -25 ? { c: 'var(--bad)', n: 'Muy cargado' } : (t <= -10 ? { c: 'var(--warn)', n: 'Cargado' } : (t <= 5 ? { c: 'var(--soft)', n: 'Equilibrio' } : (t <= 20 ? { c: 'var(--good)', n: 'Fresco' } : { c: 'var(--good)', n: 'Muy fresco' }))));
 function formaGauge(t) {
   const pos = Math.max(0, Math.min(100, (t + 40) / 80 * 100));
-  return '<div style="position:relative;margin-top:6px" role="img" aria-label="Forma ' + t + ': ' + formaZona(t).n + '"><div class="gauge" aria-hidden="true"><i style="flex:15;background:var(--bad);opacity:.85"></i><i style="flex:15;background:var(--warn);opacity:.9"></i><i style="flex:15;background:var(--track)"></i><i style="flex:15;background:var(--good);opacity:.7"></i><i style="flex:20;background:var(--good)"></i></div><span class="gmk" style="left:calc(' + pos.toFixed(1) + '% - 2px)"></span></div><div class="gl" aria-hidden="true"><span>Muy cargado</span><span>Equilibrio</span><span>Muy fresco</span></div>';
+  return '<div style="position:relative;margin-top:6px" role="img" aria-label="Forma ' + t + ': ' + formaZona(t).n + '"><div class="gauge" aria-hidden="true"><i style="flex:15;background:var(--bad);opacity:.85"></i><i style="flex:15;background:var(--warn);opacity:.9"></i><i style="flex:15;background:var(--track)"></i><i style="flex:15;background:var(--good);opacity:.7"></i><i style="flex:20;background:var(--good)"></i></div><span class="gmk" style="left:calc(' + pos.toFixed(1) + '% - 2px)"></span></div><div class="gl" aria-hidden="true"><span>Muy cargado −25</span><span>Equilibrio</span><span>+20 Muy fresco</span></div>';
 }
 function formaCard(fi, link) {
   const t = fi.tsb, z = formaZona(t);
-  return '<section class="card col g10" aria-label="Tu forma"><div class="row between"><div class="eyebrow">Tu forma</div>' + (link ? '<a href="#datos" class="muted" style="font-size:13px;text-decoration:underline">Ver mis datos</a>' : '') + '</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr">' + [[(t > 0 ? '+' : '') + t, z.c, 'Forma'], [f1(fi.last.ctl), 'var(--accent2)', 'Aptitud'], [f1(fi.last.atl), 'var(--accent)', 'Fatiga']].map(function (x, i) { return '<div class="col g6" style="align-items:center;text-align:center;padding:4px 4px;' + (i ? 'border-left:1px solid var(--line)' : '') + '"><span class="num" style="font-size:38px;line-height:1;color:' + x[1] + '">' + x[0] + '</span><span class="muted" style="font-size:13px">' + x[2] + '</span></div>'; }).join('') + '</div>' + formaGauge(t) + '<p class="soft" style="font-size:15px;margin-top:4px">' + formaLectura(t) + '</p></section>';
+  return '<section class="card col g10" aria-label="Tu forma"><div class="row between"><div class="eyebrow">Tu forma</div>' + (link ? '<a href="#datos" class="muted" style="font-size:13px;text-decoration:underline">Ver mis datos</a>' : '') + '</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr">' + [[(t > 0 ? '+' : '') + t, z.c, 'Forma'], [f1(fi.last.ctl), 'var(--accent2)', 'Aptitud'], [f1(fi.last.atl), 'var(--accent)', 'Fatiga']].map(function (x, i) { return '<div class="col g6" style="align-items:center;text-align:center;padding:4px 4px;' + (i ? 'border-left:1px solid var(--line)' : '') + '"><span class="num" style="font-size:38px;line-height:1;color:' + x[1] + '">' + x[0] + '</span><span class="muted" style="font-size:13px">' + x[2] + '</span></div>'; }).join('') + '</div><div class="fzone" style="border-color:' + z.c + '"><b style="color:' + z.c + '">' + z.n + '</b><span class="muted">Forma ' + (t > 0 ? '+' : '') + t + ' · zona de ' + FZ_RNG[z.n] + '</span></div>' + formaGauge(t) + '<p class="soft" style="font-size:15px;margin-top:4px">' + formaLectura(t) + '</p></section>';
 }
 /* ---------- Vista: Datos (historial del propio atleta) ---------- */
 function viewDatos() {
@@ -961,7 +979,7 @@ const GUIA_BASE = [
   { k: 'Check-in', t: 'Cómo se llena el check-in', ic: 'sueno', p: ['Lo llenas tú en Hoy, en 1 minuto. Hay tres tipos: <b>actividad</b> (saliste a entrenar), <b>bienestar</b> (cómo amaneciste) y <b>descanso</b>.', 'Si registras una molestia, tu coach la ve de inmediato y puede escribirte una nota. Esa nota aparece en Hoy.', 'Los check-ins son privados: solo los ven tú y tu coach. El equipo nunca ve tu bienestar ni tus molestias.'] },
   { k: 'Aptitud', t: 'Aptitud: lo que has construido', ic: 'datos', p: ['La aptitud (CTL) es tu base de entrenamiento. Es un promedio ponderado de tu carga de los últimos 42 días aproximadamente.', 'Sube lento, con semanas constantes, y baja lento si paras. Una sola salida larga casi no la mueve.', 'Más aptitud significa que tu cuerpo tolera más trabajo. Es la línea que más importa mirar en el largo plazo.'] },
   { k: 'Fatiga', t: 'Fatiga: el cansancio reciente', ic: 'racha', p: ['La fatiga (ATL) es el promedio de tu carga de los últimos 7 días aproximadamente.', 'Sube rápido con una salida dura y baja rápido con un par de días suaves. Es normal que se dispare después de un fin de semana largo.', 'Por sí sola no es mala: solo dice cuánto trabajo acumulaste esta semana.'] },
-  { k: 'Forma', t: 'Forma: aptitud menos fatiga', ic: 'cinco', p: ['La forma (TSB) es la resta: aptitud menos fatiga. Es el número grande que ves en "Tu forma".', '<b>Positiva</b>: piernas frescas, buen momento para una prueba o carrera. <b>Cerca de cero</b>: equilibrio. <b>Negativa</b>: estás cargando trabajo, que es normal en bloques de construcción.', 'Si baja de -25, tu coach lo marca como alerta. Antes de una meta, el plan busca que llegues con forma positiva.'] },
+  { k: 'Forma', t: 'Forma: aptitud menos fatiga', ic: 'cinco', p: ['La forma (TSB) es la resta: aptitud menos fatiga. Es el número grande que ves en "Tu forma".', 'Debajo de los tres números, una etiqueta dice tu zona con palabras y con su rango: <b>Muy cargado</b> (menos de −25), <b>Cargado</b> (−25 a −10), <b>Equilibrio</b> (−10 a +5), <b>Fresco</b> (+5 a +20) y <b>Muy fresco</b> (más de +20). El color acompaña, pero el texto es lo que manda.', '<b>Positiva</b>: piernas frescas, buen momento para una prueba o carrera. <b>Cerca de cero</b>: equilibrio. <b>Negativa</b>: estás cargando trabajo, que es normal en bloques de construcción.', 'Si baja de -25, tu coach lo marca como alerta. Antes de una meta, el plan busca que llegues con forma positiva.'] },
   { k: 'Datos', t: 'De dónde salen los números', ic: 'datos', p: ['Aptitud, fatiga y salidas vienen de intervals.icu, donde se conectan tus actividades de Strava o Garmin. Un proceso automático las trae <b>cada hora</b> a Camino.', 'Las salidas por semana cuentan los días con actividad registrada. Los kilómetros y minutos no se traen desde Strava por una limitación de la conexión.', 'Tu bienestar, racha e insignias vienen solo de tus check-ins en Camino, no de intervals.icu.'] },
   { k: 'Sensores', t: 'Equípate para medir tu esfuerzo', ic: 'datos', p: ['Para medir tu esfuerzo y planificar con precisión conviene salir con <b>tres sensores</b>: de <b>frecuencia cardíaca</b> (banda pectoral o de brazo), de <b>cadencia</b> y de <b>velocidad</b>.', 'La frecuencia cardíaca y la cadencia permiten estimar la carga de tus salidas y leer tu fatiga. Un sensor óptico de muñeca falla más en intervalos, frío y terreno irregular; una banda de brazo o pectoral es más fiable.', 'Si ya tienes alguno guardado, revisa primero la pila. Y recuerda: sin medidor de potencia no se calculan vatios, pero la carga estimada por frecuencia cardíaca mejora mucho con buenos sensores.'] },
   { k: 'Semana', t: 'Tu semana', ic: 'semana', p: ['Cada columna es un día. El contorno punteado es lo que dice tu plan y el relleno es lo que ya hiciste.', 'Una sesión cuenta como hecha cuando haces un check-in de tipo <b>actividad</b> ese día.', '<b>Toca la tarjeta</b> (o una columna) para abrir el detalle: cada día con lo planificado, lo que hiciste y las notas de tu coach, más el resumen de sesiones, tiempo y kilómetros. Con las flechas de abajo ves semanas anteriores y la próxima.', 'El plan lo carga tu coach. Si no ves sesiones, es que aún no te carga ese bloque.'] },
@@ -971,15 +989,17 @@ const GUIA_BASE = [
 ];
 
 const GUIA_NUEVAS = {
+  toca: { k: 'Hoy toca', t: 'Lo que toca hoy', ic: 'hoy', p: ['Al abrir Hoy, lo primero es la tarjeta <b>Hoy toca</b>: la sesión de tu plan con su duración, sus kilómetros y la nota del día si tu coach dejó una.', 'Si tu check-in dice <b>descanso</b> pero tu plan marcaba una sesión, Camino te pregunta qué pasó: <b>Sí la hice</b> abre el registro de tu sesión y <b>Descansé, no la hice</b> deja guardado que el descanso fue a propósito, y tu coach lo ve en tu último check-in. Así no ve dos mensajes distintos.', 'Si el plan de hoy está vacío, la tarjeta no aparece: es un día libre.'] },
   proy: { k: 'Proyección', t: 'Proyección del plan', ic: 'cinco', p: ['En Datos, el interruptor <b>Proyección del plan</b> (verde) añade al gráfico una zona punteada hasta tu meta.', 'Se calcula con las cargas de cada sesión de tu plan, usando el mismo modelo de aptitud (42 días) y fatiga (7 días). Por eso es una <b>estimación</b>: si el plan no trae cargas, la línea queda plana.', 'La frase de abajo te dice cómo llegarías a la meta: positiva significa piernas frescas ese día. También puedes activarlo en Ajustes.'] },
   ampliar: { k: 'Ampliar', t: 'Ver el gráfico más grande', ic: 'datos', p: ['En Datos, toca <b>Ampliar</b> (arriba a la derecha del gráfico) para verlo a pantalla completa. Los rangos de 30, 60 y 90 días, la lectura al arrastrar el dedo y la proyección funcionan igual.', '<b>Gira el teléfono</b> a horizontal estando en Datos y el gráfico se abre solo, más ancho. Al volver a vertical se cierra. Si no te gusta, apaga <b>Ampliar el gráfico al girar</b> en Ajustes.', 'En algunos teléfonos, como los iPhone, la pantalla no se puede bloquear en horizontal: gira el teléfono tú mismo. Para salir, toca <b>Cerrar</b>.'] },
   alerta: { k: 'Alerta', t: 'La línea roja de −25', ic: 'racha', p: ['En el panel de forma, la línea roja marca −25. Por debajo de ese valor tu coach recibe una alerta de carga muy alta.', 'No es un error ni un castigo: ocurre después de bloques largos o eventos grandes, como un brevet. Lo importante es que venga seguido de descanso.', 'Si te ves cerca de la línea, avisa cómo te sientes en tu check-in.'] },
   salidas: { k: 'Salidas', t: 'Salidas por semana', ic: 'semana', p: ['Cada barra es una semana, de lunes a domingo, y cuenta los <b>días con actividad</b>. Toca una barra para leer su detalle arriba.', 'La barra naranja es la semana en curso, que aún está incompleta. El contorno punteado es lo que marcaba tu plan, y la línea fina es tu promedio.', 'Los datos vienen de intervals.icu y se actualizan cada hora.'] },
   corregir: { k: 'Corregir', t: 'Corregir o borrar un check-in', ic: 'sueno', p: ['Si te equivocaste, en Hoy toca <b>Corregir check-in</b>: se abre con tus respuestas y al enviar reemplaza el de hoy.', '<b>Borrar check-in</b> lo elimina de tu historial, de tu racha y de los kilómetros del equipo de ese día. Pide confirmación antes de borrar.', 'Solo se puede corregir o borrar el check-in de hoy.'] },
-  coach: { k: 'Coach', t: 'Responder y gestionar', ic: 'cabina', p: ['En Cabina, <b>N por responder</b> te lleva al primer atleta pendiente. Las respuestas rápidas se envían con un toque y tienes 5 segundos para <b>Deshacer</b>. El lápiz las abre para editarlas.', '<b>Ver la app como…</b> muestra Hoy, Datos y Ruta tal como los ve ese atleta, en solo lectura.', 'En <b>Gestionar</b> ves el estado de su plan e historial. El historial se sincroniza solo cada hora; cargarlo a mano es el respaldo.', 'El interruptor Coach / Atleta de arriba cambia entre esta vista y la tuya como atleta.'] }
+  coach: { k: 'Coach', t: 'Responder y gestionar', ic: 'cabina', p: ['En Cabina, los atletas aparecen <b>ordenados por urgencia</b>: primero quien espera respuesta o está en alerta, luego quien lleva días sin check-in, y al final los que están al día. Cada fila dice el motivo. <b>N por responder</b> te lleva al primer atleta pendiente. Las respuestas rápidas se envían con un toque y tienes 5 segundos para <b>Deshacer</b>. El lápiz las abre para editarlas.', '<b>Ver la app como…</b> muestra Hoy, Datos y Ruta tal como los ve ese atleta, en solo lectura.', 'En <b>Gestionar</b> ves el estado de su plan e historial. El historial se sincroniza solo cada hora; cargarlo a mano es el respaldo.', 'El interruptor Coach / Atleta de arriba cambia entre esta vista y la tuya como atleta.'] }
 };
 function guiaSlides() {
   const B = GUIA_BASE.slice(), N = GUIA_NUEVAS, at = (k) => B.findIndex((x) => x.k === k);
+  B.splice(at('Hoy') + 1, 0, N.toca);
   B.splice(at('Forma') + 1, 0, N.ampliar, N.proy, N.alerta);
   B.splice(at('Semana') + 1, 0, N.salidas);
   B.splice(at('Check-in') + 1, 0, N.corregir);
@@ -996,7 +1016,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 44;
+const APP_VER = 45;
 const NEWS = [
   'Nuevo perfil: tus datos, medidas que confirma tu coach y control de tu información.',
   'Gym más simple: todo en una pantalla y una pregunta de carga según lo que trabajaste.',
@@ -1008,21 +1028,26 @@ const NEWS = [
   'Aviso automático cuando hay una versión nueva de la app.',
   'Nueva tarjeta de carga (TSS) en Datos: cuánto te costó la semana, comparado con tu promedio.',
   'Tu carga (TSS) ahora se lee igual que tu forma: tres cifras y un medidor.',
-  'Los avisos aparecen abajo, junto a donde tocas, y el gráfico de bienestar explica cada línea.'
+  'Los avisos aparecen abajo, junto a donde tocas, y el gráfico de bienestar explica cada línea.',
+  'Hoy empieza por lo que toca hoy y te pregunta si hubo un cambio entre tu plan y tu check-in.',
+  'Tu forma ahora dice su estado con palabras y rangos, no solo con color.',
+  'Las notas del coach con más de una semana se marcan como antiguas.',
+  'Cabina ordena a los atletas por urgencia y muestra el motivo de cada uno.',
+  'Botones más grandes y bordes más visibles en todos los temas.'
 ];
 const newsKey = () => 'camino.news.' + (ST.user ? ST.user.uid : '');
 /* ---------- Recorrido de bienvenida (primera vez y desde Guía/Ajustes) ---------- */
 function tourSlides() {
   const sl = [
     { c: 's0', ic: 'hoy', k: 'Bienvenida', t: 'Esto es Camino', p: 'Tu coach y tú en un solo lugar. Camino se completa con tus check-ins diarios: con ellos tu coach refleja tu esfuerzo y ajusta tu plan. En 1 minuto te muestro cómo se usa.' },
-    { c: 's1', ic: 'hoy', k: 'Hoy', t: 'Tu check-in diario', p: 'En Hoy respondes cómo dormiste, tus piernas, tu ánimo y tu estrés, y registras tu sesión: bici, gym u otra, con tu esfuerzo y, en gym, las zonas que trabajaste en una figura. Tu coach lo ve al instante. Si te equivocas, puedes corregirlo o borrarlo.' },
+    { c: 's1', ic: 'hoy', k: 'Hoy', t: 'Tu check-in diario', p: 'En Hoy ves primero lo que toca según tu plan y respondes cómo dormiste, tus piernas, tu ánimo y tu estrés, y registras tu sesión: bici, gym u otra, con tu esfuerzo y, en gym, las zonas que trabajaste en una figura. Tu coach lo ve al instante. Si te equivocas, puedes corregirlo o borrarlo.' },
     { c: 's2', ic: 'datos', k: 'Datos', t: 'Aptitud, fatiga y forma', p: 'Aptitud es lo que has construido, fatiga es el cansancio de esta semana y forma es la resta entre ambas. Activa "Proyección del plan" para ver cómo llegarías a tu meta.' },
     { c: 's0', ic: 'ruta', k: 'Ruta', t: 'Tu plan y tu camino', p: 'Aquí ves la semana, tus sesiones, tu meta y "Ver mi resumen" con tus salidas, tu mejor semana y los kilómetros de tu equipo.' },
     { c: 's1', ic: 'ajustes', k: 'Ajustes', t: 'Hazla tuya', p: 'Cambia el tono visual, activa el recordatorio diario y decide con un interruptor si compartes tus km con el equipo.' },
     { c: 's2', ic: 'guia', k: 'Guía', t: 'Si te queda una duda', p: 'En la pestaña Guía desliza las tarjetas para ver cómo se llena cada dato. Puedes volver a este recorrido cuando quieras desde ahí.', btn: 'Empezar' }
   ];
   if (UI.tourNews) sl.unshift({ c: 's1', ic: 'hoy', k: 'Novedades', t: 'Camino se actualizó', p: '', list: NEWS, btn: 'Ver el recorrido' });
-  if (isCoach()) sl.splice(UI.tourNews ? 5 : 4, 0, { c: 's0', ic: 'cabina', k: 'Cabina', t: 'Tu panel de coach', p: 'En Cabina ves quién necesita respuesta, abres a cada atleta, cargas su plan e historial y usas "Ver la app como" para ver lo que ve cada uno. El interruptor de arriba cambia entre tu vista de coach y la tuya.' });
+  if (isCoach()) sl.splice(UI.tourNews ? 5 : 4, 0, { c: 's0', ic: 'cabina', k: 'Cabina', t: 'Tu panel de coach', p: 'En Cabina ves a los atletas ordenados por urgencia, con el motivo de cada uno, abres a cada atleta, cargas su plan e historial y usas "Ver la app como" para ver lo que ve cada uno. El interruptor de arriba cambia entre tu vista de coach y la tuya.' });
   return sl;
 }
 function tourHtml() {
@@ -1051,9 +1076,10 @@ const TNAV = () => (isCoach() ? ['cabina', 'ajustes', 'guia'] : ['hoy', 'datos',
 const TUT = {
   hoy: {
     t: 'Hoy', ic: 'hoy', sub: 'Tu check-in y tu semana',
-    mock: () => tmTop() + '<div class="tmc row g10" id="m-score"><span class="tmring">78</span><div class="col g6" style="flex:1">' + tmL(70) + tmL(45) + '</div></div><div class="tmbtn" id="m-btn">Hacer check-in</div><div class="tmc col g6" id="m-chips"><div class="tml" style="width:35%"></div><div class="tmpo"><span>Mal</span><span data-on="3">Bien</span><span>Genial</span></div></div><div class="row g8"><div class="tmc" id="m-week" style="flex:1"><div class="tmwk"><i style="height:60%"></i><i style="height:35%"></i><i style="height:80%"></i><i style="height:20%"></i><i style="height:55%"></i></div></div><div class="tmc col g4" id="m-streak" style="width:34%"><b style="font-size:18px">5</b><span class="tml" style="width:80%"></span></div></div><div class="tmpill" id="m-edit">Corregir check-in</div>' + tmNav(TNAV()),
+    mock: () => tmTop() + '<div class="tmc col g6" id="m-toca"><span class="tml" style="width:60%"></span><div class="row g6"><span class="tmopt">Sí la hice</span><span class="tmopt">Descansé</span></div></div><div class="tmc row g10" id="m-score"><span class="tmring">78</span><div class="col g6" style="flex:1">' + tmL(70) + tmL(45) + '</div></div><div class="tmbtn" id="m-btn">Hacer check-in</div><div class="tmc col g6" id="m-chips"><div class="tml" style="width:35%"></div><div class="tmpo"><span>Mal</span><span data-on="3">Bien</span><span>Genial</span></div></div><div class="row g8"><div class="tmc" id="m-week" style="flex:1"><div class="tmwk"><i style="height:60%"></i><i style="height:35%"></i><i style="height:80%"></i><i style="height:20%"></i><i style="height:55%"></i></div></div><div class="tmc col g4" id="m-streak" style="width:34%"><b style="font-size:18px">5</b><span class="tml" style="width:80%"></span></div></div><div class="tmpill" id="m-edit">Corregir check-in</div>' + tmNav(TNAV()),
     steps: [
       { at: 'm-nav-hoy', say: 'Abajo, toca <b>Hoy</b>. Es tu pantalla de inicio.' },
+      { at: 'm-toca', say: 'Arriba está <b>Hoy toca</b>: la sesión de tu plan. Si tu check-in dice descanso y el plan pedía entrenar, Camino te pregunta cuál fue: <b>Sí la hice</b> o <b>Descansé</b>, y tu coach ve tu respuesta.' },
       { at: 'm-score', say: 'Este círculo es tu puntaje de hoy, de 0 a 100. Se calcula con tu último check-in: en verde estás listo para rodar.' },
       { at: 'm-btn', say: 'Toca <b>Hacer check-in</b>. Son pocas preguntas y toma 1 minuto. Si entrenaste, también registras tu sesión (mira el tutorial <b>Registro</b>).' },
       { at: 'm-chips', say: 'Responde tocando una opción de texto en cada pregunta: la que eliges se <b>hunde</b>, como un botón pulsado. Al final toca <b>Enviar</b>.' },
@@ -1079,7 +1105,7 @@ const TUT = {
     mock: () => tmTop() + '<div class="tmc row g10" id="m-load" style="align-items:flex-end"><b style="font-size:26px">385</b><span class="tmrpe" style="flex:1;height:30px"><i style="height:60%"></i><i style="height:70%"></i><i style="height:55%"></i><i style="height:80%"></i></span></div><div class="tmc col g6" id="m-forma"><div class="tm3"><b style="color:var(--good)">+12</b><b style="color:var(--accent2)">47</b><b style="color:var(--accent)">35</b></div><div class="tmgauge"><i></i></div></div><div class="row g6" id="m-rng"><span class="tmchip2">30 d</span><span class="tmchip2">60 d</span><span class="tmchip2" data-on="2">90 d</span></div><div class="row between"><span class="tml" style="width:40%"></span><span class="tmchip2" id="m-zoom">Ampliar</span></div><div class="tmc" id="m-chart"><svg viewBox="0 0 200 70" width="100%" height="70" aria-hidden="true"><path d="M0 50 C30 48 40 20 70 30 S110 52 140 34 S180 20 200 28" fill="none" stroke="var(--accent)" stroke-width="2.5"/><path d="M0 56 C40 54 80 46 120 44 S170 40 200 38" fill="none" stroke="var(--accent2)" stroke-width="2.5"/></svg></div><div class="row between tmc" id="m-sw-row"><span class="tml" style="width:50%"></span>' + tmSw('m-sw', 5) + '</div><div class="tmc" id="m-bars"><div class="tmwk"><i style="height:30%"></i><i style="height:70%"></i><i style="height:50%"></i><i style="height:90%"></i><i style="height:40%"></i></div></div>' + tmNav(TNAV()),
     steps: [
       { at: 'm-nav-datos', say: 'Toca <b>Datos</b> en el menú de abajo.' },
-      { at: 'm-forma', say: '<b>Tu forma</b> junto a tu aptitud (azul) y tu fatiga (naranja). El medidor te dice si vienes cargado o fresco.' },
+      { at: 'm-forma', say: '<b>Tu forma</b> junto a tu aptitud (azul) y tu fatiga (naranja). Una etiqueta escrita te dice tu zona (Equilibrio, Cargado, Fresco…) con su rango, y el medidor la muestra.' },
       { at: 'm-load', say: '<b>Tu carga</b> (TSS): cuánto te costó entrenar en 7 días, comparado con tu promedio. Una hora a tu umbral vale 100. Úsalo para ver tu tendencia.' },
       { at: 'm-rng', say: 'Cambia el rango del gráfico: <b>30, 60 o 90 días</b>.' },
       { at: 'm-chart', swipe: true, say: '<b>Arrastra el dedo</b> sobre el gráfico para leer el valor de cada día.' },
@@ -1116,7 +1142,7 @@ const TUT = {
       { at: 'm-mode', say: 'El interruptor de arriba cambia entre tu <b>vista de coach</b> y tu <b>vista de atleta</b>.' },
       { at: 'm-pend', say: '<b>N por responder</b> te lleva al primer atleta que espera respuesta.' },
       { at: 'm-qr', say: 'Las <b>respuestas rápidas</b> se envían con un toque. Tienes 5 segundos para <b>Deshacer</b>; el lápiz las abre para editarlas.' },
-      { at: 'm-ath', say: 'Toca un atleta para ver su detalle, cargar su plan e historial o aceptar solicitudes.' },
+      { at: 'm-ath', say: 'Los atletas van <b>ordenados por urgencia</b> y cada uno muestra su motivo. Toca uno para ver su detalle, cargar su plan e historial o aceptar solicitudes.' },
       { at: 'm-as', say: '<b>Ver la app como</b>: mira exactamente lo que ve ese atleta en Hoy, Datos y Ruta.' }
     ]
   },
@@ -1868,6 +1894,13 @@ const ACT = {
     const n = Number(String(el.value).replace(',', '.')); if (!(n >= m[3] && n <= m[4])) { say('Ingresa un valor entre ' + m[3] + ' y ' + m[4] + ' ' + m[2] + '.'); return; }
     const ms = Object.assign({}, (ST.athBio[id] || {}).meas || {}); ms[k] = Math.round(n * 10) / 10; ms.updatedAt = Date.now(); ms.by = ST.user.uid;
     try { await be.saveMeas(id, ms); say('Medida guardada', 'ok'); } catch (e) { say(friendly(e)); }
+  },
+  async restOk(v) {
+    const c = ST.user ? on(meA(), v) : null; if (!c || c.type !== 'descanso' || v !== off(0) || UI.busy) return;
+    const out = {}; CK_KEYS.forEach((k) => { if (c[k] !== undefined) out[k] = c[k]; }); out.restOk = true; // ts no cambia: no reabre la cola de respuestas del coach
+    UI.busy = true; render();
+    try { await be.saveCheckin(ST.user.uid, out); say('Listo, tu coach verá que descansaste', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
   },
   closeFb() { UI.feedback = null; render(); },
   wkOpen(v) { const t0 = parse(off(0)); t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)); const sh = v ? Math.floor(diffDays(ymd(t0), v) / 7) : 0; UI.wk = { shift: sh, focus: v || null }; render(); if (v) { const el = document.getElementById('wkd-' + v); if (el) el.scrollIntoView({ block: 'center' }); } },
