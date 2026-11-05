@@ -10,6 +10,20 @@ service cloud.firestore {
     }
     function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
     function isCoach() { return signedIn() && me().get('role', '') == 'coach'; }
+    // Coach de apoyo (role 'viewer'): su alcance lo define SOLO el coach en users/{viewer}.access:
+    //   teams (equipos visibles), athletes (atletas sueltos visibles), edit (puede escribir como coach), profile (ve perfil y medidas).
+    function isViewer() { return signedIn() && me().get('role', '') == 'viewer'; }
+    function acc() { return me().get('access', {}); }
+    function athDoc(athleteUid) { return get(/databases/$(database)/documents/users/$(athleteUid)).data; }
+    function isViewerOf(athleteUid) {
+      return isViewer()
+        && me().get('coachId', '') != ''
+        && athDoc(athleteUid).get('role', '') == 'athlete'
+        && athDoc(athleteUid).get('coachId', '') == me().get('coachId', 'x')
+        && (athDoc(athleteUid).get('team', '') in acc().get('teams', []) || athleteUid in acc().get('athletes', []));
+    }
+    function viewerEdits(athleteUid) { return isViewerOf(athleteUid) && acc().get('edit', false) == true; }
+    function viewerProfile(athleteUid) { return isViewerOf(athleteUid) && acc().get('profile', false) == true; }
     function isCoachOf(athleteUid) {
       return isCoach()
         && get(/databases/$(database)/documents/users/$(athleteUid)).data.get('coachId', '') == request.auth.uid;
@@ -23,6 +37,10 @@ service cloud.firestore {
       allow read: if signedIn() && (
         request.auth.uid == uid
         || (isCoach() && (resource.data.get('coachId', '') == request.auth.uid || resource.data.get('pending', false) == true))
+        || (isViewer() && resource.data.get('role', '') == 'athlete'
+            && me().get('coachId', '') != ''
+            && resource.data.get('coachId', '') == me().get('coachId', 'x')
+            && (resource.data.get('team', '') in acc().get('teams', []) || uid in acc().get('athletes', [])))
       );
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'pending', 'reminder', 'createdAt'])
@@ -32,8 +50,9 @@ service cloud.firestore {
         && request.resource.data.pending == true;
       allow update: if signedIn() && (
         (request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'pending', 'reminder', 'createdAt', 'coachId', 'team', 'shareKm'])
+          && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'pending', 'reminder', 'createdAt', 'coachId', 'team', 'shareKm', 'access'])
           && request.resource.data.get('shareKm', true) is bool
+          && request.resource.data.get('access', null) == resource.data.get('access', null)
           && request.resource.data.get('email', null) == resource.data.get('email', null)
           && request.resource.data.get('role', null) == resource.data.get('role', null)
           && request.resource.data.get('coachId', null) == resource.data.get('coachId', null)
@@ -45,21 +64,31 @@ service cloud.firestore {
           && request.resource.data.coachId == request.auth.uid
           && request.resource.data.team in ['grnt', 'zn']
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['coachId', 'team', 'pending']))
+        ||
+        (isCoach() && resource.data.get('role', '') == 'viewer' && resource.data.get('coachId', '') == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['access'])
+          && request.resource.data.access is map
+          && request.resource.data.access.keys().hasOnly(['teams', 'athletes', 'edit', 'profile'])
+          && request.resource.data.access.get('teams', []) is list && request.resource.data.access.get('teams', []).size() <= 5
+          && request.resource.data.access.get('athletes', []) is list && request.resource.data.access.get('athletes', []).size() <= 100
+          && request.resource.data.access.get('edit', false) is bool
+          && request.resource.data.access.get('profile', false) is bool)
       );
       allow delete: if false;
     }
 
     // Check-ins: el atleta escribe, corrige, borra y lee los suyos; su coach solo lee.
     match /users/{uid}/checkins/{date} {
-      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid) || isViewerOf(uid));
       allow create, update: if signedIn()
         && (request.auth.uid == uid || (isCoachOf(uid) && request.method == 'create' && request.resource.data.get('src', null) == 'tally'))
-        && request.resource.data.keys().hasOnly(['src', 'date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'act2', 'fuel', 'skip', 'ts'])
+        && request.resource.data.keys().hasOnly(['src', 'date', 'type', 'mood', 'sleepH', 'sleepQ', 'legs', 'stress', 'rpe', 'heat', 'hard', 'hardInfo', 'prev', 'prevInfo', 'pain', 'comment', 'activity', 'act2', 'fuel', 'skip', 'restOk', 'ts'])
         && date == request.resource.data.date
         && request.resource.data.type in ['actividad', 'bienestar', 'descanso']
         && (request.resource.data.get('mood', null) == null || (request.resource.data.mood is int && request.resource.data.mood >= 1 && request.resource.data.mood <= 5))
         && request.resource.data.get('src', null) in [null, 'tally']
         && request.resource.data.ts is number
+        && (request.resource.data.get('restOk', null) == null || request.resource.data.restOk is bool)
         && (request.resource.data.comment is string && request.resource.data.comment.size() <= 1000)
         && (request.resource.data.get('rpe', null) == null || (request.resource.data.rpe is int && request.resource.data.rpe >= 1 && request.resource.data.rpe <= 10))
         && (request.resource.data.get('sleepH', null) == null || (request.resource.data.sleepH is int && request.resource.data.sleepH >= 0 && request.resource.data.sleepH <= 4))
@@ -94,9 +123,46 @@ service cloud.firestore {
     }
 
     // Notas del coach: las crea solo su coach; el atleta las lee.
-    match /users/{uid}/notes/{id} {
+    // Perfil del atleta. main: lo completa y edita el atleta; lo lee su coach.
+    match /users/{uid}/profile/main {
+      // El coach de apoyo solo lo ve con el nivel "perfil" y solo si el documento ya no trae salud/emergencia (migrado a profile/private).
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid)
+        || (viewerProfile(uid) && (resource == null || !resource.data.keys().hasAny(['health', 'emergency']))));
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['birthDate', 'heightCm', 'sex', 'sport', 'showWeight', 'consentTs', 'updatedAt'])
+        && (request.resource.data.get('birthDate', null) == null || (request.resource.data.birthDate is string && request.resource.data.birthDate.size() == 10))
+        && (request.resource.data.get('heightCm', null) == null || (request.resource.data.heightCm is number && request.resource.data.heightCm >= 100 && request.resource.data.heightCm <= 230))
+        && request.resource.data.get('sex', null) in [null, 'f', 'm', 'o']
+        && (request.resource.data.get('sport', null) == null || (request.resource.data.sport is string && request.resource.data.sport.size() <= 40))
+        && request.resource.data.get('showWeight', false) is bool
+        && request.resource.data.get('updatedAt', 0) is number;
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Salud y contacto de emergencia: solo la persona y el coach principal. Nunca el coach de apoyo.
+    match /users/{uid}/profile/private {
       allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
-      allow create: if isCoachOf(uid)
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['health', 'emergency', 'updatedAt'])
+        && (request.resource.data.get('health', null) == null || (request.resource.data.health is map && request.resource.data.health.keys().hasOnly(['conditions', 'meds', 'injuries', 'allergies'])))
+        && (request.resource.data.get('emergency', null) == null || (request.resource.data.emergency is map && request.resource.data.emergency.keys().hasOnly(['name', 'phone'])))
+        && request.resource.data.get('updatedAt', 0) is number;
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Medidas aprobadas por el coach (peso, FTP, FC máx, LTHR). El atleta solo puede escribir 'prop' (propuestas).
+    match /users/{uid}/profile/measures {
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid) || viewerProfile(uid));
+      allow create: if signedIn() && (((isCoachOf(uid) || (viewerEdits(uid) && viewerProfile(uid))) && request.resource.data.keys().hasOnly(['weightKg', 'ftp', 'fcmax', 'lthr', 'updatedAt', 'by', 'prop']))
+        || (request.auth.uid == uid && request.resource.data.keys().hasOnly(['prop'])));
+      allow update: if signedIn() && (((isCoachOf(uid) || (viewerEdits(uid) && viewerProfile(uid))) && request.resource.data.keys().hasOnly(['weightKg', 'ftp', 'fcmax', 'lthr', 'updatedAt', 'by', 'prop']))
+        || (request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['prop'])));
+      allow delete: if false;
+    }
+
+    match /users/{uid}/notes/{id} {
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid) || isViewerOf(uid));
+      allow create: if (isCoachOf(uid) || viewerEdits(uid))
         && request.resource.data.keys().hasOnly(['text', 'at', 'from'])
         && request.resource.data.from == request.auth.uid
         && request.resource.data.at is number
@@ -107,8 +173,8 @@ service cloud.firestore {
 
     // Plan del atleta: lo escribe solo su coach; el atleta lo lee.
     match /users/{uid}/plan/{doc} {
-      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
-      allow create, update: if isCoachOf(uid)
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid) || isViewerOf(uid));
+      allow create, update: if (isCoachOf(uid) || viewerEdits(uid))
         && request.resource.data.keys().hasOnly(['goal', 'phases', 'sessions', 'notes', 'updatedAt'])
         && request.resource.data.get('phases', []) is list && request.resource.data.get('phases', []).size() <= 12
         && request.resource.data.get('sessions', {}) is map && request.resource.data.get('sessions', {}).size() <= 120
@@ -118,8 +184,8 @@ service cloud.firestore {
 
     // Historial de forma y salidas: lo carga solo su coach (desde intervals.icu); el atleta lo lee.
     match /users/{uid}/history/{doc} {
-      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid));
-      allow create, update: if isCoachOf(uid)
+      allow read: if signedIn() && (request.auth.uid == uid || isCoachOf(uid) || isViewerOf(uid));
+      allow create, update: if (isCoachOf(uid) || viewerEdits(uid))
         && request.resource.data.keys().hasOnly(['days', 'acts', 'updatedAt'])
         && request.resource.data.get('days', []) is list && request.resource.data.get('days', []).size() <= 120
         && request.resource.data.get('acts', []) is list && request.resource.data.get('acts', []).size() <= 200;
@@ -142,9 +208,28 @@ service cloud.firestore {
       allow delete: if isCoach();
     }
 
+    // Propuestas del coach de apoyo (atleta nuevo o grupo nuevo). Las crea el coach de apoyo; solo el coach principal las resuelve.
+    match /proposals/{id} {
+      allow read: if isCoach() || (signedIn() && resource.data.by == request.auth.uid);
+      allow create: if isViewer()
+        && request.resource.data.keys().hasOnly(['by', 'byName', 'kind', 'name', 'email', 'team', 'note', 'ts', 'status'])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.byName is string && request.resource.data.byName.size() <= 80
+        && request.resource.data.kind in ['athlete', 'group']
+        && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 80
+        && (request.resource.data.get('email', null) == null || (request.resource.data.email is string && request.resource.data.email.size() <= 120))
+        && (request.resource.data.kind == 'group' || (request.resource.data.get('email', null) != null && request.resource.data.get('team', '') in acc().get('teams', [])))
+        && (request.resource.data.get('note', null) == null || (request.resource.data.note is string && request.resource.data.note.size() <= 300))
+        && request.resource.data.ts is number
+        && request.resource.data.status == 'open';
+      allow update: if isCoach() && resource.data.status == 'open' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedAt'])
+        && request.resource.data.status in ['ok', 'no'] && request.resource.data.get('decidedAt', 0) is number;
+      allow delete: if isCoach() || (signedIn() && resource.data.by == request.auth.uid && resource.data.status == 'open');
+    }
+
     // Equipos (grnt, zn): solo km, metas e hitos. Nunca bienestar ni molestias.
     match /teams/{teamId}/km/{uid} {
-      allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId);
+      allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId || (isViewer() && teamId in acc().get('teams', [])));
       // El atleta decide si comparte sus km (campo shareKm de su perfil; por defecto, si).
       allow create, update: if signedIn() && request.auth.uid == uid
         && me().get('team', '') == teamId
@@ -156,7 +241,7 @@ service cloud.firestore {
       allow delete: if signedIn() && request.auth.uid == uid;
     }
     match /teams/{teamId}/meta/{doc} {
-      allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId);
+      allow read: if signedIn() && (isCoach() || me().get('team', '') == teamId || (isViewer() && teamId in acc().get('teams', [])));
       allow write: if isCoach();
     }
   }
