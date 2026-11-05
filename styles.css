@@ -451,3 +451,6 @@ input[type=time]{min-height:44px;padding:0 12px;border-radius:12px;border:1.5px 
 .fzone b{font-size:17px}
 .conflict{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border:1.5px solid var(--warn);border-radius:16px;background:var(--surface2)}
 .oldnote{opacity:.82}
+
+/* v47: triángulos nativos de <details> reemplazados por ícono Phosphor */
+details>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}details>summary::-webkit-details-marker{display:none}details>summary::marker{content:''}.dcar{display:inline-flex;transition:transform .2s ease;flex:none}details[open]>summary .dcar{transform:rotate(180deg)}@media (prefers-reduced-motion:reduce){.dcar{transition:none}}
