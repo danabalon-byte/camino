@@ -306,7 +306,7 @@ const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCo
 const NAVIC = { perfil: 'user', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
 const TABLBL = { guia: 'Guía' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
-const coachMode = () => { if (!isCoach()) return false; if (isViewer()) return true; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
+const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
 const ATABS = ['hoy', 'datos', 'ruta', 'perfil', 'ajustes', 'guia'];
 const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : ATABS) : ATABS);
 /* La Guía de los atletas vive dentro de Ajustes (hide): sigue siendo una ruta válida, pero no ocupa lugar en la barra. */
@@ -379,7 +379,7 @@ function inboxHtml() {
   return out + '</div></div>';
 }
 /* Logos de equipo: SVG negro sobre transparente; en fondos oscuros se invierte a blanco, y sobre color se usa blanco. Para sumar otro equipo, agrega su entrada aqui. */
-const demoLink = (r) => location.origin + location.pathname + '?demo=' + (r === 'coach' ? 'coach' : 'atleta');
+const demoLink = (r) => location.origin + location.pathname + (r === 'real' ? '' : '?demo=' + (r === 'coach' ? 'coach' : 'atleta'));
 const TEAM_LOGO = { grnt: { name: 'GRANITO', full: './grnt-logo.svg', fullR: 780.16 / 664.3, mark: './grnt-mark.svg', markR: 678.1 / 507.11 } };
 const bgDark = () => logoSrc() === './logo-blanco.svg';
 function teamLogo(team, kind, h, onColor) {
@@ -393,8 +393,8 @@ function topHtml() {
   if (ST.profile) {
     const t = myTeam();
     if (t && !TEAM_LOGO[t]) pills += '<span class="pill">' + TEAMS[t] + '</span>';
-    if (isViewer()) pills += '<span class="pill role">' + (canEdit() ? 'Coach de apoyo' : 'Solo lectura') + '</span>';
-    else if (isCoach()) { const cm = coachMode(); pills += '<div class="modesw" role="group" aria-label="Cambiar de vista"><button type="button" data-a="mode" data-v="coach" aria-pressed="' + cm + '">Coach</button><button type="button" data-a="mode" data-v="atleta" aria-pressed="' + !cm + '">Atleta</button></div>'; }
+    if (isViewer() && coachMode()) pills += '<span class="pill role">' + (canEdit() ? 'Coach de apoyo' : 'Solo lectura') + '</span>';
+    if (isCoach()) { const cm = coachMode(); pills += '<div class="modesw" role="group" aria-label="Cambiar de vista"><button type="button" data-a="mode" data-v="coach" aria-pressed="' + cm + '">Coach</button><button type="button" data-a="mode" data-v="atleta" aria-pressed="' + !cm + '">Atleta</button></div>'; }
     else pills += '<span class="pill role">Atleta</span>';
     pills += bellHtml();
     if (t && TEAM_LOGO[t] && UI.view !== 'ruta') pills += teamLogo(t, 'mark', 30);
@@ -1052,9 +1052,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 50;
+const APP_VER = 51;
 const NEWS = [
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Los coaches de apoyo ahora tienen el interruptor Coach/Atleta: pueden ver su propia forma, aptitud y plan como cualquier atleta.',
   'Mensajes entre coaches: el coach principal y cada coach de apoyo pueden escribirse desde Ajustes, con aviso en la campana.',
   'Las propuestas de los coaches de apoyo ahora avisan en la campana: el coach principal ve las nuevas y quien propuso ve la respuesta.',
   'Nueva pestaña Perfil: completa tu ficha por secciones (equipamiento, disponibilidad, objetivos y más) para que tu plan se ajuste mejor. La Guía ahora está dentro de Ajustes.',
@@ -1360,8 +1361,8 @@ function viewAjustes() {
   }
   if (p.team && !isCoach()) out += '<section class="card col g12" aria-label="Compartir kilómetros"><div class="eyebrow">Tu equipo</div><div class="setlist">' + setRow('Compartir mis km con el equipo', sharesKm() ? 'Tu nombre y tus km del mes suman a la meta de ' + TEAMS[p.team] : 'Tus km no aparecen ni suman a la meta del equipo', sharesKm(), 'shareKm') + '</div></section>';
   if (isOwner() && !DEMO) {
-    const dRow = (r, ttl, sub) => { const dl = demoLink(r); return '<div class="col g8"><div><b>' + ttl + '</b><div class="muted" style="font-size:13px">' + sub + '</div></div><div class="demolink" id="demolink-' + r + '" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" data-v="' + r + '" style="flex:1;min-width:130px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button><a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:130px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>Abrir demo</span></a></div></div>'; };
-    out += '<section class="card col g14" aria-label="Compartir la demostración"><div class="eyebrow">Compartir una demostración</div><p class="soft" style="font-size:15px">Cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
+    const dRow = (r, ttl, sub) => { const dl = demoLink(r); return '<div class="col g8"><div><b>' + ttl + '</b><div class="muted" style="font-size:13px">' + sub + '</div></div><div class="demolink" id="demolink-' + r + '" tabindex="0">' + esc(dl) + '</div><div class="row g10 wrap"><button type="button" class="btn primary" data-a="copyDemo" data-v="' + r + '" style="flex:1;min-width:130px;justify-content:center;white-space:nowrap"><span>Copiar enlace</span></button><a class="btn" href="' + esc(dl) + '" target="_blank" rel="noopener" style="flex:1;min-width:130px;background:var(--surface2);text-decoration:none;color:var(--text);justify-content:center;white-space:nowrap"><span>' + (r === 'real' ? 'Abrir app' : 'Abrir demo') + '</span></a></div></div>'; };
+    out += '<section class="card col g14" aria-label="Compartir la app"><div class="eyebrow">Compartir la app</div>' + dRow('real', 'App real', 'Para atletas y coaches que ya tienes: entran con su cuenta de Google y quedan pendientes hasta que los autorices.') + '<div style="height:1px;background:var(--line)"></div><p class="soft" style="font-size:15px">Para mostrarla, cualquiera puede probar Camino con <b>datos ficticios</b>, sin iniciar sesión ni usar su Gmail. No toca datos reales ni los de tus atletas.</p>' + dRow('atleta', 'Demo de atleta', 'Entra directo como atleta: Hoy, Datos, Ruta, Ajustes y Guía.') + '<div style="height:1px;background:var(--line)"></div>' + dRow('coach', 'Demo de coach', 'Entra directo a la Cabina, con atletas, alertas y buzón.') + '</section>';
   }
   if (isOwner() && !DEMO && ST.user) out += '<section class="card col g12" aria-label="Importar historial"><div class="eyebrow">Historial de Tally</div><p class="soft" style="font-size:14px">Trae tus check-ins anteriores de Tally a tu propia cuenta. No pisa los días que ya tienes.</p><button type="button" class="btn ghost" data-a="importTally" data-v="' + esc(ST.user.uid) + '" style="border:1.5px solid var(--line);color:var(--text)"' + (UI.busy ? ' disabled' : '') + '><span>Importar mi historial</span></button></section>';
   out += '<section class="card col g8" aria-label="Créditos"><div class="eyebrow">Créditos</div><p class="soft" style="font-size:14px">Iconos: Phosphor Icons (licencia MIT). Figura del cuerpo: body-muscles de Ivan Vulović (licencia Apache-2.0), adaptada por Camino. Los textos de licencia están junto a la app, en los archivos LICENSE-phosphor-icons.txt, LICENSE-body-muscles.txt y NOTICE-body-muscles.txt.</p></section>';
@@ -2135,7 +2136,7 @@ const ACT = {
   async copyDemo(v) {
     const dl = demoLink(v); let ok = false;
     try { await navigator.clipboard.writeText(dl); ok = true; } catch (e) { try { const el = document.getElementById('demolink-' + v), r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
-    say(ok ? 'Enlace de la demo de ' + (v === 'coach' ? 'coach' : 'atleta') + ' copiado. Pégalo donde quieras compartirlo.' : 'No pude copiarlo solo: mantén presionado el enlace y cópialo.', ok ? 'ok' : 'err');
+    say(ok ? (v === 'real' ? 'Enlace de la app copiado.' : 'Enlace de la demo de ' + (v === 'coach' ? 'coach' : 'atleta') + ' copiado.') + ' Pégalo donde quieras compartirlo.' : 'No pude copiarlo solo: mantén presionado el enlace y cópialo.', ok ? 'ok' : 'err');
   },
   inbox() { UI.inboxSeen = (!isCoach() || isViewer()) ? seenAt() : 0; UI.inbox = true; if (!isCoach() || isViewer()) { const mx = Math.max(Date.now(), ...(ST.myNotes || []).map((n) => Number(n.at) || 0), ...(ST.props || []).map((x) => Number(x.decidedAt) || 0)); try { localStorage.setItem(seenKey(), String(mx)); } catch (e) { /* sin almacenamiento */ } } render(); },
   inboxClose() { UI.inbox = false; render(); },
