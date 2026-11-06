@@ -69,7 +69,7 @@ const be = {
   // opts.quiet: un coach de apoyo puede no tener permiso (nivel perfil apagado): se trata como vacío, sin avisos.
   // opts.migrate: la propia persona mueve health/emergency desde main a private (una sola vez, automático).
   listenBio(uid, cb, opts = {}) {
-    let main = null, meas = null, priv = null, migrating = false; const emit = () => cb({ main: main ? { ...main, ...(priv || {}) } : (priv ? { ...priv } : null), meas });
+    let main = null, meas = null, priv = null, migrating = false, privSeen = !opts.priv; const emit = () => cb({ main: main ? { ...main, ...(priv || {}) } : (priv ? { ...priv } : null), meas, privReady: privSeen });
     const q = !!opts.quiet;
     const u1 = onSnapshot(doc(db, 'users', uid, 'profile', 'main'), (s) => {
       main = s.exists() ? s.data() : null;
@@ -85,7 +85,7 @@ const be = {
       emit();
     }, fail('perfil del atleta', q));
     const u2 = onSnapshot(doc(db, 'users', uid, 'profile', 'measures'), (s) => { meas = s.exists() ? s.data() : null; emit(); }, fail('medidas', q));
-    const u3 = opts.priv ? onSnapshot(doc(db, 'users', uid, 'profile', 'private'), (s) => { priv = s.exists() ? s.data() : null; emit(); }, fail('datos privados', q)) : () => {};
+    const u3 = opts.priv ? onSnapshot(doc(db, 'users', uid, 'profile', 'private'), (s) => { priv = s.exists() ? s.data() : null; privSeen = true; emit(); }, fail('datos privados', q)) : () => {};
     return () => { u1(); u2(); u3(); };
   },
   // main (sin salud ni emergencia) + private (salud y emergencia) en dos documentos.
@@ -96,6 +96,9 @@ const be = {
     wb.set(doc(db, 'users', uid, 'profile', 'main'), clean(main));
     return wb.commit();
   },
+  // v48: guardado por secciones. main se mezcla (merge) y private se reemplaza entera (solo salud y emergencia).
+  saveMainPart(uid, data) { return setDoc(doc(db, 'users', uid, 'profile', 'main'), clean(data), { merge: true }); },
+  savePriv(uid, data) { return setDoc(doc(db, 'users', uid, 'profile', 'private'), clean({ health: data.health || null, emergency: data.emergency || null, updatedAt: Date.now() })); },
   // El atleta solo propone (campo prop); el coach aprueba y escribe las medidas.
   propose(uid, prop) { return setDoc(doc(db, 'users', uid, 'profile', 'measures'), clean({ prop }), { merge: true }); },
   saveMeas(uid, data) { return setDoc(doc(db, 'users', uid, 'profile', 'measures'), clean(data)); },

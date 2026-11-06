@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v5';
+const KEY = 'camino-demo-v6';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -88,9 +88,9 @@ function seed() {
   ath('joaquin', 'Joaquín P.', 'zn', [4, 4, 3, 3, 2, 2, 2], { sleepH: 1, sleepQ: 3, legs: 0, stress: 2, rpe: 7, comment: 'Me molesta un poco el muslo al pedalear fuerte.', ts: tsOf(off(0), 7, 45) }, { zone: 'Muslo', side: 'Derecho', level: 'Leve' }, 1.5, ['Cuesta Barriga', '40 km · 1.100 m D+', 28]);
   ath('matias', 'Matías S.', 'grnt', [3, 3, 4, 4, 3, 4, null], { sleepH: 3, sleepQ: 1, legs: 2, stress: 0, rpe: 5, ts: tsOf(off(-1), 21, 30) }, null, 0.85);
   ath('valentina', 'Valentina T.', 'zn', [4, 4, 3, 4, null, null, null], { sleepH: 2, sleepQ: 2, legs: 1, stress: 1, rpe: 4, ts: tsOf(off(-3), 19, 50) }, null, 0.7);
-  users.demoAtleta.bioMain = { birthDate: '1988-04-12', heightCm: 176, sex: null, sport: 'Ruta', health: { conditions: '', meds: '', injuries: 'Tendón rotuliano derecho (2024), ya recuperado', allergies: '' }, emergency: { name: 'Marta (pareja)', phone: '+56 9 1234 5678' }, showWeight: false, consentTs: tsOf(off(-10), 9, 0), updatedAt: tsOf(off(-10), 9, 0) };
+  users.demoAtleta.bioMain = { birthDate: '1988-04-12', heightCm: 176, sex: null, sport: 'Ruta', health: { conditions: '', meds: '', injuries: 'Tendón rotuliano derecho (2024), ya recuperado', allergies: '' }, emergency: { name: 'Marta (pareja)', phone: '+56 9 1234 5678' }, showWeight: false, city: 'Santiago', hist: { years: '3 a 6 años', level: 'Aficionado', discs: ['Ruta', 'Gimnasio'], volume: '4 a 6 h' }, equip: { bikes: ['Ruta'], pm: ['Ninguno'], trainer: 'Inteligente', sensors: ['Banda de pulso'], computer: 'Garmin', scale: '', icu: '' }, consentTs: tsOf(off(-10), 9, 0), updatedAt: tsOf(off(-10), 9, 0) };
   users.demoAtleta.bioMeas = { weightKg: 72, ftp: 245, fcmax: 188, lthr: 168, updatedAt: tsOf(off(-20), 10, 0), by: 'demoCoach' };
-  users.camila.bioMain = { birthDate: '1992-09-03', heightCm: 165, sex: 'f', sport: 'Gravel', health: { conditions: '', meds: '', injuries: '', allergies: '' }, emergency: { name: '', phone: '' }, showWeight: false, consentTs: tsOf(off(-30), 9, 0), updatedAt: tsOf(off(-30), 9, 0) };
+  users.camila.bioMain = { birthDate: '1992-09-03', heightCm: 165, sex: 'f', sport: 'Gravel', health: { conditions: '', meds: '', injuries: '', allergies: '' }, emergency: { name: '', phone: '' }, showWeight: false, city: 'Valparaíso', hist: { years: 'Más de 6 años', level: 'Competitivo', discs: ['Gravel', 'MTB'], volume: '8 a 12 h' }, equip: { bikes: ['Gravel', 'MTB'], pm: ['MTB'], trainer: 'No tengo', sensors: ['Banda de pulso', 'Cadencia'], computer: 'Wahoo', scale: 'Bioimpedancia', icu: '' }, goals: { objA: 'Gran fondo de gravel', objDate: '', why: 'Mejorar mi tiempo', others: '' }, consentTs: tsOf(off(-30), 9, 0), updatedAt: tsOf(off(-30), 9, 0) };
   users.camila.bioMeas = { weightKg: 58, ftp: 205, fcmax: 191, updatedAt: tsOf(off(-30), 9, 0), by: 'demoCoach', prop: { weightKg: { v: 57, note: 'Me pesé esta mañana', ts: tsOf(off(-1), 8, 0) }, ftp: { v: 212, note: 'Test de 20 min del domingo', ts: tsOf(off(-1), 8, 0) } } };
   users.demoLector = { profile: { id: 'demoLector', name: 'Leo (demo, coach de apoyo)', role: 'viewer', coachId: 'demoCoach', team: null, pending: false, access: { teams: ['zn'], athletes: ['camila'], edit: false, profile: true } }, checkins: [], notes: [] };
   users.nuevo = { profile: { id: 'nuevo', name: 'Atleta nuevo (demo)', role: 'athlete', pending: true }, checkins: [], notes: [] };
@@ -134,6 +134,8 @@ const be = {
   // Igual que las reglas reales: el coach de apoyo no ve salud ni emergencia, y perfil/medidas solo con nivel "perfil".
   listenBio(uid, cb, opts = {}) { return live(() => { const u = store.users[uid] || {}; let main = u.bioMain ? JSON.parse(JSON.stringify(u.bioMain)) : null; if (main && !opts.priv) { delete main.health; delete main.emergency; } cb(JSON.parse(JSON.stringify({ main, meas: u.bioMeas || null }))); }); },
   async saveBio(uid, data) { store.users[uid].bioMain = data; notify(); },
+  async saveMainPart(uid, data) { const u = store.users[uid]; u.bioMain = Object.assign({}, u.bioMain || {}, JSON.parse(JSON.stringify(data))); notify(); },
+  async savePriv(uid, data) { const u = store.users[uid]; u.bioMain = Object.assign({}, u.bioMain || {}, { health: data.health || null, emergency: data.emergency || null }); notify(); },
   async propose(uid, prop) { const u = store.users[uid]; u.bioMeas = Object.assign({}, u.bioMeas || {}, { prop }); notify(); },
   async saveMeas(uid, data) { store.users[uid].bioMeas = data; notify(); },
   listenProfile(uid, cb) { return live(() => cb({ ...store.users[uid].profile })); },

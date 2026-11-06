@@ -43,6 +43,8 @@ const TONES = [
 const PLAN = { 1: { name: 'Rodillo Z2', min: 60, km: 28, load: 52 }, 2: { name: 'Rodillo suave', min: 45, km: 18, load: 34 }, 3: null, 4: { name: 'Intervalos sweet spot', min: 80, km: 32, load: 78 }, 5: { name: 'Z2 corto', min: 40, km: 16, load: 30 }, 6: { name: 'Rodaje largo', min: 180, km: 85, load: 150 }, 0: { name: 'Rodaje suave', min: 70, km: 30, load: 48 } };
 /* Iconografía: Phosphor Icons (MIT, https://phosphoricons.com). Una sola familia: rejilla 256, trazo regular; relleno para el estado activo. */
 const PH = {
+  'user': ['<path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>', '<path d="M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z"/>'],
+  'shield': ['<path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,104.62-80,109.18-13.53-4.51-80-30.69-80-109.18V56H208Z"/>', '<path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Z"/>'],
   'calendar-check': ['<path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-38.34-85.66a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L116,164.69l42.34-42.35A8,8,0,0,1,169.66,122.34Z"/>', '<path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM169.66,133.66l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L116,164.69l42.34-42.35a8,8,0,0,1,11.32,11.32ZM48,80V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80Z"/>'],
   'path': ['<path d="M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z"/>', '<path d="M228,200a28,28,0,0,1-54.83,8H72a48,48,0,0,1,0-96h96a24,24,0,0,0,0-48H72a8,8,0,0,1,0-16h96a40,40,0,0,1,0,80H72a32,32,0,0,0,0,64H173.17A28,28,0,0,1,228,200Z"/>'],
   'gauge': ['<path d="M207.06,72.67A111.24,111.24,0,0,0,128,40h-.4C66.07,40.21,16,91,16,153.13V176a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V152A111.25,111.25,0,0,0,207.06,72.67ZM224,176H119.71l54.76-75.3a8,8,0,0,0-12.94-9.42L99.92,176H32V153.13c0-3.08.15-6.12.43-9.13H56a8,8,0,0,0,0-16H35.27c10.32-38.86,44-68.24,84.73-71.66V80a8,8,0,0,0,16,0V56.33A96.14,96.14,0,0,1,221,128H200a8,8,0,0,0,0,16h23.67c.21,2.65.33,5.31.33,8Z"/>', '<path d="M240,152v24a16,16,0,0,1-16,16H115.93a4,4,0,0,1-3.24-6.35L174.27,101a8.21,8.21,0,0,0-1.37-11.3,8,8,0,0,0-11.37,1.61l-72,99.06A4,4,0,0,1,86.25,192H32a16,16,0,0,1-16-16V153.13c0-1.79,0-3.57.13-5.33a4,4,0,0,1,4-3.8H48a8,8,0,0,0,8-8.53A8.17,8.17,0,0,0,47.73,128H23.92a4,4,0,0,1-3.87-5c12-43.84,49.66-77.13,95.52-82.28a4,4,0,0,1,4.43,4V72a8,8,0,0,0,8.53,8A8.17,8.17,0,0,0,136,71.73V44.67a4,4,0,0,1,4.43-4A112.18,112.18,0,0,1,236.23,123a4,4,0,0,1-3.88,5H208.27a8.17,8.17,0,0,0-8.25,7.47,8,8,0,0,0,8,8.53h27.92a4,4,0,0,1,4,3.86C240,149.23,240,150.61,240,152Z"/>'],
@@ -301,12 +303,15 @@ function plainOpts(g, arr, sel, label, cols, valFn, neu, act, isOn) {
 }
 const chips = (g, arr, sel, label, valFn) => plainOpts(g, arr, sel, label, autoCols(arr), valFn, GREENG.indexOf(g) < 0);
 const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCols(arr), (i, l) => l, true, 'multi', (l, v) => (sel || []).indexOf(l) >= 0);
-const NAVIC = { hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
+const NAVIC = { perfil: 'user', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
 const TABLBL = { guia: 'Guía' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
 const coachMode = () => { if (!isCoach()) return false; if (isViewer()) return true; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
-const tabs = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']) : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']).map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id] }));
-const navHtml = () => '<div class="inner">' + tabs().map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id ? ' aria-current="page"' : '') + '>' + ph(t.ic, 26, 'currentColor', UI.view === t.id) + '<span>' + t.label + '</span></a>').join('') + '</div>';
+const ATABS = ['hoy', 'datos', 'ruta', 'perfil', 'ajustes', 'guia'];
+const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : ATABS) : ATABS);
+/* La Guía de los atletas vive dentro de Ajustes (hide): sigue siendo una ruta válida, pero no ocupa lugar en la barra. */
+const tabs = () => { const ids = tabsIds(), ath = ids === ATABS; return ids.map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id], hide: ath && id === 'guia' })); };
+const navHtml = () => '<div class="inner">' + tabs().filter((t) => !t.hide).map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id || (t.id === 'ajustes' && UI.view === 'guia' && tabs().some((x) => x.hide)) ? ' aria-current="page"' : '') + '>' + ph(t.ic, 26, 'currentColor', UI.view === t.id) + '<span>' + t.label + '</span></a>').join('') + '</div>';
 /* Logo segun el fondo: ciclista blanco sobre fondos oscuros, negro sobre fondos claros. */
 function logoSrc() {
   try {
@@ -1023,9 +1028,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 47;
+const APP_VER = 48;
 const NEWS = [
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Nueva pestaña Perfil: completa tu ficha por secciones (equipamiento, disponibilidad, objetivos y más) para que tu plan se ajuste mejor. La Guía ahora está dentro de Ajustes.',
   'Check-in más corto cuando descansas o no pudiste entrenar, y el botón Atrás vuelve a donde estabas.',
   'Coaches de apoyo: el coach principal define qué equipos y atletas ve cada uno, si puede editar y si ve perfiles. Tu salud y tu contacto de emergencia ahora van en un lugar aparte, solo para ti y tu coach principal.',
   'Hoy empieza por lo que toca hoy y te pregunta si hubo un cambio entre tu plan y tu check-in.',
@@ -1081,7 +1087,7 @@ const tmNav = (ids) => '<div class="tmnav">' + ids.map(tmN).join('') + '</div>';
 const tmTop = (r) => '<div class="tmtop"><b>CAMINO</b><span class="tmchip"' + (r ? ' id="m-mode"' : '') + '>' + (r || 'Atleta') + '</span></div>';
 const tmSw = (id, k) => '<span class="tmsw" id="' + id + '" data-on="' + k + '"><i></i></span>';
 const tmL = (w) => '<i class="tml" style="width:' + w + '%"></i>';
-const TNAV = () => (isCoach() ? ['cabina', 'ajustes', 'guia'] : ['hoy', 'datos', 'ruta', 'ajustes', 'guia']);
+const TNAV = () => (isCoach() ? ['cabina', 'ajustes', 'guia'] : ['hoy', 'datos', 'ruta', 'perfil', 'ajustes']);
 const TUT = {
   hoy: {
     t: 'Hoy', ic: 'hoy', sub: 'Tu check-in y tu semana',
@@ -1310,7 +1316,7 @@ function viewAjustes() {
   let out = '<div class="inner"><div class="stack">' + head('Preferencias', 'Ajustes') + msgBanner();
   // perfil
   out += '<section class="card col g14" aria-label="Cuenta"><div class="row g14" style="align-items:center"><span class="avatar" aria-hidden="true">' + initial(p.name) + '</span><div class="col grow g4" style="min-width:0"><span style="font-weight:700;font-size:20px;overflow-wrap:anywhere">' + esc(p.name || '') + '</span><span class="muted" style="font-size:13px;overflow-wrap:anywhere">' + esc(p.email || (ST.user && ST.user.email) || '') + '</span></div></div><div class="row g8 wrap"><span class="tag out" style="color:var(--soft);border-color:var(--line)">' + (isCoach() ? 'Coach' : 'Atleta') + '</span>' + (p.team ? '<span class="tag out" style="color:var(--soft);border-color:var(--line)">Equipo ' + TEAMS[p.team] + '</span>' : '') + (p.pending ? '<span class="tag out" style="color:var(--warn);border-color:var(--warn)">Pendiente de asignación</span>' : '') + '</div></section>';
-  if (!isCoach()) { const bm = bioMain(), n = bioDone(bm); out += '<button type="button" class="card row g14" data-a="profOpen" style="text-align:left;width:100%;align-items:center;border:1.5px solid var(--line);font:inherit;color:inherit"><span class="col grow g4" style="min-width:0"><span class="eyebrow">Mi perfil</span><span style="font-weight:600">' + (bm ? 'Datos y medidas' : 'Completa tu perfil') + '</span><span class="muted" style="font-size:14px">' + (bm ? n + ' de 4 datos clave · medidas confirmadas por tu coach' : 'Edad, estatura, disciplina y contacto de emergencia') + '</span></span>' + arrow() + '</button>'; }
+  if (tabs().some((t) => t.hide)) out += '<a class="card row g14" href="#guia" style="text-decoration:none;color:inherit;align-items:center;border:1.5px solid var(--line)"><span class="col grow g4" style="min-width:0"><span class="eyebrow">Guía</span><span style="font-weight:600">Tutoriales y cómo escribirnos</span><span class="muted" style="font-size:14px">Cómo se llena cada dato y envío de ideas</span></span>' + arrow() + '</a>';
   out += supportCard() + proposeCard();
   // apariencia
   out += '<section class="card col g12" aria-label="Apariencia"><div class="eyebrow">Apariencia</div><div class="tones" role="group" aria-label="Tono visual">' + TONES.map((t) => '<button type="button" class="tone" data-a="tone" data-v="' + t.id + '" aria-pressed="' + (PREF.tone === t.id) + '"><span class="sw">' + t.sw.map((c) => '<i style="background:' + c + '"></i>').join('') + '</span><span class="col g4" style="text-align:left"><span style="font-weight:600">' + t.name + '</span><span class="muted" style="font-size:12px;font-weight:500">' + t.sub + '</span></span></button>').join('') + '</div>'
@@ -1522,45 +1528,162 @@ const ageOf = (b) => { if (!b || !/^\d{4}-\d{2}-\d{2}$/.test(b)) return null; co
 const bioMain = () => (ST.myBio && ST.myBio.main) || null;
 const bioMeas = () => (ST.myBio && ST.myBio.meas) || {};
 const bioDone = (m) => { if (!m) return 0; const h = m.health || {}; return [m.birthDate, m.heightCm, m.sport, (m.emergency || {}).name && (m.emergency || {}).phone].filter(Boolean).length; };
-function profDraft() {
-  const m = bioMain() || {}, h = m.health || {}, e = m.emergency || {};
-  return { birth: m.birthDate || '', height: m.heightCm != null ? String(m.heightCm) : '', sex: m.sex || null, sport: m.sport || null, cond: h.conditions || '', meds: h.meds || '', inj: h.injuries || '', alle: h.allergies || '', ename: e.name || '', ephone: e.phone || '', showW: !!m.showWeight };
+/* ---------- Perfil v48: 8 secciones (p = ruta de guardado; c = cuenta para el avance) ---------- */
+const PF_DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const PSEC = [
+  { id: 's1', t: 'Datos personales', sub: 'Nacimiento, estatura, disciplina y ciudad', f: [
+    { p: 'birthDate', y: 'date', l: 'Fecha de nacimiento', c: 1 },
+    { p: 'heightCm', y: 'num', l: 'Estatura (cm)', c: 1 },
+    { p: 'sex', y: 'one', l: 'Sexo', h: '(opcional, ajusta algunas referencias fisiológicas)', o: PF_SEX },
+    { p: 'sport', y: 'one', l: 'Disciplina principal', c: 1, o: PF_SPORT },
+    { p: 'city', y: 'text', l: 'Ciudad', c: 1, max: 60 }] },
+  { id: 's2', t: 'Salud', sub: 'Privada: solo tú y tu coach principal', priv: 1, f: [
+    { p: 'health.conditions', y: 'cond', l: '¿Tienes alguna condición de salud que tu coach deba conocer?', c: 1 },
+    { p: 'health.meds', y: 'area', l: 'Medicamentos habituales' },
+    { p: 'health.injuries', y: 'area', l: 'Lesiones o molestias de largo plazo' },
+    { p: 'health.allergies', y: 'area', l: 'Alergias' },
+    { p: 'emergency.name', y: 'text', l: 'Contacto de emergencia: nombre y relación', c: 1, max: 80 },
+    { p: 'emergency.phone', y: 'tel', l: 'Contacto de emergencia: teléfono', c: 1, max: 30 }] },
+  { id: 's3', g: 'hist', t: 'Historial deportivo', sub: 'Años, disciplinas, nivel y volumen', f: [
+    { p: 'hist.years', y: 'one', l: 'Años pedaleando', c: 1, o: ['Menos de 1 año', '1 a 3 años', '3 a 6 años', 'Más de 6 años'] },
+    { p: 'hist.level', y: 'one', l: 'Tu nivel hoy', c: 1, o: ['Recreativo', 'Aficionado', 'Competitivo'] },
+    { p: 'hist.discs', y: 'multi', l: 'Disciplinas que practicas', c: 1, o: ['Ruta', 'MTB', 'Gravel', 'Pista', 'Ciclocross', 'Gimnasio', 'Running', 'Natación'] },
+    { p: 'hist.volume', y: 'one', l: 'Horas de entrenamiento por semana', c: 1, o: ['Menos de 4 h', '4 a 6 h', '6 a 8 h', '8 a 12 h', 'Más de 12 h'] }] },
+  { id: 's4', g: 'equip', t: 'Equipamiento', sub: 'Bicis, sensores y ciclocomputador', f: [
+    { p: 'equip.bikes', y: 'multi', l: 'Bicicletas que usas', c: 1, o: ['Ruta', 'MTB', 'Gravel', 'Pista', 'Rodillo'] },
+    { p: 'equip.pm', y: 'multi', l: 'Potenciómetro', h: '(indica en qué bici lo tienes)', c: 1, o: ['Ruta', 'MTB', 'Gravel', 'Ninguno'] },
+    { p: 'equip.trainer', y: 'one', l: 'Rodillo', c: 1, o: ['No tengo', 'Inteligente', 'Clásico'] },
+    { p: 'equip.sensors', y: 'multi', l: 'Sensores que usas', c: 1, o: ['Banda de pulso', 'Pulso en muñeca', 'Cadencia', 'Velocidad'] },
+    { p: 'equip.computer', y: 'one', l: 'Ciclocomputador o reloj', c: 1, o: ['Garmin', 'Wahoo', 'iGPSPORT', 'Hammerhead', 'Solo el celular', 'Otro'] },
+    { p: 'equip.scale', y: 'one', l: 'Báscula', o: ['Sin báscula', 'Común', 'Bioimpedancia'] },
+    { p: 'equip.icu', y: 'text', l: 'Correo de intervals.icu (opcional)', max: 80 }] },
+  { id: 's5', g: 'avail', t: 'Disponibilidad', sub: 'Días, horario y dónde entrenas', f: [
+    { p: 'avail.days', y: 'multi', l: 'Días en que puedes entrenar', c: 1, o: PF_DAYS },
+    { p: 'avail.slot', y: 'multi', l: 'Horario habitual', c: 1, o: ['Mañana temprano', 'Mediodía', 'Tarde', 'Noche'] },
+    { p: 'avail.where', y: 'multi', l: 'Dónde entrenas', c: 1, o: ['Outdoor', 'Indoor'] },
+    { p: 'avail.hours', y: 'one', l: 'Horas que puedes dedicar por semana', c: 1, o: ['Hasta 4 h', '4 a 6 h', '6 a 8 h', 'Más de 8 h'] }] },
+  { id: 's6', g: 'goals', t: 'Calendario y objetivos', sub: 'Objetivo A, fecha y qué buscas', f: [
+    { p: 'goals.objA', y: 'text', l: 'Objetivo A: tu evento o meta principal', c: 1, max: 100 },
+    { p: 'goals.objDate', y: 'date', l: 'Fecha del objetivo A', c: 1, any: 1 },
+    { p: 'goals.why', y: 'one', l: 'Qué buscas', c: 1, o: ['Terminar con buenas sensaciones', 'Mejorar mi tiempo', 'Salud y constancia', 'Competir por el podio'] },
+    { p: 'goals.others', y: 'area', l: 'Otras carreras o metas del año' }] },
+  { id: 's7', g: 'diet', t: 'Alimentación', sub: 'Dieta, combustible y suplementos', f: [
+    { p: 'diet.type', y: 'one', l: 'Tu alimentación', c: 1, o: ['Sin restricciones', 'Vegetariana', 'Vegana', 'Sin gluten', 'Otra'] },
+    { p: 'diet.fuel', y: 'multi', l: 'Qué usas para comer sobre la bici', c: 1, o: ['Geles', 'Barras', 'Bebida isotónica', 'Comida real'] },
+    { p: 'diet.supps', y: 'text', l: 'Suplementos que tomas', c: 1, max: 100 },
+    { p: 'diet.notes', y: 'area', l: 'Algo más que tu nutricionista deba saber' }] },
+  { id: 's8', g: 'gymp', t: 'Gimnasio y fuerza', sub: 'Rutina, días y objetivo', f: [
+    { p: 'gymp.does', y: 'one', l: '¿Haces gimnasio?', c: 1, o: ['Sí', 'No'] },
+    { p: 'gymp.days', y: 'multi', l: 'Días de gimnasio', c: 1, o: PF_DAYS },
+    { p: 'gymp.focus', y: 'multi', l: 'Foco habitual', c: 1, o: ['Piernas', 'Tren superior', 'Cuerpo completo', 'Core y movilidad'] },
+    { p: 'gymp.exp', y: 'one', l: 'Experiencia con pesas', c: 1, o: ['Principiante', 'Intermedio', 'Avanzado'] }] }
+];
+const PF_MIN = [['birthDate', 'fecha de nacimiento'], ['heightCm', 'estatura'], ['sport', 'disciplina'], ['goals.objA', 'objetivo A'], ['avail.days', 'días disponibles']];
+const pfGet = (o, p) => p.split('.').reduce((x, k) => (x == null ? undefined : x[k]), o);
+const pfHas = (v) => (Array.isArray(v) ? v.length > 0 : (v != null && String(v).trim() !== ''));
+function pfStatus(sec, m) {
+  const fs = sec.f.filter((f) => f.c), n = fs.filter((f) => pfHas(pfGet(m || {}, f.p))).length, t = fs.length;
+  return { n, t, txt: n >= t ? 'Completa' : (n ? n + ' de ' + t : 'Pendiente'), tone: n >= t ? 'ok' : (n ? 'part' : 'none') };
+}
+const pfMissing = (m) => PF_MIN.filter((x) => !pfHas(pfGet(m || {}, x[0])));
+function profDraft(sec) {
+  const m = bioMain() || {}, d = {};
+  sec.f.forEach((f) => { let v = pfGet(m, f.p); if (f.y === 'multi') v = Array.isArray(v) ? v.slice() : []; else if (v == null) v = ''; d[f.p] = (f.y === 'num' && v !== '') ? String(v) : v; });
+  if (sec.id === 's1') d.showWeight = !!m.showWeight;
+  if (sec.id === 's2') { const c = d['health.conditions']; d._cq = c === 'Ninguna' ? 'no' : (c ? 'si' : ''); }
+  return d;
+}
+const pfOpt = (o) => (Array.isArray(o) ? o : [o, o]);
+function pfField(f, d) {
+  const id = 'pf-' + f.p, v = d[f.p], hint = f.h ? ' <span class="muted" style="font-weight:500;font-size:14px">' + esc(f.h) + '</span>' : '';
+  const lab = '<label for="' + id + '" style="font-weight:600">' + esc(f.l) + hint + '</label>';
+  const grp = (act, sel, g, opts) => '<div class="col g10"><div style="font-weight:600">' + esc(f.l) + hint + '</div><div class="chips" role="group" aria-label="' + esc(f.l) + '">' + opts.map((o) => { const x = pfOpt(o); return '<button type="button" class="chip" data-a="' + act + '" data-g="' + esc(g) + '" data-v="' + esc(x[0]) + '" aria-pressed="' + sel(x[0]) + '">' + esc(x[1]) + '</button>'; }).join('') + '</div></div>';
+  if (f.y === 'date') return '<div class="col g8">' + lab + '<input class="field" id="' + id + '" type="date"' + (f.any ? '' : ' max="' + off(0) + '"') + ' value="' + esc(v) + '"></div>';
+  if (f.y === 'num') return '<div class="col g8">' + lab + '<input class="field" id="' + id + '" type="number" inputmode="numeric" min="100" max="230" value="' + esc(v) + '"></div>';
+  if (f.y === 'text' || f.y === 'tel') return '<div class="col g8">' + lab + '<input class="field" id="' + id + '" type="' + (f.y === 'tel' ? 'tel' : 'text') + '"' + (f.y === 'tel' ? ' inputmode="tel"' : '') + ' maxlength="' + (f.max || 80) + '" value="' + esc(v) + '"></div>';
+  if (f.y === 'area') return '<div class="col g8">' + lab + '<textarea id="' + id + '" maxlength="300" rows="2">' + esc(v) + '</textarea></div>';
+  if (f.y === 'one') return grp('pfSet', (x) => v === x, f.p, f.o);
+  if (f.y === 'multi') return grp('pfMul', (x) => (v || []).indexOf(x) >= 0, f.p, f.o);
+  if (f.y === 'cond') return grp('pfSet', (x) => d._cq === x, '_cq', [['no', 'No'], ['si', 'Sí, tengo algo que contar']]) + (d._cq === 'si' ? '<div class="col g8" style="margin-top:10px"><label for="' + id + '" style="font-weight:600">Cuéntale a tu coach</label><textarea id="' + id + '" maxlength="300" rows="3">' + esc(v === 'Ninguna' ? '' : v) + '</textarea></div>' : '');
+  return '';
 }
 function profHtml() {
-  const P = UI.prof, d = P.d, meas = bioMeas(), prop = meas.prop || {};
-  const fld = (id, lbl, val, extra) => '<div class="col g8"><label for="pf-' + id + '" style="font-weight:600">' + lbl + '</label><input class="field" id="pf-' + id + '" value="' + esc(val) + '" ' + (extra || '') + '></div>';
-  const area = (id, lbl, val) => '<div class="col g8"><label for="pf-' + id + '" style="font-weight:600">' + lbl + '</label><textarea id="pf-' + id + '" maxlength="300" rows="2">' + esc(val) + '</textarea></div>';
-  let out = '<div class="inner flowsel"><div class="stack" style="gap:18px"><div class="row between"><button type="button" class="link" data-a="profClose">Cerrar</button><span class="muted" style="font-size:13px">Mi perfil</span></div>'
-    + '<div class="col g8"><h2 class="title">Tu perfil</h2><p class="muted">Ayuda a tu coach a ajustar el entrenamiento contigo. Todo es opcional y puedes cambiarlo cuando quieras.</p></div>'
-    + '<section class="card col g14" aria-label="Datos básicos"><div class="eyebrow">Datos básicos</div>'
-    + fld('birth', 'Fecha de nacimiento', d.birth, 'type="date" max="' + off(0) + '"') + fld('height', 'Estatura (cm)', d.height, 'type="number" inputmode="numeric" min="100" max="230"')
-    + '<div class="col g10"><div style="font-weight:600">Sexo <span class="muted" style="font-weight:500;font-size:14px">(opcional, ajusta algunas referencias fisiológicas)</span></div><div class="chips" role="group" aria-label="Sexo">' + PF_SEX.map((x) => '<button type="button" class="chip" data-a="pfSet" data-g="sex" data-v="' + x[0] + '" aria-pressed="' + (d.sex === x[0]) + '">' + x[1] + '</button>').join('') + '</div></div>'
-    + '<div class="col g10"><div style="font-weight:600">Disciplina principal</div><div class="chips" role="group" aria-label="Disciplina">' + PF_SPORT.map((x) => '<button type="button" class="chip" data-a="pfSet" data-g="sport" data-v="' + esc(x) + '" aria-pressed="' + (d.sport === x) + '">' + esc(x) + '</button>').join('') + '</div></div></section>';
-  // medidas aprobadas por el coach
-  out += '<section class="card col g12" aria-label="Medidas"><div class="eyebrow">Medidas de tu coach</div><p class="soft" style="font-size:14px">Las confirma tu coach para que sus cálculos sean consistentes. Si cambiaron, propón el nuevo valor y él lo revisa.</p><div class="setlist">'
-    + PF_MEAS.map((x) => {
-      const k = x[0], cur = meas[k], pr = prop[k], hide = k === 'weightKg' && !d.showW && cur != null;
-      const val = cur == null ? 'Sin dato' : (hide ? 'Oculto' : cur + ' ' + x[2]);
-      let row = '<div class="col g8" style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row between g10" style="align-items:center"><span class="col g4" style="min-width:0"><span style="font-weight:600">' + x[1] + '</span><span class="muted" style="font-size:14px">' + val + (cur != null && meas.updatedAt ? ' · ' + relTime(meas.updatedAt) : '') + '</span></span>'
-        + (pr ? '<span class="tag">En revisión · ' + pr.v + ' ' + x[2] + '</span>' : '<button type="button" class="chip" data-a="pfOpen" data-v="' + k + '" aria-pressed="' + (P.open === k) + '">Proponer cambio</button>') + '</div>';
-      if (pr) row += '<div class="row g10 wrap" style="align-items:center"><span class="muted" style="font-size:13px">Enviado ' + relTime(pr.ts) + (pr.note ? ' · “' + esc(pr.note) + '”' : '') + '</span><button type="button" class="link" data-a="pfWithdraw" data-v="' + k + '">Retirar</button></div>';
-      if (!pr && P.open === k) row += '<div class="col g10"><input class="field" id="pp-' + k + '" type="number" inputmode="decimal" placeholder="Nuevo valor (' + x[2] + ')" min="' + x[3] + '" max="' + x[4] + '"><input class="field" id="pp-note" type="text" maxlength="120" placeholder="Nota para tu coach (opcional)"><button type="button" class="btn primary" data-a="pfProp" data-v="' + k + '" style="justify-content:center"><span>Enviar a mi coach</span></button></div>';
-      return row + '</div>';
-    }).join('') + setRow('Mostrar mi peso en pantalla', d.showW ? 'Tu peso se ve en esta pantalla' : 'Oculto por defecto: tu coach igual lo usa en sus cálculos', d.showW, 'pfSw') + '</div></section>';
-  // salud
-  out += '<section class="card col g14" aria-label="Salud"><div class="eyebrow">Salud (opcional)</div><div class="info" role="note">' + infoIcon() + '<span>Solo lo ve tu coach y sirve para cuidarte mejor. No reemplaza una evaluación médica. Comparte solo lo que quieras.</span></div>'
-    + area('inj', 'Lesiones o molestias de largo plazo', d.inj) + area('cond', 'Condiciones que tu coach deba considerar', d.cond) + area('meds', 'Medicamentos habituales', d.meds) + area('alle', 'Alergias', d.alle) + '</section>';
-  out += '<section class="card col g14" aria-label="Contacto de emergencia"><div class="eyebrow">Contacto de emergencia (opcional)</div>' + fld('ename', 'Nombre y relación', d.ename, 'type="text" maxlength="80"') + fld('ephone', 'Teléfono', d.ephone, 'type="tel" inputmode="tel" maxlength="30"') + '</section>';
-  out += '<section class="card col g10" aria-label="Tus datos"><div class="eyebrow">Tus datos, tu control</div><p class="soft" style="font-size:14px">Puedes descargar todo lo que Camino guarda de ti o pedir que se elimine tu cuenta.</p><div class="col g8"><button type="button" class="btn ghost" data-a="pfExport" style="justify-content:center;border:1.5px solid var(--line)"><span>Descargar mis datos</span></button>'
-    + (P.confirmDel ? '<p class="soft" style="font-size:14px">Se enviará una solicitud a tu coach para eliminar tu cuenta y todos tus registros. ¿Confirmas?</p><div class="row g10"><button type="button" class="btn primary" data-a="pfDelReq" style="flex:1;justify-content:center"><span>Sí, solicitar</span></button><button type="button" class="btn ghost" data-a="pfDelNo" style="flex:1;justify-content:center"><span>Cancelar</span></button></div>' : '<button type="button" class="btn ghost" data-a="pfDelAsk" style="justify-content:center;border:1.5px solid var(--line)"><span>Solicitar eliminar mi cuenta</span></button>') + '</div></section>';
-  return out + '<div class="col g8"><button type="button" class="btn primary" data-a="profSave" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '><span>Guardar perfil</span></button><button type="button" class="btn ghost" data-a="profClose">Cancelar</button></div></div></div>';
+  const P = UI.prof, sec = PSEC.find((s) => s.id === P.sec), d = P.d, idx = PSEC.indexOf(sec) + 1, meas = bioMeas(), prop = meas.prop || {};
+  let out = '<div class="inner flowsel nopos"><div class="stack" style="gap:18px"><div class="row between"><button type="button" class="link" data-a="profClose" style="min-height:44px">Volver</button><span class="muted" style="font-size:13px">Perfil · sección ' + idx + ' de ' + PSEC.length + '</span></div>'
+    + '<div class="col g8"><h2 class="title">' + esc(sec.t) + '</h2><p class="muted">' + (sec.priv ? 'Comparte solo lo que quieras. Sirve para cuidarte mejor y no reemplaza una evaluación médica.' : 'Todo es opcional y puedes dejarlo a medias: se guarda cuando tocas «Guardar sección».') + '</p></div>';
+  if (sec.priv) out += '<div class="info" role="note">' + infoIcon() + '<span><b>Información privada.</b> La ven solo tú y tu coach principal. Los coaches de apoyo y tu equipo no tienen acceso.</span></div>';
+  out += '<section class="card col g14" aria-label="' + esc(sec.t) + '">' + sec.f.map((f) => pfField(f, d)).join('') + '</section>';
+  if (sec.id === 's1') {
+    out += '<section class="card col g12" aria-label="Medidas"><div class="eyebrow">Medidas de tu coach</div><p class="soft" style="font-size:14px">Las confirma tu coach para que sus cálculos sean consistentes. Si cambiaron, propón el nuevo valor y él lo revisa.</p><div class="setlist">'
+      + PF_MEAS.map((x) => {
+        const k = x[0], cur = meas[k], pr = prop[k], hide = k === 'weightKg' && !d.showWeight && cur != null;
+        const val = cur == null ? 'Sin dato' : (hide ? 'Oculto' : cur + ' ' + x[2]);
+        let row = '<div class="col g8" style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row between g10" style="align-items:center"><span class="col g4" style="min-width:0"><span style="font-weight:600">' + x[1] + '</span><span class="muted" style="font-size:14px">' + val + (cur != null && meas.updatedAt ? ' · ' + relTime(meas.updatedAt) : '') + '</span></span>'
+          + (pr ? '<span class="tag">En revisión · ' + pr.v + ' ' + x[2] + '</span>' : '<button type="button" class="chip" data-a="pfOpen" data-v="' + k + '" aria-pressed="' + (P.open === k) + '">Proponer cambio</button>') + '</div>';
+        if (pr) row += '<div class="row g10 wrap" style="align-items:center"><span class="muted" style="font-size:13px">Enviado ' + relTime(pr.ts) + (pr.note ? ' · “' + esc(pr.note) + '”' : '') + '</span><button type="button" class="link" data-a="pfWithdraw" data-v="' + k + '">Retirar</button></div>';
+        if (!pr && P.open === k) row += '<div class="col g10"><input class="field" id="pp-' + k + '" type="number" inputmode="decimal" placeholder="Nuevo valor (' + x[2] + ')" min="' + x[3] + '" max="' + x[4] + '"><input class="field" id="pp-note" type="text" maxlength="120" placeholder="Nota para tu coach (opcional)"><button type="button" class="btn primary" data-a="pfProp" data-v="' + k + '" style="justify-content:center"><span>Enviar a mi coach</span></button></div>';
+        return row + '</div>';
+      }).join('') + setRow('Mostrar mi peso en pantalla', d.showWeight ? 'Tu peso se ve en esta pantalla' : 'Oculto por defecto: tu coach igual lo usa en sus cálculos', d.showWeight, 'pfSw') + '</div></section>';
+  }
+  return out + '<div class="col g8"><button type="button" class="btn primary" data-a="profSave" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '><span>Guardar sección</span></button><button type="button" class="btn ghost" data-a="profClose">Cancelar</button></div></div></div>';
+}
+/* Pre-carga: lo que Camino ya sabe por tus check-ins y lo que tu coach tiene registrado; se confirma con un toque. */
+function pfSuggest() {
+  const m = bioMain() || {}, pre = m.pre || {}, a = meA(), cks = (a && a.checkins) || [], out = [];
+  const kinds = []; cks.forEach((c) => { const k = c.activity && c.activity.kind; if (BKINDS[k] && kinds.indexOf(k) < 0) kinds.push(k); });
+  if (!pfHas(m.sport) && pre.sport == null && kinds.length) { const k = lastBikeKind(a); out.push({ id: 'sport', l: 'Disciplina principal: ' + BKINDS[k], patch: { sport: BKINDS[k] } }); }
+  if (!pfHas((m.equip || {}).bikes) && pre.bikes == null && kinds.length) { const ls = kinds.map((k) => BKINDS[k]); out.push({ id: 'bikes', l: 'Bicicletas que usas: ' + ls.join(', '), patch: { equip: Object.assign({}, m.equip || {}, { bikes: ls }) } }); }
+  if (!pfHas((m.gymp || {}).does) && pre.gym == null && cks.some((c) => (c.activity && c.activity.kind === 'gym') || (c.act2 && c.act2.kind === 'gym'))) out.push({ id: 'gym', l: 'Haces gimnasio', patch: { gymp: Object.assign({}, m.gymp || {}, { does: 'Sí' }) } });
+  return out;
+}
+function pfKnown() { const ms = bioMeas(), m = bioMain() || {}; return PF_MEAS.filter((x) => ms[x[0]] != null && (x[0] !== 'weightKg' || m.showWeight)).map((x) => x[1] + ' ' + ms[x[0]] + ' ' + x[2]); }
+function viewPerfil() {
+  const m = bioMain(), secs = PSEC.map((s) => Object.assign({ s }, pfStatus(s, m))), tot = secs.reduce((a, x) => a + x.t, 0), done = secs.reduce((a, x) => a + x.n, 0), pct = tot ? Math.round(done / tot * 100) : 0, full = secs.filter((x) => x.n >= x.t).length, miss = pfMissing(m), sug = pfSuggest(), known = pfKnown();
+  const circ = 213.6, chip = { ok: 'background:var(--good-soft);color:var(--good)', part: 'background:var(--surface2);color:var(--text)', none: 'background:var(--accent-soft);color:var(--accent)' };
+  let out = '<div class="inner"><div class="stack">' + head('Tu ficha de atleta', 'Perfil') + msgBanner() + '<p class="soft" style="font-size:15px">Cuanto más completo, mejor ajusta Camino tu plan. Tómate tu tiempo: cada sección se guarda por separado.</p>';
+  out += '<section class="card row g14" aria-label="Avance del perfil" style="align-items:center"><svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="' + pct + '% completado" style="flex:none"><circle cx="42" cy="42" r="34" fill="none" stroke="var(--line)" stroke-width="9"/><circle cx="42" cy="42" r="34" fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + circ + '" stroke-dashoffset="' + (circ * (1 - pct / 100)).toFixed(1) + '" transform="rotate(-90 42 42)"/><text x="42" y="48" text-anchor="middle" font-family="var(--font-d)" font-weight="700" font-size="24" fill="var(--text)">' + pct + '%</text></svg>'
+    + '<div class="col g6"><div style="font-weight:700;font-size:17px">' + full + ' de ' + PSEC.length + ' secciones</div>'
+    + (miss.length ? '<div style="font-size:14px;color:var(--accent);font-weight:600">Para tu plan falta: ' + miss.map((x) => x[1]).join(', ') + '</div>' : '<div class="row g6" style="align-items:center;font-size:14px;color:var(--good);font-weight:600">' + ph('check', 18, 'var(--good)') + 'Mínimo para tu plan: listo</div>')
+    + '<div class="muted" style="font-size:13px">Lo demás es opcional y se completa cuando quieras.</div></div></section>';
+  const nPre = sug.length + known.length;
+  if (nPre) {
+    out += '<section class="card col g10" aria-label="Datos que ya conocemos" style="background:var(--accent-soft);border:1.5px solid var(--accent)"><div style="font-size:15px;line-height:1.4"><b>Tu coach y Camino ya conocen ' + nPre + (nPre === 1 ? ' dato' : ' datos') + ' tuyos.</b> Confírmalos con un toque, sin escribir nada.</div><button type="button" class="btn primary" data-a="pfPre" aria-expanded="' + !!UI.pfPre + '" style="align-self:flex-start;min-height:44px;padding:0 18px;width:auto;flex:none"><span>' + (UI.pfPre ? 'Cerrar' : 'Revisar') + '</span></button>';
+    if (UI.pfPre) {
+      out += '<div class="col g8">' + sug.map((x) => '<div class="col g8" style="padding:8px 0;border-top:1px solid var(--line)"><span style="font-weight:600">' + esc(x.l) + '</span><div class="row g8 wrap"><button type="button" class="chip" data-a="pfPreOk" data-v="' + x.id + '">Sí, es así</button><button type="button" class="chip" data-a="pfPreNo" data-v="' + x.id + '">No es así</button></div></div>').join('')
+        + (known.length ? '<div style="padding:8px 0;border-top:1px solid var(--line)"><span class="eyebrow">Tu coach ya tiene registrado</span><div style="margin-top:4px">' + esc(known.join(' · ')) + '</div><div class="muted" style="font-size:13px;margin-top:4px">Si algo cambió, propón el nuevo valor en «Datos personales».</div></div>' : '') + '</div>';
+    }
+    out += '</section>';
+  }
+  out += '<div class="col g10">' + secs.map((x, i) => '<button type="button" class="card row g12" data-a="profOpen" data-v="' + x.s.id + '" style="text-align:left;width:100%;align-items:center;border:1.5px solid var(--line);font:inherit;color:inherit;min-height:64px"><span aria-hidden="true" style="width:36px;height:36px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-weight:700;font-size:20px;flex:none">' + (i + 1) + '</span><span class="col grow g4" style="min-width:0"><span style="font-weight:700;font-size:16px">' + esc(x.s.t) + '</span><span class="muted" style="font-size:13px">' + esc(x.s.sub) + '</span></span><span style="font-size:13px;font-weight:700;border-radius:999px;padding:4px 10px;flex:none;' + chip[x.tone] + '">' + x.txt + '</span>' + arrow() + '</button>').join('') + '</div>';
+  out += '<section class="card col g10" aria-label="Tus datos"><div class="row g8" style="align-items:flex-start"><span style="flex:none;margin-top:2px">' + ph('shield', 18, 'var(--muted)') + '</span><p class="soft" style="font-size:14px">Tu salud y tu contacto de emergencia los ven solo tú y tu coach principal. El resto lo ven tu coach y, si tiene permiso, tus coaches de apoyo.</p></div><div class="col g8"><button type="button" class="btn ghost" data-a="pfExport" style="justify-content:center;border:1.5px solid var(--line)"><span>Descargar mis datos</span></button>'
+    + (UI.pfDel ? '<p class="soft" style="font-size:14px">Se enviará una solicitud a tu coach para eliminar tu cuenta y todos tus registros. ¿Confirmas?</p><div class="row g10"><button type="button" class="btn primary" data-a="pfDelReq" style="flex:1;justify-content:center"><span>Sí, solicitar</span></button><button type="button" class="btn ghost" data-a="pfDelNo" style="flex:1;justify-content:center"><span>Cancelar</span></button></div>' : '<button type="button" class="btn ghost" data-a="pfDelAsk" style="justify-content:center;border:1.5px solid var(--line)"><span>Solicitar eliminar mi cuenta</span></button>') + '</div></section>';
+  return out + '</div></div>';
+}
+/* Ficha en la Cabina: resumen de las secciones nuevas y alertas útiles para planificar. */
+function bioExtra(m, showHealth) {
+  const j = (v) => (Array.isArray(v) ? v.join(', ') : (v || '')), g = (n) => m[n] || {};
+  const row = (l, v) => v ? '<div class="col g4"><span class="eyebrow">' + l + '</span><span style="overflow-wrap:anywhere">' + esc(v) + '</span></div>' : '';
+  const al = [];
+  const inj = (m.health || {}).injuries;
+  if (showHealth && pfHas(inj) && String(inj).trim().toLowerCase() !== 'ninguna') al.push('Molestias o lesiones declaradas: revisa su ficha de salud antes de subir la carga.');
+  if (Array.isArray(g('equip').pm) && g('equip').pm.indexOf('Ninguno') >= 0 && g('equip').pm.length === 1) al.push('Sin potenciómetro: dosifica con frecuencia cardíaca y RPE.');
+  else if (Array.isArray(g('equip').pm) && g('equip').pm.length && g('equip').pm.indexOf('Ninguno') < 0) al.push('Potenciómetro en: ' + g('equip').pm.join(', ') + '. En las demás bicis usa FC y RPE.');
+  if (!pfHas(g('avail').days)) al.push('Disponibilidad pendiente: pídele que complete la sección 5.');
+  return (al.length ? '<div class="col g6">' + al.map((x) => '<div class="info" role="note">' + infoIcon() + '<span>' + esc(x) + '</span></div>').join('') + '</div>' : '')
+    + row('Ciudad', m.city) + row('Historial', [g('hist').years, g('hist').level, j(g('hist').discs), g('hist').volume].filter(pfHas).join(' · '))
+    + row('Equipamiento', [j(g('equip').bikes) && 'Bicis: ' + j(g('equip').bikes), g('equip').computer, j(g('equip').sensors), g('equip').trainer && 'Rodillo: ' + g('equip').trainer, g('equip').scale].filter(Boolean).join(' · '))
+    + row('Disponibilidad', [j(g('avail').days), j(g('avail').slot), j(g('avail').where), g('avail').hours].filter(pfHas).join(' · '))
+    + row('Objetivos', [g('goals').objA, g('goals').objDate, g('goals').why, g('goals').others].filter(pfHas).join(' · '))
+    + row('Alimentación', [g('diet').type, j(g('diet').fuel), g('diet').supps, g('diet').notes].filter(pfHas).join(' · '))
+    + row('Gimnasio', [g('gymp').does, j(g('gymp').days), j(g('gymp').focus), g('gymp').exp].filter(pfHas).join(' · '));
 }
 function bioPanel(a, ro) {
   const b = ST.athBio[a.id] || {}, m = b.main, ms = b.meas || {}, prop = ms.prop || {}, h = (m && m.health) || {}, e = (m && m.emergency) || {};
   const row = (l, v) => v ? '<div class="col g4"><span class="eyebrow">' + l + '</span><span style="overflow-wrap:anywhere">' + esc(v) + '</span></div>' : '';
   let out = '<div class="col g12" style="padding:6px 0 12px">';
   if (!m) out += '<p class="soft" style="font-size:14px">' + esc(a.first) + ' aún no completa su perfil.</p>';
-  else out += row('Edad y estatura', [ageOf(m.birthDate) != null ? ageOf(m.birthDate) + ' años' : '', m.heightCm ? m.heightCm + ' cm' : '', m.sport || ''].filter(Boolean).join(' · ')) + ((ro || !isOwner()) ? '' : row('Lesiones', h.injuries) + row('Condiciones', h.conditions) + row('Medicamentos', h.meds) + row('Alergias', h.allergies) + row('Emergencia', [e.name, e.phone].filter(Boolean).join(' · ')));
+  else out += row('Edad y estatura', [ageOf(m.birthDate) != null ? ageOf(m.birthDate) + ' años' : '', m.heightCm ? m.heightCm + ' cm' : '', m.sport || ''].filter(Boolean).join(' · ')) + ((ro || !isOwner()) ? '' : row('Lesiones', h.injuries) + row('Condiciones', h.conditions) + row('Medicamentos', h.meds) + row('Alergias', h.allergies) + row('Emergencia', [e.name, e.phone].filter(Boolean).join(' · ')))
+    + bioExtra(m, !(ro || !isOwner()));
   out += '<div class="col g10"><span class="eyebrow">Medidas confirmadas</span>' + PF_MEAS.map((x) => {
     const k = x[0], pr = prop[k];
     return '<div class="col g8" style="padding:6px 0;border-bottom:1px solid var(--line)"><div class="row between g10" style="align-items:center"><span style="font-weight:600">' + x[1] + ' <span class="muted" style="font-weight:500">' + (ms[k] != null ? ms[k] + ' ' + x[2] : 'sin dato') + '</span></span>'
@@ -1635,7 +1758,7 @@ function storyHtml() {
 /* ---------- Render ---------- */
 function applyPrefs() { const r = document.documentElement; if (PREF.calm) r.setAttribute('data-calm', ''); else r.removeAttribute('data-calm'); }
 function applyTone() { const r = document.documentElement; if (PREF.tone === 'auto') r.removeAttribute('data-tone'); else r.setAttribute('data-tone', PREF.tone); }
-const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes };
+const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
 /* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
@@ -1899,21 +2022,48 @@ const ACT = {
   back() { const f = UI.flow; if (f.step === 'run' && f.i > 0) f.i--; else { f.step = f.from || 'tipo'; f.i = 0; } render(); },
   send() { if (!UI.busy) finishFlow(); },
   feedback() { UI.feedback = { checkin: on(meA(), off(0)), newBadges: [] }; render(); },
-  profOpen() { UI.prof = { d: profDraft(), open: null, confirmDel: false }; render(); },
+  profOpen(v) {
+    const sec = PSEC.find((s) => s.id === v); if (!sec) return;
+    if (sec.id === 's2' && ST.myBio && ST.myBio.privReady === false) { say('Estamos cargando tus datos privados. Intenta de nuevo en un momento.'); return; }
+    UI.prof = { sec: v, d: profDraft(sec), open: null }; render();
+    const ov = document.getElementById('overlay'); if (ov) ov.scrollTop = 0;
+  },
   profClose() { UI.prof = null; render(); const ov = document.getElementById('overlay'); if (ov) ov.scrollTop = 0; },
-  pfSet(v, t) { if (!UI.prof) return; const g = t.dataset.g; UI.prof.d[g] = UI.prof.d[g] === v ? null : v; render(); },
-  pfSw() { if (!UI.prof) return; UI.prof.d.showW = !UI.prof.d.showW; render(); },
+  pfSet(v, t) {
+    if (!UI.prof) return; const g = t.dataset.g, d = UI.prof.d; d[g] = d[g] === v ? '' : v;
+    if (g === '_cq') { if (d._cq === 'no') d['health.conditions'] = 'Ninguna'; else if (d['health.conditions'] === 'Ninguna') d['health.conditions'] = ''; }
+    render();
+  },
+  pfMul(v, t) { if (!UI.prof) return; const a = UI.prof.d[t.dataset.g], i = a.indexOf(v); if (i >= 0) a.splice(i, 1); else a.push(v); render(); },
+  pfSw() { if (!UI.prof) return; UI.prof.d.showWeight = !UI.prof.d.showWeight; render(); },
   pfOpen(v) { if (!UI.prof) return; UI.prof.open = UI.prof.open === v ? null : v; render(); },
-  pfDelAsk() { if (UI.prof) { UI.prof.confirmDel = true; render(); } },
-  pfDelNo() { if (UI.prof) { UI.prof.confirmDel = false; render(); } },
+  pfPre() { UI.pfPre = !UI.pfPre; render(); },
+  async pfPreOk(v) {
+    const x = pfSuggest().find((s) => s.id === v); if (!x || !ST.user) return; const old = bioMain() || {};
+    try { await be.saveMainPart(ST.user.uid, Object.assign({}, x.patch, { pre: Object.assign({}, old.pre || {}, { [v]: true }), consentTs: old.consentTs || Date.now(), updatedAt: Date.now() })); say('Dato confirmado', 'ok'); } catch (e) { say(friendly(e)); }
+  },
+  async pfPreNo(v) {
+    if (!ST.user) return; const old = bioMain() || {};
+    try { await be.saveMainPart(ST.user.uid, { pre: Object.assign({}, old.pre || {}, { [v]: false }), consentTs: old.consentTs || Date.now(), updatedAt: Date.now() }); } catch (e) { say(friendly(e)); }
+  },
+  pfDelAsk() { UI.pfDel = true; render(); },
+  pfDelNo() { UI.pfDel = false; render(); },
   async profSave() {
-    const P = UI.prof; if (!P || !ST.user || UI.busy) return; const d = P.d, t = (x) => String(x || '').trim();
-    const h = d.height === '' ? null : Number(d.height); if (h != null && !(h >= 100 && h <= 230)) { say('La estatura debe estar entre 100 y 230 cm.'); return; }
-    if (d.birth && ageOf(d.birth) == null) { say('Revisa la fecha de nacimiento.'); return; }
+    const P = UI.prof; if (!P || !ST.user || UI.busy) return; const sec = PSEC.find((s) => s.id === P.sec), d = P.d, t = (x, n) => String(x || '').trim().slice(0, n || 200);
+    const val = (f) => { const v = d[f.p]; if (f.y === 'multi') return (v || []).slice(0, 12).map((x) => String(x).slice(0, 40)); return t(v, f.y === 'area' ? 300 : (f.max || 80)); };
     const old = bioMain() || {};
-    const main = { birthDate: d.birth || null, heightCm: h, sex: d.sex || null, sport: d.sport || null, health: { conditions: t(d.cond).slice(0, 300), meds: t(d.meds).slice(0, 300), injuries: t(d.inj).slice(0, 300), allergies: t(d.alle).slice(0, 300) }, emergency: { name: t(d.ename).slice(0, 80), phone: t(d.ephone).slice(0, 30) }, showWeight: !!d.showW, consentTs: old.consentTs || Date.now(), updatedAt: Date.now() };
+    let main = { consentTs: old.consentTs || Date.now(), updatedAt: Date.now() }, priv = null;
+    if (sec.id === 's1') {
+      const h = d.heightCm === '' ? null : Number(d.heightCm); if (h != null && !(h >= 100 && h <= 230)) { say('La estatura debe estar entre 100 y 230 cm.'); return; }
+      if (d.birthDate && ageOf(d.birthDate) == null) { say('Revisa la fecha de nacimiento.'); return; }
+      main = Object.assign(main, { birthDate: d.birthDate || null, heightCm: h, sex: d.sex || null, sport: d.sport || null, city: t(d.city, 60), showWeight: !!d.showWeight });
+    } else if (sec.id === 's2') {
+      priv = { health: { conditions: t(d['health.conditions'], 300), meds: t(d['health.meds'], 300), injuries: t(d['health.injuries'], 300), allergies: t(d['health.allergies'], 300) }, emergency: { name: t(d['emergency.name'], 80), phone: t(d['emergency.phone'], 30) } };
+    } else {
+      const o = {}; sec.f.forEach((f) => { o[f.p.split('.')[1]] = val(f); }); main[sec.g] = o;
+    }
     UI.busy = true; render();
-    try { await be.saveBio(ST.user.uid, main); UI.prof = null; say('Perfil guardado', 'ok'); } catch (e) { say(friendly(e)); }
+    try { if (priv) await be.savePriv(ST.user.uid, priv); else await be.saveMainPart(ST.user.uid, main); UI.prof = null; say('Sección guardada', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
   async pfProp(v) {
@@ -1930,7 +2080,7 @@ const ACT = {
   },
   async pfDelReq() {
     if (!ST.user || UI.busy) return; UI.busy = true; render();
-    try { await be.sendFeedback({ uid: ST.user.uid, name: String((ST.profile && ST.profile.name) || 'Atleta').slice(0, 80), team: String((ST.profile && ST.profile.team) || ''), kind: 'consulta', text: 'Solicito eliminar mi cuenta y todos mis datos de Camino.', ts: Date.now(), read: false }); if (UI.prof) UI.prof.confirmDel = false; say('Solicitud enviada a tu coach', 'ok'); } catch (e) { say(friendly(e)); }
+    try { await be.sendFeedback({ uid: ST.user.uid, name: String((ST.profile && ST.profile.name) || 'Atleta').slice(0, 80), team: String((ST.profile && ST.profile.team) || ''), kind: 'consulta', text: 'Solicito eliminar mi cuenta y todos mis datos de Camino.', ts: Date.now(), read: false }); UI.pfDel = false; say('Solicitud enviada a tu coach', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
   bioTgl(v) { UI.bioOpen = UI.bioOpen === v ? null : v; render(); },
