@@ -159,6 +159,9 @@ const be = {
   // Permisos del coach de apoyo (solo los escribe el coach principal)
   setAccess(viewerUid, access) { return updateDoc(doc(db, 'users', viewerUid), { access: clean(access) }); },
   // Propuestas del coach de apoyo (atleta o grupo nuevo); las resuelve el coach principal
+  // Mensajes coach principal <-> coach de apoyo (hilo por coach de apoyo: coachChat/{vid}/msgs)
+  listenChat(vid, cb) { const q = query(collection(db, 'coachChat', vid, 'msgs'), orderBy('ts', 'desc'), limit(50)); return onSnapshot(q, (s) => cb(rows(s)), fail('mensajes entre coaches')); },
+  sendChat(vid, m) { return setDoc(doc(collection(db, 'coachChat', vid, 'msgs')), clean(m)); },
   sendProposal(p) { return setDoc(doc(collection(db, 'proposals')), clean(p)); },
   listenProposals(cb, byUid) {
     const q = byUid ? query(collection(db, 'proposals'), where('by', '==', byUid)) : query(collection(db, 'proposals'), orderBy('ts', 'desc'), limit(50));

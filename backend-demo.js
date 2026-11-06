@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v6';
+const KEY = 'camino-demo-v7';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -95,7 +95,7 @@ function seed() {
   users.demoLector = { profile: { id: 'demoLector', name: 'Leo (demo, coach de apoyo)', role: 'viewer', coachId: 'demoCoach', team: null, pending: false, access: { teams: ['zn'], athletes: ['camila'], edit: false, profile: true } }, checkins: [], notes: [] };
   users.nuevo = { profile: { id: 'nuevo', name: 'Atleta nuevo (demo)', role: 'athlete', pending: true }, checkins: [], notes: [] };
   const mo = ymd(new Date()).slice(0, 7), k = (name, km) => ({ name, month: mo, km });
-  return { users, km: { grnt: { demoAtleta: k('Tomás (demo)', 412), camila: k('Camila R.', 520), matias: k('Matías S.', 380), lucas: k('Lucas V.', 290), sofia: k('Sofía M.', 345) }, zn: { joaquin: k('Joaquín P.', 310), valentina: k('Valentina T.', 260), emilia: k('Emilia C.', 405), nicolas: k('Nicolás A.', 220) } }, meta: { grnt: { goal: 2500, hito: 'Salida grupal del sábado: 70 km por el camino costero, ritmo conversado.' }, zn: { goal: 1800, hito: 'Semana de recuperación activa: rodajes suaves y movilidad.' } },
+  return { chat: { demoLector: [{ id: 'c1', by: 'demoCoach', byName: 'Diego', text: 'Hola Leo, bienvenido al equipo de apoyo. Cualquier duda con los atletas de ZN, escríbeme por aquí.', ts: Date.now() - 2 * 86400000 }, { id: 'c2', by: 'demoLector', byName: 'Leo (demo, coach de apoyo)', text: 'Gracias, Diego. Ya revisé los check-ins de la semana.', ts: Date.now() - 2 * 86400000 + 3600000 }] }, users, km: { grnt: { demoAtleta: k('Tomás (demo)', 412), camila: k('Camila R.', 520), matias: k('Matías S.', 380), lucas: k('Lucas V.', 290), sofia: k('Sofía M.', 345) }, zn: { joaquin: k('Joaquín P.', 310), valentina: k('Valentina T.', 260), emilia: k('Emilia C.', 405), nicolas: k('Nicolás A.', 220) } }, meta: { grnt: { goal: 2500, hito: 'Salida grupal del sábado: 70 km por el camino costero, ritmo conversado.' }, zn: { goal: 1800, hito: 'Semana de recuperación activa: rodajes suaves y movilidad.' } },
     feedback: [{ id: 'f1', uid: 'camila', name: 'Camila R.', team: 'grnt', kind: 'idea', text: 'Sería genial ver el clima del día en la pantalla Hoy, para decidir a qué hora salir.', ts: Date.now() - 3 * 3600000, read: false }, { id: 'f2', uid: 'matias', name: 'Matías S.', team: 'grnt', kind: 'consulta', text: '¿Cómo se calcula la fatiga? No me queda claro por qué sube tanto después del fondo largo.', ts: Date.now() - 30 * 3600000, read: true }] };
 }
 
@@ -157,6 +157,8 @@ const be = {
   listenAthletes(coachUid, cb) { return live(() => cb(Object.values(store.users).filter(u => u.profile.coachId === coachUid).map(u => ({ ...u.profile })))); },
   listenAthletesScoped(coachUid, access, cb) { const a = access || {}; return live(() => cb(Object.values(store.users).filter(u => u.profile.coachId === coachUid && u.profile.role === 'athlete' && ((a.teams || []).includes(u.profile.team) || (a.athletes || []).includes(u.profile.id))).map(u => ({ ...u.profile })))); },
   async setAccess(viewerUid, access) { store.users[viewerUid].profile.access = JSON.parse(JSON.stringify(access)); notify(); },
+  async sendChat(vid, m) { store.chat = store.chat || {}; (store.chat[vid] = store.chat[vid] || []).push({ id: 'c' + Date.now() + Math.random().toString(36).slice(2, 6), ...m }); notify(); },
+  listenChat(vid, cb) { return live(() => cb(((store.chat || {})[vid] || []).map(x => ({ ...x })).sort((a, b) => b.ts - a.ts))); },
   async sendProposal(p) { (store.proposals = store.proposals || []).unshift({ id: 'p' + Date.now(), ...p }); notify(); },
   listenProposals(cb, byUid) { return live(() => cb((store.proposals || []).filter(x => !byUid || x.by === byUid).map(x => ({ ...x })))); },
   async resolveProposal(id, status) { const x = (store.proposals || []).find(p => p.id === id); if (x) { x.status = status; x.decidedAt = Date.now(); } notify(); },

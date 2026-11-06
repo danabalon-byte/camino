@@ -97,7 +97,7 @@ const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF
 /* ---------- Estado ---------- */
 const ST = { props: [], ready: false, user: null, myBio: null, athBio: {}, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
-let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {};
+let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {}, chatSubs = {};
 
 const isViewer = () => !!(ST.profile && ST.profile.role === 'viewer');
 const isOwner = () => !!(ST.profile && ST.profile.role === 'coach');
@@ -333,11 +333,29 @@ const unreadNotes = () => { const t = seenAt(); return (ST.myNotes || []).filter
 const replyQueue = () => athleteObjs().filter((a) => needsReply(a));
 const unreadFbk = () => (ST.fbk || []).filter((x) => !x.read);
 /* Propuestas de coaches de apoyo: el coach principal ve las abiertas; quien propuso ve las ya resueltas que aún no abrió. */
+/* Mensajes entre coaches: un hilo por coach de apoyo (id del hilo = uid del coach de apoyo). */
+const chatKey = (vid) => 'camino.chat.' + (ST.user ? ST.user.uid : '') + '.' + vid;
+function chatSeen(vid) { let v = null; try { v = localStorage.getItem(chatKey(vid)); } catch (e) { /* sin almacenamiento */ } return Number(v) || 0; }
+function chatMark(vid) { const mx = Math.max(Date.now(), ...((ST.chat || {})[vid] || []).map((m) => Number(m.ts) || 0)); try { localStorage.setItem(chatKey(vid), String(mx)); } catch (e) { /* sin almacenamiento */ } }
+const chatRows = (vid) => ((ST.chat || {})[vid] || []).slice().sort((a, b) => Number(a.ts) - Number(b.ts));
+const chatUnread = (vid) => { const t = chatSeen(vid), me = ST.user ? ST.user.uid : ''; return chatRows(vid).filter((m) => m.by !== me && Number(m.ts) > t).length; };
+const chatVids = () => (isOwner() ? viewersList().map((v) => v.id) : (isViewer() && ST.user ? [ST.user.uid] : []));
+const chatBell = () => chatVids().reduce((n, v) => n + chatUnread(v), 0);
+function chatThread(vid, who) {
+  const L = chatRows(vid).slice(-15), me = ST.user ? ST.user.uid : '', draft = (UI.chatDraft || {})[vid] || '';
+  if (UI.chatOpen === vid) chatMark(vid);
+  return '<div class="col g10" id="chat-' + esc(vid) + '">' + (L.length ? '<div class="col g8" role="log" aria-label="Mensajes con ' + esc(who) + '">' + L.map((m) => { const mine = m.by === me; return '<div class="col g4" style="align-self:' + (mine ? 'flex-end' : 'flex-start') + ';max-width:88%;background:' + (mine ? 'var(--accent-soft)' : 'var(--surface2)') + ';border-radius:14px;padding:10px 12px"><div class="muted" style="font-size:12px">' + (mine ? 'Tú' : esc(firstName(m.byName || who))) + ' · ' + relTime(m.ts) + '</div><div style="white-space:pre-wrap;overflow-wrap:anywhere">' + esc(m.text) + '</div></div>'; }).join('') + '</div>' : '<p class="soft" style="font-size:14px">Aún no hay mensajes. Escribe el primero.</p>')
+    + '<label for="chatText-' + esc(vid) + '" class="muted" style="font-size:13px">Mensaje para ' + esc(who) + '</label><textarea id="chatText-' + esc(vid) + '" data-vid="' + esc(vid) + '" maxlength="600" rows="2" placeholder="Escribe aquí">' + esc(draft) + '</textarea><button type="button" class="btn primary" data-a="chatSend" data-v="' + esc(vid) + '" style="justify-content:center"' + (UI.busy ? ' disabled' : '') + '><span>Enviar</span></button></div>';
+}
+function chatCard(vid, who, id) {
+  const n = chatUnread(vid), open = UI.chatOpen === vid;
+  return '<section class="card col g12" id="' + id + '" aria-label="Mensajes con ' + esc(who) + '"' + (n ? ' style="border:1.5px solid var(--accent)"' : '') + '><button type="button" class="row between g12" data-a="chatTgl" data-v="' + esc(vid) + '" aria-expanded="' + open + '" style="text-align:left;min-height:48px;font:inherit;color:inherit;background:transparent;border:0;padding:0"><span class="col g4"><span class="eyebrow">Mensajes con ' + esc(who) + '</span><span style="font-weight:600">' + (n ? '<span style="color:var(--accent)">' + n + (n === 1 ? ' mensaje nuevo' : ' mensajes nuevos') + '</span>' : (chatRows(vid).length ? 'Ver conversación' : 'Escribir un mensaje')) + '</span></span>' + dcar() + '</button>' + (open ? chatThread(vid, who) : '') + '</section>';
+}
 const openPropsN = () => (ST.props || []).filter((x) => x.status === 'open');
 const newDecisions = () => { const t = seenAt(); return (ST.props || []).filter((x) => x.status !== 'open' && Number(x.decidedAt) > t); };
 function bellCount() {
   if (!ST.profile || !ST.user) return 0;
-  return isCoach() ? replyQueue().length + unreadFbk().length + (isOwner() ? openPropsN().length : (isViewer() ? newDecisions().length : 0)) : unreadNotes().length;
+  return isCoach() ? replyQueue().length + unreadFbk().length + (isOwner() ? openPropsN().length : (isViewer() ? newDecisions().length : 0)) + chatBell() : unreadNotes().length;
 }
 const bellHtml = () => {
   const n = bellCount();
@@ -346,8 +364,9 @@ const bellHtml = () => {
 function inboxHtml() {
   let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px">' + (isCoach() ? 'Pendientes por revisar' : 'De tu coach') + '</div><h1 class="title">Mensajes</h1></div><button type="button" class="x" data-a="inboxClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600">Cerrar</button></div>';
   if (isCoach()) {
-    const q = replyQueue(), f = unreadFbk(), po = isOwner() ? openPropsN() : [], dec = isViewer() ? (ST.props || []).filter((x) => x.status !== 'open').sort((a, b) => Number(b.decidedAt) - Number(a.decidedAt)).slice(0, 8) : [], tS = UI.inboxSeen || 0;
-    if (!q.length && !f.length && !po.length && !dec.length) out += '<section class="card"><p class="soft">Todo al día. No tienes atletas esperando respuesta ni comentarios nuevos.</p></section>';
+    const cv = chatVids().filter((v) => chatUnread(v) > 0), q = replyQueue(), f = unreadFbk(), po = isOwner() ? openPropsN() : [], dec = isViewer() ? (ST.props || []).filter((x) => x.status !== 'open').sort((a, b) => Number(b.decidedAt) - Number(a.decidedAt)).slice(0, 8) : [], tS = UI.inboxSeen || 0;
+    if (!q.length && !f.length && !po.length && !dec.length && !cv.length) out += '<section class="card"><p class="soft">Todo al día. No tienes atletas esperando respuesta ni comentarios nuevos.</p></section>';
+    if (cv.length) out += '<section class="col g10"><div class="eyebrow">Mensajes entre coaches · ' + cv.reduce((n, v) => n + chatUnread(v), 0) + '</div>' + cv.map((v) => { const w = isOwner() ? ((ST.athletes.find((r) => r.id === v) || {}).name || 'Coach de apoyo') : 'el coach principal', last = chatRows(v).filter((m) => m.by !== (ST.user && ST.user.uid)).slice(-1)[0]; return '<button type="button" class="card row between g12" data-a="inboxChat" data-v="' + esc(v) + '" style="text-align:left;min-height:64px"><span class="col"><b>' + (isOwner() ? esc(w) : 'Tu coach principal') + '</b><span class="muted" style="font-size:13px">' + esc(String((last || {}).text || '').slice(0, 70)) + '</span></span><span class="muted" aria-hidden="true">' + crt() + '</span></button>'; }).join('') + '</section>';
     if (po.length) out += '<section class="col g10"><div class="eyebrow">Propuestas por autorizar · ' + po.length + '</div><button type="button" class="card row between g12" data-a="inboxProp" style="text-align:left;min-height:64px"><span class="col"><b>' + po.length + (po.length === 1 ? ' propuesta nueva' : ' propuestas nuevas') + '</b><span class="muted" style="font-size:13px">De ' + esc(po[0].byName || 'un coach de apoyo') + ': ' + esc(String(po[0].name || '').slice(0, 60)) + '</span></span><span class="muted" aria-hidden="true">' + crt() + '</span></button></section>';
     if (dec.length) out += '<section class="col g10"><div class="eyebrow">Respuestas a tus propuestas</div>' + dec.map((x) => '<div class="card col g6" style="' + (Number(x.decidedAt) > tS ? 'border:1.5px solid var(--accent)' : '') + '"><div class="eyebrow">' + (Number(x.decidedAt) > tS ? '<span style="color:var(--accent)">Nuevo</span> · ' : '') + relTime(x.decidedAt) + '</div><p class="soft" style="font-size:16px">' + (x.kind === 'athlete' ? 'Atleta' : 'Grupo') + ' «' + esc(x.name) + '»: <b>' + (x.status === 'ok' ? 'autorizado por el coach principal' : 'no autorizado') + '</b></p></div>').join('') + '</section>';
     if (q.length) out += '<section class="col g10"><div class="eyebrow">Atletas por responder · ' + q.length + '</div>' + q.map((a) => '<button type="button" class="card row between g12" data-a="inboxGo" data-v="' + esc(a.id) + '" style="text-align:left;min-height:64px"><span class="col"><b>' + esc(a.name || 'Atleta') + '</b><span class="muted" style="font-size:13px">' + esc(statusOf(a).k === 'warn' ? 'Necesita atención' : 'Check-in sin respuesta') + '</span></span><span class="muted" aria-hidden="true">' + crt() + '</span></button>').join('') + '</section>';
@@ -1033,9 +1052,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 49;
+const APP_VER = 50;
 const NEWS = [
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Mensajes entre coaches: el coach principal y cada coach de apoyo pueden escribirse desde Ajustes, con aviso en la campana.',
   'Las propuestas de los coaches de apoyo ahora avisan en la campana: el coach principal ve las nuevas y quien propuso ve la respuesta.',
   'Nueva pestaña Perfil: completa tu ficha por secciones (equipamiento, disponibilidad, objetivos y más) para que tu plan se ajuste mejor. La Guía ahora está dentro de Ajustes.',
   'Check-in más corto cuando descansas o no pudiste entrenar, y el botón Atrás vuelve a donde estabas.',
@@ -1297,6 +1317,7 @@ function supportCard() {
   if (openProps.length) out += '<section class="card col g12" id="propsCard" aria-label="Propuestas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Propuestas por autorizar</div>' + openProps.map((x) => '<div class="col g8" style="padding:6px 0"><div style="font-weight:600">' + (x.kind === 'athlete' ? 'Atleta nuevo: ' : 'Grupo nuevo: ') + esc(x.name) + '</div><div class="muted" style="font-size:13px">De ' + esc(x.byName) + (x.kind === 'athlete' ? ' · ' + esc(x.email || '') + ' · equipo ' + esc(TEAMS[x.team] || x.team || '') : '') + (x.note ? ' · “' + esc(x.note) + '”' : '') + '</div><div class="row g8 wrap"><button type="button" class="chip" data-a="propOk" data-v="' + esc(x.id) + '">Autorizar</button><button type="button" class="chip" data-a="propNo" data-v="' + esc(x.id) + '">Rechazar</button></div></div>').join('') + '<p class="muted" style="font-size:13px">Al autorizar un atleta, cuando se registre con ese correo te aparecerá en Solicitudes nuevas marcado como propuesto. Los grupos nuevos quedan anotados y los activas tú.</p></section>';
   vs.forEach((v) => {
     const a = accOf(v), others = ST.athletes.filter((r) => r.role === 'athlete' && a.teams.indexOf(r.team) < 0).sort((x, y) => String(x.name).localeCompare(String(y.name), 'es'));
+    out += chatCard(v.id, v.name, 'chat-card-' + v.id);
     out += '<section class="card col g12" aria-label="Equipo de apoyo"><div class="eyebrow">Equipo de apoyo · ' + esc(v.name) + '</div><p class="soft" style="font-size:14px">Tú mantienes el control total. Aquí eliges qué ve ' + esc(firstName(v.name)) + ' y qué puede hacer.</p>'
       + '<div class="col g8"><span class="eyebrow">Equipos que ve</span><div class="chips" role="group" aria-label="Equipos visibles">' + Object.keys(TEAMS).map((t) => '<button type="button" class="chip" data-a="accTeam" data-v="' + esc(v.id) + '|' + t + '" aria-pressed="' + (a.teams.indexOf(t) >= 0) + '">' + TEAMS[t] + '</button>').join('') + '</div></div>'
       + (others.length ? '<div class="col g8"><span class="eyebrow">Atletas sueltos (de otros equipos)</span><div class="chips" role="group" aria-label="Atletas visibles">' + others.map((r) => '<button type="button" class="chip" data-a="accAth" data-v="' + esc(v.id) + '|' + esc(r.id) + '" aria-pressed="' + (a.athletes.indexOf(r.id) >= 0) + '">' + esc(firstName(r.name)) + ' · ' + esc(TEAMS[r.team] || '') + '</button>').join('') + '</div></div>' : '')
@@ -1323,7 +1344,7 @@ function viewAjustes() {
   // perfil
   out += '<section class="card col g14" aria-label="Cuenta"><div class="row g14" style="align-items:center"><span class="avatar" aria-hidden="true">' + initial(p.name) + '</span><div class="col grow g4" style="min-width:0"><span style="font-weight:700;font-size:20px;overflow-wrap:anywhere">' + esc(p.name || '') + '</span><span class="muted" style="font-size:13px;overflow-wrap:anywhere">' + esc(p.email || (ST.user && ST.user.email) || '') + '</span></div></div><div class="row g8 wrap"><span class="tag out" style="color:var(--soft);border-color:var(--line)">' + (isCoach() ? 'Coach' : 'Atleta') + '</span>' + (p.team ? '<span class="tag out" style="color:var(--soft);border-color:var(--line)">Equipo ' + TEAMS[p.team] + '</span>' : '') + (p.pending ? '<span class="tag out" style="color:var(--warn);border-color:var(--warn)">Pendiente de asignación</span>' : '') + '</div></section>';
   if (tabs().some((t) => t.hide)) out += '<a class="card row g14" href="#guia" style="text-decoration:none;color:inherit;align-items:center;border:1.5px solid var(--line)"><span class="col grow g4" style="min-width:0"><span class="eyebrow">Guía</span><span style="font-weight:600">Tutoriales y cómo escribirnos</span><span class="muted" style="font-size:14px">Cómo se llena cada dato y envío de ideas</span></span>' + arrow() + '</a>';
-  out += supportCard() + proposeCard();
+  out += (isViewer() && ST.user ? chatCard(ST.user.uid, 'tu coach principal', 'chatCard') : '') + supportCard() + proposeCard();
   // apariencia
   out += '<section class="card col g12" aria-label="Apariencia"><div class="eyebrow">Apariencia</div><div class="tones" role="group" aria-label="Tono visual">' + TONES.map((t) => '<button type="button" class="tone" data-a="tone" data-v="' + t.id + '" aria-pressed="' + (PREF.tone === t.id) + '"><span class="sw">' + t.sw.map((c) => '<i style="background:' + c + '"></i>').join('') + '</span><span class="col g4" style="text-align:left"><span style="font-weight:600">' + t.name + '</span><span class="muted" style="font-size:12px;font-weight:500">' + t.sub + '</span></span></button>').join('') + '</div>'
     + '<div class="setlist">' + setRow('Ampliar el gráfico al girar', 'Con el teléfono en horizontal, en Datos, el gráfico de forma se abre a pantalla completa', PREF.rotZoom !== false, 'pref', 'rotZoom') + setRow('Reducir animaciones', 'Quita transiciones y movimientos', !!PREF.calm, 'pref', 'calm') + '</div></section>';
@@ -1813,7 +1834,7 @@ const friendly = (e) => {
 };
 
 /* ---------- Datos en vivo ---------- */
-function stopData() { dataUnsubs.forEach((u) => { try { u(); } catch (e) {} }); dataUnsubs = []; Object.keys(athSubs).forEach((k) => athSubs[k].forEach((u) => { try { u(); } catch (e) {} })); athSubs = {}; dataKey = ''; }
+function stopData() { dataUnsubs.forEach((u) => { try { u(); } catch (e) {} }); dataUnsubs = []; Object.keys(chatSubs).forEach((k) => { try { chatSubs[k](); } catch (e) {} }); chatSubs = {}; Object.keys(athSubs).forEach((k) => athSubs[k].forEach((u) => { try { u(); } catch (e) {} })); athSubs = {}; dataKey = ''; }
 function stopAll() { ownUnsubs.forEach((u) => { try { u(); } catch (e) {} }); ownUnsubs = []; stopData(); }
 function setupData() {
   const p = ST.profile; if (!p || !ST.user) return;
@@ -1832,10 +1853,12 @@ function setupData() {
     const onAth = (rows) => {
       if (p.role === 'viewer') rows = rows.filter((r) => r.role !== 'viewer'); ST.athletes = rows; /* incluye al propio coach si su documento tiene coachId = su uid (para cargar su plan e historial) */
       const ids = ST.athletes.map((r) => r.id);
+      if (p.role === 'coach') { const vids = ST.athletes.filter((r) => r.role === 'viewer').map((r) => r.id); Object.keys(chatSubs).forEach((k) => { if (vids.indexOf(k) < 0) { try { chatSubs[k](); } catch (e) {} delete chatSubs[k]; } }); vids.forEach((id) => { if (!chatSubs[id]) chatSubs[id] = be.listenChat(id, (rs) => { (ST.chat = ST.chat || {})[id] = rs; soft(); }); }); }
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
       ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), ].concat(p.role === 'coach' || (p.role === 'viewer' && (p.access || {}).profile === true) ? [be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); }, p.role === 'coach' ? { priv: true } : { quiet: true })] : []); });
       soft();
     };
+    if (p.role === 'viewer') dataUnsubs.push(be.listenChat(ST.user.uid, (rs) => { (ST.chat = ST.chat || {})[ST.user.uid] = rs; soft(); }));
     if (p.role === 'viewer') dataUnsubs.push(be.listenAthletesScoped(p.coachId, p.access || {}, (rows) => { const seen = {}; onAth(rows.filter((r) => r.role === 'athlete' && !seen[r.id] && (seen[r.id] = 1))); }));
     else dataUnsubs.push(be.listenAthletes(ST.user.uid, onAth));
     if (p.role === 'coach') dataUnsubs.push(be.listenPending((rows) => { ST.pending = rows; soft(); }));
@@ -1843,7 +1866,7 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; ST.myBio = null; ST.athBio = {}; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; ST.myBio = null; ST.athBio = {}; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; ST.chat = {}; UI.chatOpen = null; UI.chatDraft = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e) + ' [' + ((e && e.step) || 'perfil') + ': ' + String((e && e.code) || '').replace('firestore/', '') + ' | ' + (user.email || 'sin correo') + ' | ' + String(user.uid).slice(0, 6) + ']'));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
@@ -2117,6 +2140,14 @@ const ACT = {
   inbox() { UI.inboxSeen = (!isCoach() || isViewer()) ? seenAt() : 0; UI.inbox = true; if (!isCoach() || isViewer()) { const mx = Math.max(Date.now(), ...(ST.myNotes || []).map((n) => Number(n.at) || 0), ...(ST.props || []).map((x) => Number(x.decidedAt) || 0)); try { localStorage.setItem(seenKey(), String(mx)); } catch (e) { /* sin almacenamiento */ } } render(); },
   inboxClose() { UI.inbox = false; render(); },
   inboxGo(v) { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; UI.sel = v; UI.reply = { id: v, text: '' }; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('replyBox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
+  inboxChat(v) { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; UI.chatOpen = v; location.hash = '#ajustes'; UI.view = 'ajustes'; render(); const el = document.getElementById(isOwner() ? 'chat-card-' + v : 'chatCard'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
+  chatTgl(v) { UI.chatOpen = UI.chatOpen === v ? null : v; if (UI.chatOpen) chatMark(v); render(); },
+  async chatSend(v) {
+    if (!ST.user || UI.busy) return; const text = String(((UI.chatDraft || {})[v]) || '').trim().slice(0, 600); if (!text) { say('Escribe un mensaje antes de enviar.'); return; }
+    UI.busy = true; render();
+    try { await be.sendChat(v, { by: ST.user.uid, byName: String((ST.profile && ST.profile.name) || 'Coach').slice(0, 80), text, ts: Date.now() }); UI.chatDraft = Object.assign({}, UI.chatDraft || {}, { [v]: '' }); chatMark(v); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
   inboxProp() { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; location.hash = '#ajustes'; UI.view = 'ajustes'; render(); const el = document.getElementById('propsCard'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   inboxFb() { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('fbinbox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   story(v) { UI.story = Number(v) || 0; render(); },
@@ -2218,6 +2249,7 @@ document.addEventListener('input', (e) => {
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id && id.indexOf('pf-') === 0 && UI.prof) UI.prof.d[id.slice(3)] = e.target.value;
   if (id === 'comment') UI.draft.comment = e.target.value;
+  if (id && id.indexOf('chatText-') === 0) { UI.chatDraft = Object.assign({}, UI.chatDraft || {}, { [e.target.dataset.vid]: e.target.value }); }
   if (id === 'propName' || id === 'propEmail' || id === 'propNote') { UI.prop = UI.prop || { kind: 'athlete' }; UI.prop[id.slice(4).toLowerCase()] = e.target.value; }
   if (id && id.indexOf('gzt-') === 0 && UI.flow && UI.flow.d.gzones && UI.flow.d.gzones[id.slice(4)]) { UI.flow.d.gzones[id.slice(4)].t = e.target.value; const cc = document.getElementById('gzc-' + id.slice(4)); if (cc) cc.textContent = e.target.value.length + '/200'; }
   if (id === 'prevText') UI.draft.prevText = e.target.value;
