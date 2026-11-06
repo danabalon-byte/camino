@@ -332,9 +332,12 @@ function seenAt() {
 const unreadNotes = () => { const t = seenAt(); return (ST.myNotes || []).filter((n) => Number(n.at) > t); };
 const replyQueue = () => athleteObjs().filter((a) => needsReply(a));
 const unreadFbk = () => (ST.fbk || []).filter((x) => !x.read);
+/* Propuestas de coaches de apoyo: el coach principal ve las abiertas; quien propuso ve las ya resueltas que aún no abrió. */
+const openPropsN = () => (ST.props || []).filter((x) => x.status === 'open');
+const newDecisions = () => { const t = seenAt(); return (ST.props || []).filter((x) => x.status !== 'open' && Number(x.decidedAt) > t); };
 function bellCount() {
   if (!ST.profile || !ST.user) return 0;
-  return isCoach() ? replyQueue().length + unreadFbk().length : unreadNotes().length;
+  return isCoach() ? replyQueue().length + unreadFbk().length + (isOwner() ? openPropsN().length : (isViewer() ? newDecisions().length : 0)) : unreadNotes().length;
 }
 const bellHtml = () => {
   const n = bellCount();
@@ -343,8 +346,10 @@ const bellHtml = () => {
 function inboxHtml() {
   let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px">' + (isCoach() ? 'Pendientes por revisar' : 'De tu coach') + '</div><h1 class="title">Mensajes</h1></div><button type="button" class="x" data-a="inboxClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600">Cerrar</button></div>';
   if (isCoach()) {
-    const q = replyQueue(), f = unreadFbk();
-    if (!q.length && !f.length) out += '<section class="card"><p class="soft">Todo al día. No tienes atletas esperando respuesta ni comentarios nuevos.</p></section>';
+    const q = replyQueue(), f = unreadFbk(), po = isOwner() ? openPropsN() : [], dec = isViewer() ? (ST.props || []).filter((x) => x.status !== 'open').sort((a, b) => Number(b.decidedAt) - Number(a.decidedAt)).slice(0, 8) : [], tS = UI.inboxSeen || 0;
+    if (!q.length && !f.length && !po.length && !dec.length) out += '<section class="card"><p class="soft">Todo al día. No tienes atletas esperando respuesta ni comentarios nuevos.</p></section>';
+    if (po.length) out += '<section class="col g10"><div class="eyebrow">Propuestas por autorizar · ' + po.length + '</div><button type="button" class="card row between g12" data-a="inboxProp" style="text-align:left;min-height:64px"><span class="col"><b>' + po.length + (po.length === 1 ? ' propuesta nueva' : ' propuestas nuevas') + '</b><span class="muted" style="font-size:13px">De ' + esc(po[0].byName || 'un coach de apoyo') + ': ' + esc(String(po[0].name || '').slice(0, 60)) + '</span></span><span class="muted" aria-hidden="true">' + crt() + '</span></button></section>';
+    if (dec.length) out += '<section class="col g10"><div class="eyebrow">Respuestas a tus propuestas</div>' + dec.map((x) => '<div class="card col g6" style="' + (Number(x.decidedAt) > tS ? 'border:1.5px solid var(--accent)' : '') + '"><div class="eyebrow">' + (Number(x.decidedAt) > tS ? '<span style="color:var(--accent)">Nuevo</span> · ' : '') + relTime(x.decidedAt) + '</div><p class="soft" style="font-size:16px">' + (x.kind === 'athlete' ? 'Atleta' : 'Grupo') + ' «' + esc(x.name) + '»: <b>' + (x.status === 'ok' ? 'autorizado por el coach principal' : 'no autorizado') + '</b></p></div>').join('') + '</section>';
     if (q.length) out += '<section class="col g10"><div class="eyebrow">Atletas por responder · ' + q.length + '</div>' + q.map((a) => '<button type="button" class="card row between g12" data-a="inboxGo" data-v="' + esc(a.id) + '" style="text-align:left;min-height:64px"><span class="col"><b>' + esc(a.name || 'Atleta') + '</b><span class="muted" style="font-size:13px">' + esc(statusOf(a).k === 'warn' ? 'Necesita atención' : 'Check-in sin respuesta') + '</span></span><span class="muted" aria-hidden="true">' + crt() + '</span></button>').join('') + '</section>';
     if (f.length) out += '<section class="col g10"><div class="eyebrow">Ideas y consultas nuevas · ' + f.length + '</div><button type="button" class="card row between g12" data-a="inboxFb" style="text-align:left;min-height:64px"><span class="col"><b>' + f.length + (f.length === 1 ? ' mensaje nuevo' : ' mensajes nuevos') + '</b><span class="muted" style="font-size:13px">' + esc(String(f[0].text).slice(0, 70)) + '</span></span><span class="muted" aria-hidden="true">' + crt() + '</span></button></section>';
   } else {
@@ -1028,9 +1033,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 48;
+const APP_VER = 49;
 const NEWS = [
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Las propuestas de los coaches de apoyo ahora avisan en la campana: el coach principal ve las nuevas y quien propuso ve la respuesta.',
   'Nueva pestaña Perfil: completa tu ficha por secciones (equipamiento, disponibilidad, objetivos y más) para que tu plan se ajuste mejor. La Guía ahora está dentro de Ajustes.',
   'Check-in más corto cuando descansas o no pudiste entrenar, y el botón Atrás vuelve a donde estabas.',
   'Coaches de apoyo: el coach principal define qué equipos y atletas ve cada uno, si puede editar y si ve perfiles. Tu salud y tu contacto de emergencia ahora van en un lugar aparte, solo para ti y tu coach principal.',
@@ -1288,7 +1294,7 @@ function supportCard() {
   const vs = viewersList(), openProps = (ST.props || []).filter((x) => x.status === 'open');
   if (!vs.length && !openProps.length) return '';
   let out = '';
-  if (openProps.length) out += '<section class="card col g12" aria-label="Propuestas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Propuestas por autorizar</div>' + openProps.map((x) => '<div class="col g8" style="padding:6px 0"><div style="font-weight:600">' + (x.kind === 'athlete' ? 'Atleta nuevo: ' : 'Grupo nuevo: ') + esc(x.name) + '</div><div class="muted" style="font-size:13px">De ' + esc(x.byName) + (x.kind === 'athlete' ? ' · ' + esc(x.email || '') + ' · equipo ' + esc(TEAMS[x.team] || x.team || '') : '') + (x.note ? ' · “' + esc(x.note) + '”' : '') + '</div><div class="row g8 wrap"><button type="button" class="chip" data-a="propOk" data-v="' + esc(x.id) + '">Autorizar</button><button type="button" class="chip" data-a="propNo" data-v="' + esc(x.id) + '">Rechazar</button></div></div>').join('') + '<p class="muted" style="font-size:13px">Al autorizar un atleta, cuando se registre con ese correo te aparecerá en Solicitudes nuevas marcado como propuesto. Los grupos nuevos quedan anotados y los activas tú.</p></section>';
+  if (openProps.length) out += '<section class="card col g12" id="propsCard" aria-label="Propuestas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Propuestas por autorizar</div>' + openProps.map((x) => '<div class="col g8" style="padding:6px 0"><div style="font-weight:600">' + (x.kind === 'athlete' ? 'Atleta nuevo: ' : 'Grupo nuevo: ') + esc(x.name) + '</div><div class="muted" style="font-size:13px">De ' + esc(x.byName) + (x.kind === 'athlete' ? ' · ' + esc(x.email || '') + ' · equipo ' + esc(TEAMS[x.team] || x.team || '') : '') + (x.note ? ' · “' + esc(x.note) + '”' : '') + '</div><div class="row g8 wrap"><button type="button" class="chip" data-a="propOk" data-v="' + esc(x.id) + '">Autorizar</button><button type="button" class="chip" data-a="propNo" data-v="' + esc(x.id) + '">Rechazar</button></div></div>').join('') + '<p class="muted" style="font-size:13px">Al autorizar un atleta, cuando se registre con ese correo te aparecerá en Solicitudes nuevas marcado como propuesto. Los grupos nuevos quedan anotados y los activas tú.</p></section>';
   vs.forEach((v) => {
     const a = accOf(v), others = ST.athletes.filter((r) => r.role === 'athlete' && a.teams.indexOf(r.team) < 0).sort((x, y) => String(x.name).localeCompare(String(y.name), 'es'));
     out += '<section class="card col g12" aria-label="Equipo de apoyo"><div class="eyebrow">Equipo de apoyo · ' + esc(v.name) + '</div><p class="soft" style="font-size:14px">Tú mantienes el control total. Aquí eliges qué ve ' + esc(firstName(v.name)) + ' y qué puede hacer.</p>'
@@ -2108,9 +2114,10 @@ const ACT = {
     try { await navigator.clipboard.writeText(dl); ok = true; } catch (e) { try { const el = document.getElementById('demolink-' + v), r = document.createRange(); r.selectNodeContents(el); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
     say(ok ? 'Enlace de la demo de ' + (v === 'coach' ? 'coach' : 'atleta') + ' copiado. Pégalo donde quieras compartirlo.' : 'No pude copiarlo solo: mantén presionado el enlace y cópialo.', ok ? 'ok' : 'err');
   },
-  inbox() { UI.inboxSeen = isCoach() ? 0 : seenAt(); UI.inbox = true; if (!isCoach()) { const mx = Math.max(Date.now(), ...(ST.myNotes || []).map((n) => Number(n.at) || 0)); try { localStorage.setItem(seenKey(), String(mx)); } catch (e) { /* sin almacenamiento */ } } render(); },
+  inbox() { UI.inboxSeen = (!isCoach() || isViewer()) ? seenAt() : 0; UI.inbox = true; if (!isCoach() || isViewer()) { const mx = Math.max(Date.now(), ...(ST.myNotes || []).map((n) => Number(n.at) || 0), ...(ST.props || []).map((x) => Number(x.decidedAt) || 0)); try { localStorage.setItem(seenKey(), String(mx)); } catch (e) { /* sin almacenamiento */ } } render(); },
   inboxClose() { UI.inbox = false; render(); },
   inboxGo(v) { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; UI.sel = v; UI.reply = { id: v, text: '' }; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('replyBox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
+  inboxProp() { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; location.hash = '#ajustes'; UI.view = 'ajustes'; render(); const el = document.getElementById('propsCard'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   inboxFb() { UI.inbox = false; UI.mode = 'coach'; try { localStorage.setItem('camino.mode', 'coach'); } catch (e) { /* sin almacenamiento */ } UI.asId = null; location.hash = '#cabina'; UI.view = 'cabina'; render(); const el = document.getElementById('fbinbox'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); },
   story(v) { UI.story = Number(v) || 0; render(); },
   storyNext() { UI.story = UI.story >= 2 ? null : UI.story + 1; render(); },
