@@ -2,7 +2,7 @@ name: Sincronizar forma desde intervals.icu
 
 on:
   schedule:
-    - cron: '17 * * * *'   # cada hora, minuto 17 (UTC)
+    - cron: '7,37 * * * *'   # cada 30 minutos (minutos 7 y 37, UTC)
   workflow_dispatch:        # también se puede lanzar a mano desde la pestaña Actions
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
           import admin from 'firebase-admin';
 
           const DRY = process.env.DRY === '1';
-          const key = process.env.ICU_API_KEY, map = JSON.parse(process.env.ICU_MAP || '{}');
+          const key = process.env.ICU_API_KEY, map = { ...JSON.parse(process.env.ICU_MAP || '{}'), ...JSON.parse(process.env.ICU_MAP_EXTRA || '{}') };
           if (!key) throw new Error('Falta ICU_API_KEY');
           if (!DRY) admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SA)) });
           const db = DRY ? null : admin.firestore();
@@ -41,12 +41,29 @@ jobs:
           const newest = ymd(now), oldest = ymd(new Date(now.getTime() - DAYS * 86400 * 1000));
           const get = async (url) => { const r = await fetch(url, { headers: { Authorization: auth } }); if (!r.ok) throw new Error('intervals.icu respondió ' + r.status); return r.json(); };
 
+          const planFrom = ymd(new Date(now.getTime() - 56 * 86400 * 1000)), planTo = ymd(new Date(now.getTime() + 42 * 86400 * 1000));
+          // Convierte los entrenamientos planificados de intervals.icu en sesiones de Camino (una por dia).
+          const toSessions = (evs) => {
+            const out = {}; if (!Array.isArray(evs)) return null;
+            for (const e of evs) {
+              const d = String(e.start_date_local || '').slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+              const name = String(e.name || '').trim().slice(0, 80); if (!name) continue;
+              const min = typeof e.moving_time === 'number' ? Math.round(e.moving_time / 60) : 0;
+              const km = typeof e.distance === 'number' ? Math.round(e.distance / 1000) : 0;
+              const load = typeof e.icu_training_load === 'number' ? Math.round(e.icu_training_load) : 0;
+              const note = String(e.description || '').split('\n')[0].trim().slice(0, 140);
+              const s = { name, ...(min ? { min } : {}), ...(km ? { km } : {}), ...(load ? { load } : {}), ...(note ? { note } : {}) };
+              if (out[d]) { out[d] = { name: (out[d].name + ' + ' + name).slice(0, 80), min: (out[d].min || 0) + (s.min || 0) || undefined, km: (out[d].km || 0) + (s.km || 0) || undefined, load: (out[d].load || 0) + (s.load || 0) || undefined, ...(out[d].note ? { note: out[d].note } : {}) }; Object.keys(out[d]).forEach((k) => out[d][k] === undefined && delete out[d][k]); }
+              else out[d] = s;
+            }
+            const keys = Object.keys(out).sort().slice(-110); const r = {}; keys.forEach((k) => { r[k] = out[k]; }); return r;
+          };
           let ok = 0, skipped = 0, failed = 0, i = 0;
           for (const [email, icu] of Object.entries(map)) {
             i++;
             try {
               const base = 'https://intervals.icu/api/v1/athlete/' + encodeURIComponent(icu);
-              const [well, acts] = await Promise.all([get(base + '/wellness?oldest=' + oldest + '&newest=' + newest), get(base + '/activities?oldest=' + oldest + '&newest=' + newest)]);
+              const [well, acts, evs] = await Promise.all([get(base + '/wellness?oldest=' + oldest + '&newest=' + newest), get(base + '/activities?oldest=' + oldest + '&newest=' + newest), get(base + '/events?category=WORKOUT&oldest=' + planFrom + '&newest=' + planTo).catch(() => null)]);
               const days = well.filter((x) => x && x.id && typeof x.ctl === 'number' && typeof x.atl === 'number').map((x) => ({ d: x.id, ctl: Math.round(x.ctl * 10) / 10, atl: Math.round(x.atl * 10) / 10, ...(typeof x.ctlLoad === 'number' ? { l: Math.round(x.ctlLoad) } : {}) })).sort((a, b) => (a.d < b.d ? -1 : 1)).slice(-120);
               const actDates = acts.map((x) => String(x.start_date_local || '').slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-200);
               if (!days.length) { skipped++; console.log('Atleta ' + i + ': sin datos de forma, se omite'); continue; }
@@ -54,7 +71,12 @@ jobs:
               const snap = await db.collection('users').where('email', '==', email.trim().toLowerCase()).limit(1).get();
               if (snap.empty) { skipped++; console.log('Atleta ' + i + ': aún no ha entrado a Camino, se omite'); continue; }
               await db.doc('users/' + snap.docs[0].id + '/history/current').set({ days, acts: actDates, updatedAt: Date.now() });
-              ok++; console.log('Atleta ' + i + ': ' + days.length + ' días y ' + actDates.length + ' salidas actualizados');
+              const uid = snap.docs[0].id, sessions = toSessions(evs);
+              if (sessions && Object.keys(sessions).length) {
+                const pref = db.doc('users/' + uid + '/plan/current');
+                try { await pref.update({ sessions, updatedAt: Date.now() }); } catch (e) { await pref.set({ sessions, updatedAt: Date.now() }, { merge: true }); }
+              }
+              ok++; console.log('Atleta ' + i + ': ' + days.length + ' días, ' + actDates.length + ' salidas y ' + (sessions ? Object.keys(sessions).length : 0) + ' sesiones de plan actualizados');
             } catch (e) { failed++; console.log('Atleta ' + i + ': error (' + String(e.message).slice(0, 80) + ')'); }
           }
           console.log('Resumen: ' + ok + ' actualizados, ' + skipped + ' omitidos, ' + failed + ' con error');
@@ -64,5 +86,6 @@ jobs:
         env:
           ICU_API_KEY: ${{ secrets.ICU_API_KEY }}
           ICU_MAP: ${{ secrets.ICU_MAP }}
+          ICU_MAP_EXTRA: ${{ vars.ICU_MAP_EXTRA }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
         run: node sync.mjs
