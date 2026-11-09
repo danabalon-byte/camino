@@ -972,6 +972,9 @@ function actSheetHtml() {
   if (km && x.min) tiles.push(tile(f1(km / (x.min / 60)) + ' km/h', 'Velocidad media'));
   if (r && r.gain != null) tiles.push(tile(r.gain + ' m', 'Desnivel positivo'));
   if (r && r.max != null) tiles.push(tile(r.max + ' m', 'Altitud máxima'));
+  if (x.np) tiles.push(tile(x.np + ' W', 'Potencia normalizada'));
+  if (x.w) tiles.push(tile(x.w + ' W', 'Potencia media'));
+  if (x.hr) tiles.push(tile(x.hr + ' lpm', 'FC media' + (x.hrx ? ' · máx. ' + x.hrx : '')));
   if (x.l) tiles.push(tile(x.l, 'Carga de la salida'));
   let body;
   if (r === undefined) body = '<section class="card" aria-live="polite"><p class="soft">Cargando recorrido…</p></section>';
