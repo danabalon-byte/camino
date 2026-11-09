@@ -1133,8 +1133,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 57;
+const APP_VER = 59;
 const NEWS = [
+  'Terminar un evento en vivo ahora pide doble confirmación, con textos claros: el botón seguro siempre va primero y dice "Seguir en el evento".',
   'Planificar y el modo en vivo se habilitan atleta por atleta desde la tarjeta Gestionar de cada uno.',
   'Planificar ahora tiene modo en vivo: inicia tu evento, di dónde estás con el GPS o el km del ciclocomputador, y ve si vas adelantado o atrasado y cuánto falta para el próximo control.',
   'Nueva pestaña Planificar: crea un evento (por ejemplo un brevet), carga su recorrido en GPX y calcula tus horarios con las ventanas de apertura y cierre de cada control.',
@@ -2520,7 +2521,7 @@ document.addEventListener('change', (e) => { const t = e.target; if (t && t.data
 /* ---------- Modo en vivo del evento (v56) ---------- */
 var LV = null;
 const lvKey = () => 'camino-live-v1-' + (ST.user ? ST.user.uid : '');
-const lvLoad = () => { try { const r = JSON.parse(localStorage.getItem(lvKey()) || 'null'); return r && r.ev ? r : null; } catch (e) { return null; } };
+const lvLoad = () => { try { const r = JSON.parse(localStorage.getItem(lvKey()) || 'null'); if (r && r.ev) { r.confirmEnd = 0; r.gpsBusy = false; return r; } return null; } catch (e) { return null; } };
 const lvSave = () => { try { if (LV) localStorage.setItem(lvKey(), JSON.stringify(LV)); else localStorage.removeItem(lvKey()); } catch (e) { /* sin almacenamiento */ } };
 const lvClock = (ms) => { const d = new Date(ms), s = new Date(LV && LV.start ? LV.start : ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + (ymd(d) !== ymd(s) ? ' (+' + Math.max(1, Math.round((parse(ymd(d)) - parse(ymd(s))) / 86400000)) + ' d)' : ''); };
 const lvHMS = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)); return Math.floor(t / 3600) + ':' + pad(Math.floor(t % 3600 / 60)) + ':' + pad(t % 60); };
@@ -2604,7 +2605,10 @@ function liveHtml() {
   out += '<section class="card col g8"><div class="eyebrow">Registrar algo</div><select class="field" id="lv-evt" aria-label="Tipo de registro"><option value="detencion">Detención (pinchazo, baño, mecánica)</option><option value="botellas">Botellas / hidratación</option><option value="comida">Comida extra</option><option value="sales">Sales / electrolitos</option><option value="sensacion">Sensación</option><option value="otro">Otro</option></select><input class="field" id="lv-evd" type="text" maxlength="80" placeholder="Detalle (opcional)" aria-label="Detalle"><button type="button" class="btn" data-a="lvEv" style="justify-content:center"><span>Registrar</span></button><p class="muted" style="font-size:12px">La detención pausa el cálculo del ritmo. El resto solo queda anotado con la hora.</p></section>';
   out += '<section class="card col g8"><div class="eyebrow">Compartir avance</div><textarea id="lv-msg" rows="2" maxlength="200" placeholder="Mensaje personal (opcional)" aria-label="Mensaje personal">' + esc(LV.msg || '') + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvWa" style="width:auto;padding:0 20px;min-height:48px;justify-content:center">Compartir por WhatsApp</button><button type="button" class="chip" data-a="lvCopy">Copiar mensaje</button></div><p class="muted" style="font-size:12px">El mensaje dice tu km y tu próximo control, no tu ubicación exacta.</p></section>';
   if ((LV.rec || []).length) out += '<details class="card"><summary style="font-weight:600;min-height:44px;display:flex;align-items:center">Eventos registrados (' + LV.rec.length + ')</summary>' + LV.rec.map((e) => '<div class="mrow"><div class="col grow g4"><span style="font-weight:600">' + ({ detencion: 'Detención', botellas: 'Botellas', comida: 'Comida extra', sales: 'Sales', sensacion: 'Sensación', otro: 'Otro' }[e.type] || 'Otro') + ' · ' + lvClock(e.start) + '</span><span class="muted" style="font-size:13px">' + esc(e.detail || '') + (e.type === 'detencion' && e.end ? ' · ' + lvHMS(e.end - e.start) : '') + '</span></div></div>').join('') + '</details>';
-  out += LV.confirmEnd ? '<section class="card col g8"><p class="soft">¿Terminar el evento aquí? Quedará guardado con lo recorrido hasta ahora.</p><div class="row g8 wrap"><button type="button" class="chip" data-a="lvEndYes" style="border-color:var(--warn);font-weight:700">Sí, terminar</button><button type="button" class="chip" data-a="lvEndNo">No, seguir</button></div></section>' : '<button type="button" class="btn ghost" data-a="lvEnd">Terminar el evento aquí</button>';
+  const lvSafe = '<button type="button" class="btn primary" data-a="lvEndNo" style="justify-content:center;min-height:60px"><span>Seguir en el evento</span></button>';
+  out += LV.confirmEnd === 1 ? '<section class="card col g12" role="alertdialog" aria-label="Terminar el evento: paso 1 de 2" style="border:2px solid var(--warn)"><div class="eyebrow">Terminar el evento · paso 1 de 2</div><p style="font-size:17px;font-weight:700;line-height:1.3">¿Quieres dejar de registrar este evento?</p><p class="soft" style="font-size:14px">Si sigues, tendrás que confirmar una vez más.</p>' + lvSafe + '<button type="button" class="chip" data-a="lvEndYes" style="min-height:56px;justify-content:center;border-color:var(--warn);font-weight:700">Quiero terminar el evento</button></section>'
+    : LV.confirmEnd === 2 ? '<section class="card col g12" role="alertdialog" aria-label="Terminar el evento: paso 2 de 2" style="border:2px solid var(--warn)"><div class="eyebrow">Terminar el evento · paso 2 de 2</div><p style="font-size:17px;font-weight:700;line-height:1.3">El evento se cerrará y no podrás retomarlo.</p><p class="soft" style="font-size:14px">Tus controles registrados quedarán guardados.</p>' + lvSafe + '<button type="button" class="chip" data-a="lvEndFinal" style="min-height:56px;justify-content:center;border-color:var(--warn);font-weight:700">Terminar el evento ahora</button></section>'
+    : '<button type="button" class="btn ghost" data-a="lvEnd">Terminar el evento aquí</button>';
   return out + '</div></div>';
 }
 function lvMsg(m) { if (LV) { LV.posMsg = m; LV.gpsBusy = false; lvSave(); render(); } }
@@ -2622,7 +2626,7 @@ Object.assign(ACT, {
     UI.pl = null; UI.liveOpen = true; lvSave(); render(); window.scrollTo(0, 0);
   },
   lvOpen() { UI.liveOpen = true; UI.pl = null; render(); },
-  lvHide() { UI.liveOpen = false; render(); },
+  lvHide() { LV.confirmEnd = 0; UI.liveOpen = false; render(); },
   lvGo() { lvGo(0); },
   lvGoAgo() { const n = Number((document.getElementById('lv-ago') || {}).value); if (!(n >= 0 && n <= 600)) { say('Indica los minutos entre 0 y 600.'); return; } lvGo(n); },
   lvDrop() { LV = null; lvSave(); UI.liveOpen = false; render(); },
@@ -2651,9 +2655,10 @@ Object.assign(ACT, {
   lvUndo() { const lg = LV.log.pop(); if (!lg) return; LV.idx = lg.i; LV.depMs = lg.depMs; LV.depKm = lg.depKm; LV.lastKm = lg.depKm; LV.lastKmAt = lg.depMs; LV.mode = 'ride'; LV.end = null; lvSave(); render(); },
   lvEv() { const t = (document.getElementById('lv-evt') || {}).value || 'otro', d = String((document.getElementById('lv-evd') || {}).value || '').slice(0, 80), now = Date.now(); LV.rec = LV.rec || []; if (t === 'detencion') { if (LV.rec.some((e) => e.type === 'detencion' && !e.end)) { say('Ya hay una detención en curso.'); return; } LV.rec.push({ type: t, detail: d, start: now, end: null }); } else LV.rec.push({ type: t, detail: d, start: now, end: now }); lvSave(); render(); },
   lvEvEnd() { const op = (LV.rec || []).find((e) => e.type === 'detencion' && !e.end); if (op) op.end = Date.now(); lvSave(); render(); },
-  lvEnd() { LV.confirmEnd = true; render(); },
-  lvEndNo() { LV.confirmEnd = false; render(); },
-  lvEndYes() { const now = Date.now(), op = (LV.rec || []).find((e) => e.type === 'detencion' && !e.end); if (op) op.end = now; LV.confirmEnd = false; LV.mode = 'fin'; LV.end = now; lvSave(); render(); window.scrollTo(0, 0); },
+  lvEnd() { LV.confirmEnd = 1; render(); },
+  lvEndNo() { LV.confirmEnd = 0; render(); },
+  lvEndYes() { LV.confirmEnd = 2; render(); },
+  lvEndFinal() { if (LV.confirmEnd !== 2) return; const now = Date.now(), op = (LV.rec || []).find((e) => e.type === 'detencion' && !e.end); if (op) op.end = now; LV.confirmEnd = 0; LV.mode = 'fin'; LV.end = now; lvSave(); render(); window.scrollTo(0, 0); },
   lvWa() { const t = lvShareText(); try { window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank', 'noopener'); } catch (e) { say('No pude abrir WhatsApp. Usa Copiar mensaje.'); } },
   async lvCopy() { const t = lvShareText(); try { await navigator.clipboard.writeText(t); say('Mensaje copiado.', 'ok'); } catch (e) { say('No pude copiar. Mantén presionado este mensaje para copiarlo: ' + t); } },
   async lvSaveEnd() {
