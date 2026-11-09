@@ -564,6 +564,8 @@ function viewCabina() {
   if (isOwner() && ST.pending.filter((p) => p.id !== (ST.user && ST.user.uid)).length) {
     out += '<section class="card col g12" aria-label="Solicitudes nuevas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Solicitudes nuevas</div>' + ST.pending.filter((p) => p.id !== ST.user.uid).map((p) => '<div class="col g10"><div style="font-weight:600">' + esc(p.name) + '</div>' + propBadge(p) + '<div class="row g8 wrap"><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="grnt">Aceptar en GRNT</button><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="zn">Aceptar en ZN</button></div></div>').join('') + '</section>';
   }
+  const rev = list.map((a) => ({ a, n: Object.values((((ST.athBio[a.id] || {}).meas || {}).prop) || {}).filter((x) => x && x.auto).length })).filter((x) => x.n);
+  if (rev.length) out += '<section class="card col g10" aria-label="Datos para revisar" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Datos para revisar · ' + rev.reduce((t, x) => t + x.n, 0) + '</div><p class="soft" style="font-size:14px">La revisión automática encontró medidas distintas en intervals.icu. Aprueba o rechaza cada una en el perfil del atleta.</p><div class="row g8 wrap">' + rev.map((x) => '<button type="button" class="chip" data-a="sel" data-v="' + esc(x.a.id) + '">' + esc(x.a.first) + ' · ' + x.n + '</button>').join('') + '</div></section>';
   out += '<section class="row g10" aria-label="Resumen del equipo">' + [['Al día', cnt.ok, 'var(--good)'], ['Atención', cnt.warn, 'var(--warn)'], ['Sin check-in', cnt.none, 'var(--muted)']].map((x) => '<div class="card tight grow"><div class="num" style="font-size:40px;color:' + x[2] + '">' + x[1] + '</div><div class="soft" style="font-size:13px;margin-top:4px">' + x[0] + '</div></div>').join('') + '</section>';
   out += '<button type="button" class="row between g12" data-a="nextReply" ' + (queue === 0 ? 'disabled' : '') + ' style="width:100%;min-height:52px;text-align:left;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:16px;padding:12px 16px"><span style="font-weight:600">' + (queue === 0 ? 'Todo respondido por hoy' : queue + ' por responder') + '</span><span class="muted" style="font-size:13px">' + (queue === 0 ? 'Cola de respuestas' : 'Ir a responder ›') + '</span></button>';
   if (!list.length) { out += '<section class="card"><p class="soft">Aún no tienes atletas asignados. Cuando alguien entre con Google aparecerá arriba como solicitud nueva.</p></section></div></div>'; return out; }
@@ -1134,8 +1136,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 64;
+const APP_VER = 66;
 const NEWS = [
+  'Tu Perfil ahora muestra tus medidas (edad, estatura, peso, FTP con W/kg, FC máx y LTHR), te deja actualizarlas cuando cambien y guarda el historial de cada cambio.',
   'Hoja de seguridad en cada evento: enlace de seguimiento, contacto responsable, hora límite sin noticias, tramos sin señal y un mensaje listo para WhatsApp.',
   'Nueva pestaña Biblioteca (solo para el coach principal): activa herramientas por atleta, por equipo o por coach de apoyo, con vista por herramienta y por atleta.',
   'En Planificar, la etiqueta de carbohidratos se acortó a "Carbos (g/h)" para que no se descuadre en pantallas angostas.',
@@ -1148,6 +1151,7 @@ const NEWS = [
   'El detalle de la actividad ahora incluye potencia, frecuencia cardíaca y tiempo pedaleado frente a detenido. Las salidas muy cortas ya no se listan y los nombres de Garmin salen en español.',
   'Ahora puedes tocar una actividad para ver su detalle: distancia, tiempo, desnivel y el recorrido dibujado con su perfil de altitud. Solo lo ves tú y tu coach.',
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Revisión automática de tus medidas: cada 15 días comparamos tu peso, FTP y frecuencia cardíaca con tu plataforma de entrenamiento. Si hay cambios, te avisamos en Tus medidas para que los revises.',
   'Nueva tarjeta de últimas actividades: ves lo que hiciste, con nombre, km y carga, y si estaba en tu plan o fue extra. Tu plan se sincroniza solo desde intervals.icu.',
   'Los coaches de apoyo ahora tienen el interruptor Coach/Atleta: pueden ver su propia forma, aptitud y plan como cualquier atleta.',
   'Mensajes entre coaches: el coach principal y cada coach de apoyo pueden escribirse desde Ajustes, con aviso en la campana.',
@@ -1756,9 +1760,12 @@ function pfSuggest() {
   if (!pfHas(m.sport) && pre.sport == null && kinds.length) { const k = lastBikeKind(a); out.push({ id: 'sport', l: 'Disciplina principal: ' + BKINDS[k], patch: { sport: BKINDS[k] } }); }
   if (!pfHas((m.equip || {}).bikes) && pre.bikes == null && kinds.length) { const ls = kinds.map((k) => BKINDS[k]); out.push({ id: 'bikes', l: 'Bicicletas que usas: ' + ls.join(', '), patch: { equip: Object.assign({}, m.equip || {}, { bikes: ls }) } }); }
   if (!pfHas((m.gymp || {}).does) && pre.gym == null && cks.some((c) => (c.activity && c.activity.kind === 'gym') || (c.act2 && c.act2.kind === 'gym'))) out.push({ id: 'gym', l: 'Haces gimnasio', patch: { gymp: Object.assign({}, m.gymp || {}, { does: 'Sí' }) } });
+  const ms0 = bioMeas();
+  if (!pfHas(m.birthDate) && pre.bd == null && ms0.birthDate && ageOf(ms0.birthDate) != null) out.push({ id: 'bd', l: 'Fecha de nacimiento: ' + ms0.birthDate.split('-').reverse().join('/'), patch: { birthDate: ms0.birthDate } });
+  if (!pfHas(m.heightCm) && pre.ht == null && ms0.heightCm) out.push({ id: 'ht', l: 'Estatura: ' + ms0.heightCm + ' cm', patch: { heightCm: ms0.heightCm } });
   return out;
 }
-function pfKnown() { const ms = bioMeas(), m = bioMain() || {}; return PF_MEAS.filter((x) => ms[x[0]] != null && (x[0] !== 'weightKg' || m.showWeight)).map((x) => x[1] + ' ' + ms[x[0]] + ' ' + x[2]); }
+function pfKnown() { const ms = bioMeas(), m = bioMain() || {}; return PF_MEAS.filter((x) => ms[x[0]] != null).map((x) => x[1] + ' ' + ms[x[0]] + ' ' + x[2]); }
 function viewPerfil() {
   const m = bioMain(), secs = PSEC.map((s) => Object.assign({ s }, pfStatus(s, m))), tot = secs.reduce((a, x) => a + x.t, 0), done = secs.reduce((a, x) => a + x.n, 0), pct = tot ? Math.round(done / tot * 100) : 0, full = secs.filter((x) => x.n >= x.t).length, miss = pfMissing(m), sug = pfSuggest(), known = pfKnown();
   const circ = 213.6, chip = { ok: 'background:var(--good-soft);color:var(--good)', part: 'background:var(--surface2);color:var(--text)', none: 'background:var(--accent-soft);color:var(--accent)' };
@@ -1767,6 +1774,7 @@ function viewPerfil() {
     + '<div class="col g6"><div style="font-weight:700;font-size:17px">' + full + ' de ' + PSEC.length + ' secciones</div>'
     + (miss.length ? '<div style="font-size:14px;color:var(--accent);font-weight:600">Para tu plan falta: ' + miss.map((x) => x[1]).join(', ') + '</div>' : '<div class="row g6" style="align-items:center;font-size:14px;color:var(--good);font-weight:600">' + ph('check', 18, 'var(--good)') + 'Mínimo para tu plan: listo</div>')
     + '<div class="muted" style="font-size:13px">Lo demás es opcional y se completa cuando quieras.</div></div></section>';
+  out += measCard();
   const nPre = sug.length + known.length;
   if (nPre) {
     out += '<section class="card col g10" aria-label="Datos que ya conocemos" style="background:var(--accent-soft);border:1.5px solid var(--accent)"><div style="font-size:15px;line-height:1.4"><b>Tu coach y Camino ya conocen ' + nPre + (nPre === 1 ? ' dato' : ' datos') + ' tuyos.</b> Confírmalos con un toque, sin escribir nada.</div><button type="button" class="btn primary" data-a="pfPre" aria-expanded="' + !!UI.pfPre + '" style="align-self:flex-start;min-height:44px;padding:0 18px;width:auto;flex:none"><span>' + (UI.pfPre ? 'Cerrar' : 'Revisar') + '</span></button>';
@@ -1812,7 +1820,7 @@ function bioPanel(a, ro) {
       + (pr && !ro ? '<span class="row g8"><button type="button" class="chip" data-a="bioOk" data-v="' + esc(a.id) + '|' + k + '">Aprobar ' + pr.v + '</button><button type="button" class="chip" data-a="bioNo" data-v="' + esc(a.id) + '|' + k + '">Rechazar</button></span>' : '') + '</div>'
       + (pr && pr.note ? '<span class="muted" style="font-size:13px">“' + esc(pr.note) + '”</span>' : '')
       + (ro ? '' : '<div class="row g8"><input class="field" id="bm-' + k + '" type="number" inputmode="decimal" placeholder="Fijar ' + x[1] + ' (' + x[2] + ')" style="min-height:40px"><button type="button" class="chip" data-a="bioSet" data-v="' + esc(a.id) + '|' + k + '">Guardar</button></div>') + '</div>';
-  }).join('') + '</div></div>';
+  }).join('') + '</div>' + ((ro || !isOwner()) ? '' : '<button type="button" class="chip" data-a="bioImpTgl" data-v="' + esc(a.id) + '" style="align-self:flex-start" aria-expanded="' + (UI.bioImp === a.id) + '">Importar datos (pegar)</button>' + (UI.bioImp === a.id ? bioImportBox(a.id) : '')) + '</div>';
   return out;
 }
 function feedbackHtml() {
@@ -2209,13 +2217,13 @@ const ACT = {
     UI.busy = false; render();
   },
   bioTgl(v) { UI.bioOpen = UI.bioOpen === v ? null : v; render(); },
-  async bioOk(v) { const [id, k] = String(v).split('|'), b = ST.athBio[id] || {}, ms = Object.assign({}, b.meas || {}), pr = Object.assign({}, ms.prop || {}); if (!pr[k] || !ST.user) return; ms[k] = pr[k].v; delete pr[k]; ms.prop = pr; ms.updatedAt = Date.now(); ms.by = ST.user.uid; try { await be.saveMeas(id, ms); say('Medida aprobada', 'ok'); } catch (e) { say(friendly(e)); } },
+  async bioOk(v) { const [id, k] = String(v).split('|'), b = ST.athBio[id] || {}, ms = Object.assign({}, b.meas || {}), pr = Object.assign({}, ms.prop || {}); if (!pr[k] || !ST.user) return; const nv = pr[k].v; delete pr[k]; ms.prop = pr; const nm = measApply(ms, { [k]: nv }, ST.user.uid) || Object.assign(ms, { updatedAt: Date.now(), by: ST.user.uid }); try { await be.saveMeas(id, nm); say('Medida aprobada', 'ok'); } catch (e) { say(friendly(e)); } },
   async bioNo(v) { const [id, k] = String(v).split('|'), b = ST.athBio[id] || {}, ms = Object.assign({}, b.meas || {}), pr = Object.assign({}, ms.prop || {}); if (!pr[k] || !ST.user) return; delete pr[k]; ms.prop = pr; ms.by = ST.user.uid; try { await be.saveMeas(id, ms); say('Propuesta rechazada', 'ok'); } catch (e) { say(friendly(e)); } },
   async bioSet(v) {
     const [id, k] = String(v).split('|'), m = PF_MEAS.find((x) => x[0] === k), el = document.getElementById('bm-' + k); if (!m || !el || !ST.user) return;
     const n = Number(String(el.value).replace(',', '.')); if (!(n >= m[3] && n <= m[4])) { say('Ingresa un valor entre ' + m[3] + ' y ' + m[4] + ' ' + m[2] + '.'); return; }
-    const ms = Object.assign({}, (ST.athBio[id] || {}).meas || {}); ms[k] = Math.round(n * 10) / 10; ms.updatedAt = Date.now(); ms.by = ST.user.uid;
-    try { await be.saveMeas(id, ms); say('Medida guardada', 'ok'); } catch (e) { say(friendly(e)); }
+    const ms = Object.assign({}, (ST.athBio[id] || {}).meas || {}); const nm = measApply(ms, { [k]: Math.round(n * 10) / 10 }, ST.user.uid);
+    try { if (nm) await be.saveMeas(id, nm); say('Medida guardada', 'ok'); } catch (e) { say(friendly(e)); }
   },
   async restOk(v) {
     const c = ST.user ? on(meA(), v) : null; if (!c || c.type !== 'descanso' || v !== off(0) || UI.busy) return;
@@ -2870,6 +2878,78 @@ Object.assign(ACT, {
     if (!isOwner() || UI.busy) return; const [tool, gid] = String(v).split('|'), g = libGroups().find((x) => x.id === gid); if (!g || !LIB_TOOLS.some((t) => t.id === tool)) return; const on = !g.m.every((r) => libOn(r, tool)), nm = (LIB_TOOLS.find((t) => t.id === tool) || {}).name;
     UI.busy = true; render();
     try { for (const r of g.m) { if (libOn(r, tool) !== on) await libWrite(r, tool, on); } UI.busy = false; say(nm + (on ? ' activado' : ' desactivado') + ' para ' + g.label.toLowerCase() + ' (' + g.m.length + ').', 'ok'); } catch (e) { UI.busy = false; say(friendly(e)); }
+  }
+});
+/* ---------- v65: medidas del atleta a la vista, actualizables y con historial ---------- */
+const MEAS_RNG = { weightKg: [30, 200], ftp: [50, 600], fcmax: [120, 230], lthr: [100, 220], heightCm: [120, 230] };
+const MEAS_LOGK = ['weightKg', 'ftp', 'fcmax', 'lthr', 'heightCm'];
+function measApply(old, ch, by) {
+  const ms = Object.assign({}, old || {}), now = Date.now(), log = Array.isArray(ms.log) ? ms.log.slice() : []; let n = 0;
+  Object.keys(ch).forEach((k) => { const v = ch[k]; if (v == null || ms[k] === v) return; if (MEAS_LOGK.indexOf(k) >= 0 && ms[k] != null) log.push({ k, v: ms[k], ts: ms.updatedAt || now }); ms[k] = v; n++; });
+  if (!n) return null; ms.log = log.slice(-80); ms.updatedAt = now; ms.by = by; return ms;
+}
+function measParse(o) {
+  const out = {}, bad = [];
+  Object.keys(o || {}).forEach((k) => {
+    const v = o[k];
+    if (k === 'birthDate') { if (/^\d{4}-\d{2}-\d{2}$/.test(String(v)) && ageOf(String(v)) != null) out.birthDate = String(v); else bad.push(k); }
+    else if (MEAS_RNG[k]) { const x = Math.round(Number(v) * 10) / 10; if (x >= MEAS_RNG[k][0] && x <= MEAS_RNG[k][1]) out[k] = x; else bad.push(k); }
+  });
+  return { out, bad };
+}
+function measPrev(ms, k) { const e = (ms.log || []).filter((x) => x.k === k).sort((a, b) => b.ts - a.ts)[0]; return e ? e : null; }
+function measCard() {
+  const m = bioMain() || {}, ms = bioMeas(), prop = ms.prop || {}, own = isOwner(), q = UI.mq || null;
+  const bd = m.birthDate || ms.birthDate, ht = m.heightCm || ms.heightCm, age = ageOf(bd), kg = Number(ms.weightKg) > 0 ? Number(ms.weightKg) : null;
+  const num = (v) => String(v).replace('.', ',');
+  let out = '<section class="card col g10" aria-label="Tus medidas"><div class="row between g8" style="align-items:baseline"><div class="eyebrow">Tus medidas</div>' + (ms.updatedAt ? '<span class="muted" style="font-size:12px">Actualizado ' + esc(relTime(ms.updatedAt)) + '</span>' : '') + '</div>';
+  out += '<div class="row g12 wrap"><div class="col g4"><span class="num" style="font-size:22px">' + (age != null ? age : '—') + '</span><span class="muted" style="font-size:12px">Edad</span></div><div class="col g4"><span class="num" style="font-size:22px">' + (ht ? ht + ' cm' : '—') + '</span><span class="muted" style="font-size:12px">Estatura</span></div></div>';
+  out += PF_MEAS.map((x) => {
+    const k = x[0], v = ms[k], pr = prop[k], pv = measPrev(ms, k), wkg = k === 'ftp' && v != null && kg ? (v / kg).toFixed(2).replace('.', ',') + ' W/kg' : '';
+    let row = '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row between g10" style="align-items:center"><span class="col g4" style="min-width:0"><span style="font-weight:600;font-size:16px">' + x[1] + ' · ' + (v != null ? num(v) + ' ' + x[2] : 'sin dato') + '</span>' + ((wkg || pv) ? '<span class="muted" style="font-size:13px">' + [wkg, pv ? 'Antes: ' + num(pv.v) + ' ' + x[2] + ' (' + esc(shortDate(ymd(new Date(pv.ts)))) + ')' : ''].filter(Boolean).join(' · ') + '</span>' : '') + '</span><button type="button" class="chip" data-a="measOpen" data-v="' + k + '" aria-expanded="' + (q === k) + '">' + (q === k ? 'Cerrar' : 'Actualizar') + '</button></div>';
+    if (pr && pr.auto) row += own ? '<div class="col g8" style="background:var(--accent-soft);border-radius:12px;padding:10px 12px"><span style="font-size:14px">Detectamos <b>' + num(pr.v) + ' ' + x[2] + '</b> en intervals.icu. ¿Lo aplicamos?</span><div class="row g8"><button type="button" class="chip" data-a="measAutoOk" data-v="' + k + '">Aplicar</button><button type="button" class="chip" data-a="measAutoNo" data-v="' + k + '">Descartar</button></div></div>' : '<span class="muted" style="font-size:13px">Detectamos ' + num(pr.v) + ' ' + x[2] + ' en tu plataforma de entrenamiento. Tu coach lo revisa y lo confirma; revisa que sea correcto.</span>';
+    else if (pr && !own) row += '<span class="muted" style="font-size:13px">Enviaste ' + num(pr.v) + ' ' + x[2] + ' a tu coach: pendiente de aprobación.</span>';
+    if (q === k) row += '<div class="row g8" style="align-items:center"><input class="field" id="mq-' + k + '" type="number" inputmode="decimal" min="' + x[3] + '" max="' + x[4] + '" placeholder="Nuevo valor (' + x[2] + ')" aria-label="Nuevo valor de ' + x[1] + '" style="min-height:44px"><button type="button" class="btn primary" data-a="measUpd" data-v="' + k + '" style="width:auto;padding:0 16px"><span>' + (own ? 'Guardar' : 'Enviar a mi coach') + '</span></button></div>' + (own ? '' : '<input class="field" id="mq-note" type="text" maxlength="120" placeholder="Nota opcional (cómo lo mediste)" aria-label="Nota opcional" style="min-height:44px">');
+    return row + '</div>';
+  }).join('');
+  out += '<p class="muted" style="font-size:12px">' + (own ? 'Tus cambios se guardan al tiro y quedan en el historial.' : 'Tu coach confirma cada cambio. Así tu plan siempre usa datos revisados.') + '</p>' + (own ? '<button type="button" class="chip" data-a="selfImport" style="align-self:flex-start" aria-expanded="' + !!UI.selfImp + '">Cargar mis datos (pegar)</button>' + (UI.selfImp ? bioImportBox(ST.user && ST.user.uid) : '') : '') + '</section>';
+  return out;
+}
+function bioImportBox(id) { return '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><label for="bi-json" class="muted" style="font-size:13px">Pega aquí los datos (formato JSON)</label><textarea id="bi-json" rows="4" placeholder=\'{"heightCm":175,"weightKg":70,"ftp":220}\' style="font-family:monospace;font-size:13px"></textarea><button type="button" class="btn primary" data-a="bioImport" data-v="' + esc(id) + '"><span>Guardar datos</span></button><p class="muted" style="font-size:12px">Acepta birthDate (AAAA-MM-DD), heightCm, weightKg, ftp, fcmax y lthr.</p></div>'; }
+Object.assign(ACT, {
+  measOpen(v) { UI.mq = UI.mq === v ? null : v; render(); const el = document.getElementById('mq-' + v); if (el) el.focus(); },
+  selfImport() { UI.selfImp = !UI.selfImp; render(); },
+  async measUpd(v) {
+    const m = PF_MEAS.find((x) => x[0] === v), el = document.getElementById('mq-' + v), nt = document.getElementById('mq-note'); if (!m || !el || !ST.user) return;
+    const n = Number(String(el.value).replace(',', '.')); if (!(n >= m[3] && n <= m[4])) { say('Ingresa un valor entre ' + m[3] + ' y ' + m[4] + ' ' + m[2] + '.'); return; }
+    const val = Math.round(n * 10) / 10;
+    try {
+      if (isOwner()) { const ms = measApply(bioMeas(), { [v]: val }, ST.user.uid); if (ms) await be.saveMeas(ST.user.uid, ms); UI.mq = null; say(m[1] + ' actualizado.', 'ok'); }
+      else { const prop = Object.assign({}, bioMeas().prop || {}); prop[v] = { v: val, note: nt ? String(nt.value || '').trim().slice(0, 120) : '', ts: Date.now() }; await be.propose(ST.user.uid, prop); UI.mq = null; say('Enviado a tu coach.', 'ok'); }
+    } catch (e) { say(friendly(e)); }
+    render();
+  },
+  async bioImport(v) {
+    if (!isOwner() || !ST.user) return; const el = document.getElementById('bi-json'); if (!el) return; let o; try { o = JSON.parse(el.value); } catch (e) { say('No pude leer el texto. Pega el bloque tal como te lo di, con llaves { }.'); return; }
+    const P = measParse(o), n = Object.keys(P.out).length; if (!n) { say('No encontré datos válidos para guardar.'); return; }
+    if (P.bad.length) { say('Revisa estos datos fuera de rango: ' + P.bad.join(', ') + '.'); return; }
+    const id = v === ST.user.uid ? ST.user.uid : v, cur = id === ST.user.uid ? bioMeas() : ((ST.athBio[id] || {}).meas || {});
+    try {
+      const ms = measApply(cur, P.out, ST.user.uid); if (ms) await be.saveMeas(id, ms);
+      if (id === ST.user.uid) { const mm = bioMain() || {}, patch = {}; if (P.out.birthDate && !mm.birthDate) patch.birthDate = P.out.birthDate; if (P.out.heightCm && !mm.heightCm) patch.heightCm = P.out.heightCm; if (Object.keys(patch).length) await be.saveMainPart(id, Object.assign(patch, { consentTs: mm.consentTs || Date.now(), updatedAt: Date.now() })); }
+      UI.selfImp = false; UI.bioImp = null; say(n + (n === 1 ? ' dato guardado.' : ' datos guardados.'), 'ok');
+    } catch (e) { say(friendly(e)); }
+    render();
+  },
+  bioImpTgl(v) { UI.bioImp = UI.bioImp === v ? null : v; render(); },
+  async measAutoOk(k) {
+    if (!isOwner() || !ST.user) return; const ms = Object.assign({}, bioMeas()), pr = Object.assign({}, ms.prop || {}); if (!pr[k]) return; const nv = pr[k].v; delete pr[k]; ms.prop = pr;
+    const nm = measApply(ms, { [k]: nv }, ST.user.uid) || Object.assign(ms, { updatedAt: Date.now(), by: ST.user.uid });
+    try { await be.saveMeas(ST.user.uid, nm); say('Medida actualizada.', 'ok'); } catch (e) { say(friendly(e)); }
+  },
+  async measAutoNo(k) {
+    if (!isOwner() || !ST.user) return; const ms = Object.assign({}, bioMeas()), pr = Object.assign({}, ms.prop || {}); if (!pr[k]) return; delete pr[k]; ms.prop = pr;
+    try { await be.saveMeas(ST.user.uid, ms); say('Aviso descartado.', 'ok'); } catch (e) { say(friendly(e)); }
   }
 });
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-a]'); if (!t) return; const fn = ACT[t.dataset.a]; if (fn) fn(t.dataset.v, t); });
