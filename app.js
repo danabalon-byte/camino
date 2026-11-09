@@ -1134,8 +1134,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 63;
+const APP_VER = 64;
 const NEWS = [
+  'Hoja de seguridad en cada evento: enlace de seguimiento, contacto responsable, hora límite sin noticias, tramos sin señal y un mensaje listo para WhatsApp.',
   'Nueva pestaña Biblioteca (solo para el coach principal): activa herramientas por atleta, por equipo o por coach de apoyo, con vista por herramienta y por atleta.',
   'En Planificar, la etiqueta de carbohidratos se acortó a "Carbos (g/h)" para que no se descuadre en pantallas angostas.',
   'La nutrición de Planificar se ajusta a ti: usa tu peso y nivel del perfil para sugerir carbohidratos, líquido y sodio por hora, la carga previa por kg y la cafeína.',
@@ -2497,8 +2498,8 @@ function plNutBox(d) {
   return out + '<div id="pl-nutres">' + plNutResHtml(d) + '</div>';
 }
 function plNutSave(d) { const n = plNutFix(d.nut), ks = plTramos(d).map((t) => String(t.to)), seg = {}; ks.forEach((k) => { if (n.seg[k] != null) seg[k] = Number(n.seg[k]); }); n.seg = seg; return n; }
-function plNew() { const nut = PL_NUT0(), S = plSug(200 / 24); if (S) { nut.gph = S.g; nut.mlph = S.ml; nut.naph = S.na; } return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, ctl: [], nut } }; }
-function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop })), nut: plNutFix(e.nut) } }; }
+function plNew() { const nut = PL_NUT0(), S = plSug(200 / 24); if (S) { nut.gph = S.g; nut.mlph = S.ml; nut.naph = S.na; } return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, ctl: [], nut, safe: Object.assign(plSafeFix(null), plSafeProfile()) } }; }
+function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop })), nut: plNutFix(e.nut), safe: plSafeFix(e.safe) } }; }
 function plEvName(e) { return e.name || 'Evento'; }
 function viewPlanificar() {
   if (!plannerOn()) return '<div class="inner"><div class="stack">' + head('Función no disponible', 'Planificar') + '<section class="card"><p class="soft">Esta función no está habilitada en tu cuenta. Si te interesa, pídesela a tu coach.</p></section></div></div>';
@@ -2542,6 +2543,7 @@ function plEditHtml(P) {
   out += '<section class="card col g12" aria-label="Tu ritmo"><div class="eyebrow">Tu ritmo</div><div class="row g8"><div class="col g8 grow">' + lab('pl-speed', 'Velocidad media (km/h)') + '<input class="field" id="pl-speed" data-pl="speed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.speed) + '"></div><div class="col g8 grow">' + lab('pl-stop', 'Parada típica (min)') + '<input class="field" id="pl-stop" data-pl="stop" type="number" inputmode="numeric" min="0" max="600" value="' + esc(d.stop) + '"></div></div><p class="muted" style="font-size:12px">La velocidad es en movimiento, sin contar las paradas.</p></section>';
   out += '<section class="card col g12" aria-label="Nutrición e hidratación"><div class="eyebrow">Nutrición e hidratación</div><div id="pl-nut" class="col g12">' + plNutBox(d) + '</div><p class="muted" style="font-size:12px">Son valores de partida: ajústalos a lo que te funciona y a lo que acuerdes con tu nutricionista. Se calculan sobre el tiempo en movimiento.</p></section>';
   out += '<section class="card col g8" aria-label="Horarios"><div class="eyebrow">' + (brv ? 'Horarios y ventanas de control' : 'Horarios estimados') + '</div><div id="pl-res">' + plResHtml(d) + '</div></section>';
+  out += '<section class="card col g12" aria-label="Hoja de seguridad"><div class="eyebrow">Hoja de seguridad</div><p class="soft" style="font-size:13px">Opcional. Deja a tu gente informada: cómo seguirte, a quién llamar y desde qué hora preocuparse.</p><div id="pl-safe" class="col g12">' + plSafeBox(d) + '</div></section>';
   out += '<button type="button" class="btn primary" data-a="plSave"' + (UI.busy ? ' disabled' : '') + '><span>Guardar evento</span>' + ph('check', 22) + '</button>';
   if (P.id) out += '<button type="button" class="btn" data-a="lvStart" data-v="' + esc(P.id) + '"><span>Iniciar evento<small style="display:block;font-size:13px;font-weight:500;color:var(--muted)">Sigue tu avance en vivo. Usa la versión guardada.</small></span>' + ph('arrow-right', 22) + '</button>';
   else out += '<p class="muted" style="font-size:13px">Guarda el evento para poder iniciarlo en vivo.</p>';
@@ -2551,6 +2553,7 @@ function plEditHtml(P) {
 function plInput(t) {
   const P = UI.pl, k = t.dataset && t.dataset.pl; if (!P || !k) return false; const d = P.d, v = t.value;
   if (k === 'file') return true;
+  if (k === 'sl' || k === 'sn' || k === 'sp' || k === 'su' || k === 'dk') { d.safe = plSafeFix(d.safe); if (k === 'sl') d.safe.link = v.trim(); else if (k === 'sn') d.safe.name = v; else if (k === 'sp') d.safe.phone = v; else if (k === 'su') d.safe.until = v; else { const r = d.safe.dead[+t.dataset.i]; if (r) r[t.dataset.w] = v; } plSafeRefresh(); return true; }
   if (k === 'name') { d.name = v; const h = document.querySelector('h1.title'); if (h) h.textContent = v || 'Evento'; return true; }
   if (k === 'ng' || k === 'nm' || k === 'nn' || k === 'np') { d.nut = plNutFix(d.nut); if (k === 'np') d.nut.prods[t.dataset.k].g = plNum(v, d.nut.prods[t.dataset.k].g, 1, 200); else { const f = { ng: 'gph', nm: 'mlph', nn: 'naph' }[k]; d.nut[f] = plNum(v, d.nut[f], 0, f === 'gph' ? 200 : 2000); } }
   else if (k === 'date' || k === 'start' || k === 'km' || k === 'speed' || k === 'stop') d[k] = v;
@@ -2566,6 +2569,8 @@ function plValid(d) {
   const km = Number(d.km); if (!(km > 0 && km <= 2000)) return 'Indica la distancia del evento.';
   const v = Number(d.speed); if (!(v >= 5 && v <= 60)) return 'La velocidad media debe estar entre 5 y 60 km/h.';
   for (const c of d.ctl || []) { const k = Number(c.km); if (!(k > 0 && k < km)) return 'Cada control debe estar entre 0 y ' + km + ' km.'; if (c.stop !== '' && c.stop != null && !(Number(c.stop) >= 0 && Number(c.stop) <= 600)) return 'Las paradas van de 0 a 600 minutos.'; }
+  const sf = plSafeFix(d.safe); if (sf.link && !/^https:\/\/[^\s]+$/i.test(sf.link)) return 'El enlace de seguimiento debe empezar con https://';
+  for (const r of sf.dead) { if (r.a === '' && r.b === '') continue; if (!(Number(r.a) >= 0 && Number(r.b) > Number(r.a) && Number(r.b) <= km)) return 'Cada tramo sin señal debe ir desde un km menor a uno mayor, dentro de ' + km + ' km.'; }
   return '';
 }
 Object.assign(ACT, {
@@ -2587,7 +2592,7 @@ Object.assign(ACT, {
   async plSave() {
     const P = UI.pl; if (!P || !ST.user || UI.busy) return; const d = P.d, er = plValid(d); if (er) { say(er); return; }
     const ctl = (d.ctl || []).filter((c) => Number(c.km) > 0).map((c) => ({ km: Number(c.km), name: String(c.name || '').slice(0, 40), stop: c.stop === '' || c.stop == null ? null : Number(c.stop) })).sort((a, b) => a.km - b.km);
-    const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), stop: Number(d.stop) || 0, track: d.track || null, ctl, nut: plNutSave(d), updatedAt: Date.now() };
+    const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), stop: Number(d.stop) || 0, track: d.track || null, ctl, nut: plNutSave(d), safe: plSafeSave(d), updatedAt: Date.now() };
     const old = (ST.myEvents || []).find((x) => x.id === P.id); if (old && old.result) data.result = old.result;
     UI.busy = true; render();
     try { await be.saveEvent(ST.user.uid, P.id || ('e' + Date.now().toString(36)), data); UI.pl = null; say('Evento guardado.', 'ok'); } catch (e) { say(friendly(e)); }
@@ -2656,10 +2661,56 @@ function lvShareText() {
 }
 function lvTile(l, v, id) { return '<div class="col g4" style="background:var(--surface);border-radius:16px;padding:12px 14px;min-width:0"><span class="num" style="font-size:22px;line-height:1.05"' + (id ? ' id="' + id + '"' : '') + '>' + v + '</span><span class="muted" style="font-size:12px">' + l + '</span></div>'; }
 function lvStatCard(chip, big, sub, subId, warn) { return '<section class="card col g4" style="text-align:center;align-items:center"><span class="pill" style="' + (warn ? 'border-color:var(--warn);color:var(--text);font-weight:700' : 'border-color:var(--good);color:var(--text);font-weight:700') + '">' + chip + '</span><div class="num" style="font-size:clamp(26px,8vw,36px);line-height:1.1">' + big + '</div><div class="muted" style="font-size:13px"' + (subId ? ' id="' + subId + '"' : '') + '>' + sub + '</div></section>'; }
+/* ---------- v64: Hoja de seguridad del evento ---------- */
+function plSafeFix(x) {
+  x = x && typeof x === 'object' ? x : {};
+  return { link: String(x.link || '').trim().slice(0, 300), name: String(x.name || '').slice(0, 80), phone: String(x.phone || '').slice(0, 30), until: /^\d{2}:\d{2}$/.test(x.until || '') ? x.until : '',
+    dead: (Array.isArray(x.dead) ? x.dead : []).slice(0, 10).map((r) => ({ a: r && r.a != null ? r.a : '', b: r && r.b != null ? r.b : '' })) };
+}
+function plSafeProfile() { const e = (bioMain() || {}).emergency || {}; return { name: e.name || '', phone: e.phone || '' }; }
+function plSafeAutoUntil(d) { const c = plCalc(d); if (!c) return ''; const p = String(d.start || '06:00').split(':'), t = ((+p[0] || 0) * 60 + (+p[1] || 0) + c.finish + 120) % 1440; return pad(Math.floor(t / 60)) + ':' + pad(t % 60); }
+function plSafeText(d) {
+  const s = plSafeFix(d.safe), c = plCalc(d), kmf = (n) => String(Number(n)).replace('.', ',');
+  const dead = s.dead.filter((r) => Number(r.b) > Number(r.a) && Number(r.a) >= 0).map((r) => 'km ' + kmf(r.a) + ' al ' + kmf(r.b));
+  let t = 'Hola, salgo a hacer ' + (d.name || 'mi evento') + ' (' + kmf(d.km) + ' km) el ' + shortDate(d.date) + ' a las ' + d.start + '.';
+  if (c) t += ' Llegada estimada: ' + plClock(d.start, c.finish) + '.';
+  if (s.link) t += ' Puedes seguir mi ubicación aquí: ' + s.link;
+  if (dead.length) t += ' Tramos sin señal celular: ' + dead.join(', ') + '.';
+  if (s.until) t += ' Si no tienes noticias mías después de las ' + s.until + ', intenta llamarme' + (s.name || s.phone ? ' y, si no respondo, avisa a ' + [s.name, s.phone].filter(Boolean).join(' · ') : '') + '.';
+  return t;
+}
+function plSafeBox(d) {
+  const s = plSafeFix(d.safe), lab = (id, t) => '<label for="' + id + '" class="muted" style="font-size:13px">' + t + '</label>', hasProf = !!(plSafeProfile().name || plSafeProfile().phone);
+  let out = '<div class="col g8">' + lab('pl-sl', 'Enlace de seguimiento en vivo (Garmin LiveTrack, Beacon u otro)') + '<input class="field" id="pl-sl" data-pl="sl" type="url" inputmode="url" maxlength="300" placeholder="https://..." value="' + esc(s.link) + '"></div>';
+  out += '<div class="col g8"><span class="eyebrow">Contacto responsable</span><div class="row g8"><div class="col g8 grow">' + lab('pl-sn', 'Nombre') + '<input class="field" id="pl-sn" data-pl="sn" type="text" maxlength="80" value="' + esc(s.name) + '"></div><div class="col g8 grow">' + lab('pl-sp', 'Teléfono') + '<input class="field" id="pl-sp" data-pl="sp" type="tel" inputmode="tel" maxlength="30" value="' + esc(s.phone) + '"></div></div>' + (hasProf ? '<button type="button" class="chip" data-a="plSafeProf" style="align-self:flex-start">Usar el contacto de emergencia de mi perfil</button>' : '') + '</div>';
+  out += '<div class="col g8">' + lab('pl-su', 'Si no hay noticias mías después de las') + '<div class="row g8" style="align-items:center"><input class="field" id="pl-su" data-pl="su" type="time" value="' + esc(s.until) + '" style="max-width:160px"><button type="button" class="chip" data-a="plSafeAuto">Llegada estimada + 2 h</button></div></div>';
+  out += '<div class="col g8"><span class="eyebrow">Tramos sin señal celular</span>' + s.dead.map((r, i) => '<div class="row g8" style="align-items:flex-end"><div class="col g4 grow">' + lab('pl-da' + i, 'Desde el km') + '<input class="field" id="pl-da' + i + '" data-pl="dk" data-w="a" data-i="' + i + '" type="number" inputmode="decimal" min="0" value="' + esc(r.a) + '"></div><div class="col g4 grow">' + lab('pl-db' + i, 'Hasta el km') + '<input class="field" id="pl-db' + i + '" data-pl="dk" data-w="b" data-i="' + i + '" type="number" inputmode="decimal" min="0" value="' + esc(r.b) + '"></div><button type="button" class="chip" data-a="plDeadDel" data-v="' + i + '" aria-label="Quitar tramo ' + (i + 1) + '">Quitar</button></div>').join('') + (s.dead.length < 10 ? '<button type="button" class="chip" data-a="plDeadAdd" style="align-self:flex-start">Agregar tramo sin señal</button>' : '') + '</div>';
+  out += '<div class="col g8"><span class="eyebrow">Mensaje para tu grupo</span><p class="soft" id="pl-safemsg" style="font-size:14px;background:var(--surface2);border-radius:14px;padding:12px 14px">' + esc(plSafeText(d)) + '</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="plSafeWa" style="width:auto;padding:0 18px"><span>Compartir por WhatsApp</span></button><button type="button" class="btn" data-a="plSafeCopy" style="width:auto;padding:0 18px"><span>Copiar mensaje</span></button></div></div>';
+  out += '<div class="info" role="note" style="border-color:var(--warn)">' + infoIcon() + '<span>Quien reciba el enlace verá dónde estás mientras dure el seguimiento. Compártelo solo con personas de confianza y desactívalo al terminar.</span></div>';
+  return out;
+}
+function plSafeSave(d) { const s = plSafeFix(d.safe); s.dead = s.dead.filter((r) => r.a !== '' && r.b !== '' && Number(r.b) > Number(r.a)).map((r) => ({ a: Number(r.a), b: Number(r.b) })); return s; }
+async function safeShare(d, how) {
+  const t = plSafeText(d);
+  if (how === 'wa') { window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank', 'noopener'); return; }
+  try { await navigator.clipboard.writeText(t); say('Mensaje copiado.', 'ok'); } catch (e) { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); let okc = false; try { okc = document.execCommand('copy'); } catch (e2) { /* sin portapapeles */ } ta.remove(); say(okc ? 'Mensaje copiado.' : 'No pude copiar. Mantén presionado el texto para copiarlo.', okc ? 'ok' : 'err'); }
+}
+function plSafeRefresh() { const m = document.getElementById('pl-safemsg'); if (m && UI.pl) m.textContent = plSafeText(UI.pl.d); }
+Object.assign(ACT, {
+  plSafeProf() { const d = UI.pl.d, p = plSafeProfile(); d.safe = plSafeFix(d.safe); d.safe.name = p.name; d.safe.phone = p.phone; document.getElementById('pl-safe').innerHTML = plSafeBox(d); },
+  plSafeAuto() { const d = UI.pl.d, u = plSafeAutoUntil(d); if (!u) { say('Indica primero la distancia y tu velocidad media.'); return; } d.safe = plSafeFix(d.safe); d.safe.until = u; document.getElementById('pl-safe').innerHTML = plSafeBox(d); },
+  plDeadAdd() { const d = UI.pl.d; d.safe = plSafeFix(d.safe); if (d.safe.dead.length < 10) d.safe.dead.push({ a: '', b: '' }); document.getElementById('pl-safe').innerHTML = plSafeBox(d); },
+  plDeadDel(v) { const d = UI.pl.d; d.safe = plSafeFix(d.safe); d.safe.dead.splice(+v, 1); document.getElementById('pl-safe').innerHTML = plSafeBox(d); },
+  plSafeWa() { safeShare(UI.pl.d, 'wa'); },
+  plSafeCopy() { safeShare(UI.pl.d, 'copy'); },
+  lvSafeWa() { if (LV) safeShare(plFromEv(LV.ev).d, 'wa'); },
+  lvSafeCopy() { if (LV) safeShare(plFromEv(LV.ev).d, 'copy'); }
+});
 function liveHtml() {
   const ev = LV.ev; let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4" style="min-width:0"><div class="muted" style="font-size:14px">' + (LV.mode === 'fin' ? 'Evento terminado' : 'Evento en curso') + '</div><h1 class="title">' + esc(ev.name) + '</h1></div><button type="button" class="chip" data-a="lvHide">Salir</button></div>' + msgBanner();
   if (LV.mode === 'pre') {
     out += '<section class="card col g12"><div class="eyebrow">Antes de salir</div><p class="soft">Salida programada: <b>' + esc(ev.start) + '</b>. Toca el botón en el momento exacto de la salida: desde ahí corre el cronómetro y se calculan los horarios.</p><button type="button" class="btn primary" data-a="lvGo"><span>Confirmar salida ahora</span>' + ph('arrow-right', 22) + '</button><div class="col g8"><label for="lv-ago" class="muted" style="font-size:13px">¿Ya saliste? Indica hace cuántos minutos</label><div class="row g8"><input class="field" id="lv-ago" type="number" inputmode="numeric" min="0" max="600" placeholder="Ejemplo: 20"><button type="button" class="chip" data-a="lvGoAgo">Aplicar</button></div></div></section><button type="button" class="btn ghost" data-a="lvDrop">Cancelar, no voy a salir</button>';
+    { const sf = plSafeFix(ev.safe); if (sf.link || sf.name || sf.phone || sf.until) out += '<section class="card col g8" aria-label="Hoja de seguridad"><div class="eyebrow">Hoja de seguridad</div><p class="soft" style="font-size:14px">' + esc(plSafeText(plFromEv(ev).d)) + '</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvSafeWa" style="width:auto;padding:0 18px"><span>Compartir por WhatsApp</span></button><button type="button" class="btn" data-a="lvSafeCopy" style="width:auto;padding:0 18px"><span>Copiar mensaje</span></button></div></section>'; }
     return out + '</div></div>';
   }
   if (LV.mode === 'fin') {
@@ -2712,7 +2763,7 @@ Object.assign(ACT, {
     if (LV && LV.ev.id !== v) { say('Ya tienes un evento en curso. Termínalo o ciérralo antes de iniciar otro.'); return; }
     if (LV) { UI.liveOpen = true; render(); return; }
     const e = (ST.myEvents || []).find((x) => x.id === v); if (!e) return; const d = plFromEv(e).d; if (!plCalc(d)) { say('Completa la distancia y tu velocidad media para iniciar.'); return; }
-    LV = { ev: { id: e.id, name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null }, mode: 'pre', start: null, idx: 0, depMs: null, depKm: 0, lastKm: 0, lastKmAt: null, log: [], rec: [], msg: '', posMsg: '' };
+    LV = { ev: { id: e.id, name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null, safe: e.safe || null }, mode: 'pre', start: null, idx: 0, depMs: null, depKm: 0, lastKm: 0, lastKmAt: null, log: [], rec: [], msg: '', posMsg: '' };
     UI.pl = null; UI.liveOpen = true; lvSave(); render(); window.scrollTo(0, 0);
   },
   lvOpen() { UI.liveOpen = true; UI.pl = null; render(); },
@@ -2754,7 +2805,7 @@ Object.assign(ACT, {
   async lvSaveEnd() {
     const e = (ST.myEvents || []).find((x) => x.id === LV.ev.id); if (!e || !ST.user) { LV = null; lvSave(); UI.liveOpen = false; render(); return; }
     const last = LV.log[LV.log.length - 1], res = { start: LV.start, end: LV.end, done: !!(last && last.meta), controls: LV.log.map((x) => ({ n: x.name, km: x.km, arr: Math.round((x.arr - LV.start) / 60000), delay: Math.round(x.delay) })), stops: (LV.rec || []).filter((x) => x.type === 'detencion').length };
-    const data = { name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop || 0, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null, result: res, updatedAt: Date.now() };
+    const data = { name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop || 0, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null, safe: e.safe || null, result: res, updatedAt: Date.now() };
     UI.busy = true; try { await be.saveEvent(ST.user.uid, e.id, data); LV = null; lvSave(); UI.liveOpen = false; say('Resultado guardado en el evento.', 'ok'); } catch (er) { say(friendly(er)); } UI.busy = false; render();
   }
 });
