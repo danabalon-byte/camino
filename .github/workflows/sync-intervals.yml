@@ -41,6 +41,42 @@ jobs:
           const newest = ymd(now), oldest = ymd(new Date(now.getTime() - DAYS * 86400 * 1000));
           const get = async (url) => { const r = await fetch(url, { headers: { Authorization: auth } }); if (!r.ok) throw new Error('intervals.icu respondió ' + r.status); return r.json(); };
 
+          // ---- Rutas: simplificación (Ramer-Douglas-Peucker) y codificación polyline (precisión 1e5). ----
+          const encNum = (v) => { v = v < 0 ? ~(v << 1) : v << 1; let s = ''; while (v >= 0x20) { s += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; } return s + String.fromCharCode(v + 63); };
+          const encPoly = (pts) => { let a = 0, o = 0, s = ''; for (const [la, lo] of pts) { const x = Math.round(la * 1e5), y = Math.round(lo * 1e5); s += encNum(x - a) + encNum(y - o); a = x; o = y; } return s; };
+          const rdp = (P, eps) => {
+            const keep = new Uint8Array(P.length); keep[0] = keep[P.length - 1] = 1; const st = [[0, P.length - 1]];
+            const k = Math.cos(P[0][0] * Math.PI / 180) * 111320, kk = 110540;
+            while (st.length) {
+              const [s, e] = st.pop(); let m = -1, id = -1;
+              const ax = P[s][1] * k, ay = P[s][0] * kk, bx = P[e][1] * k, by = P[e][0] * kk, dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+              for (let j = s + 1; j < e; j++) {
+                const px = P[j][1] * k, py = P[j][0] * kk; let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0; t = Math.max(0, Math.min(1, t));
+                const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy)); if (d > m) { m = d; id = j; }
+              }
+              if (m > eps && id > 0) { keep[id] = 1; st.push([s, id], [id, e]); }
+            }
+            const out = []; for (let j = 0; j < P.length; j++) if (keep[j]) out.push(j); return out;
+          };
+          // Interpreta la respuesta de /streams.json y devuelve el documento de ruta, o null si la salida no tiene GPS.
+          const buildRoute = (st, d) => {
+            if (!Array.isArray(st)) return null; const by = {}; for (const s of st) if (s && s.type) by[s.type] = s;
+            const ll = by.latlng; if (!ll || !Array.isArray(ll.data)) return null;
+            let P = []; if (Array.isArray(ll.data2)) { for (let j = 0; j < ll.data.length; j++) P.push([ll.data[j], ll.data2[j]]); } else P = ll.data.map((q) => (Array.isArray(q) ? [q[0], q[1]] : null));
+            const alt = by.altitude && Array.isArray(by.altitude.data) ? by.altitude.data : [], dist = by.distance && Array.isArray(by.distance.data) ? by.distance.data : [];
+            const ix = []; P.forEach((q, j) => { if (q && isFinite(q[0]) && isFinite(q[1]) && Math.abs(q[0]) <= 90 && Math.abs(q[1]) <= 180 && !(q[0] === 0 && q[1] === 0)) ix.push(j); });
+            if (ix.length < 20) return null;
+            const V = ix.map((j) => P[j]); let eps = 8, keep = rdp(V, eps); while (keep.length > 400 && eps < 200) { eps *= 1.5; keep = rdp(V, eps); }
+            const pts = keep.map((j) => V[j]), alts = keep.map((j) => { const a = alt[ix[j]]; return typeof a === 'number' ? Math.round(a) : null; });
+            let gain = 0, ref = null, mx = -1e9, mn = 1e9; for (const j of ix) { const a = alt[j]; if (typeof a !== 'number') continue; if (ref == null) ref = a; else if (a - ref >= 3) { gain += a - ref; ref = a; } else if (ref - a >= 3) ref = a; if (a > mx) mx = a; if (a < mn) mn = a; }
+            const lastD = dist.length ? dist[dist.length - 1] : 0;
+            const out = { d, p: encPoly(pts), n: pts.length, updatedAt: Date.now() };
+            if (alts.every((a) => a != null)) out.a = alts;
+            if (lastD > 0) out.km = Math.round(lastD / 100) / 10;
+            if (mx > -1e9) { out.max = Math.round(mx); out.min = Math.round(mn); out.gain = Math.round(gain); }
+            return out;
+          };
+
           const planFrom = ymd(new Date(now.getTime() - 56 * 86400 * 1000)), planTo = ymd(new Date(now.getTime() + 42 * 86400 * 1000));
           // Convierte los entrenamientos planificados de intervals.icu en sesiones de Camino (una por dia).
           const toSessions = (evs) => {
@@ -69,6 +105,7 @@ jobs:
               const sessions = toSessions(evs), planDates = new Set(Object.keys(sessions || {}));
               const recent = acts.filter((x) => /^\d{4}-\d{2}-\d{2}/.test(String(x.start_date_local || ''))).sort((p, q) => (String(p.start_date_local) < String(q.start_date_local) ? 1 : -1)).slice(0, 25).map((x) => {
                 const d = String(x.start_date_local).slice(0, 10), r = { d, n: String(x.name || 'Actividad').trim().slice(0, 60) || 'Actividad', p: planDates.has(d) || !!x.paired_event_id };
+                if (x.id != null && /^[A-Za-z0-9_.-]{1,40}$/.test(String(x.id))) r.id = String(x.id);
                 if (x.type) r.t = String(x.type).slice(0, 24);
                 if (typeof x.distance === 'number' && x.distance > 0) r.km = Math.round(x.distance / 100) / 10;
                 if (typeof x.moving_time === 'number' && x.moving_time > 0) r.min = Math.round(x.moving_time / 60);
@@ -79,8 +116,22 @@ jobs:
               if (DRY) { console.log('Atleta ' + i + ' (simulación): ' + days.length + ' días, ' + actDates.length + ' salidas'); ok++; continue; }
               const snap = await db.collection('users').where('email', '==', email.trim().toLowerCase()).limit(1).get();
               if (snap.empty) { skipped++; console.log('Atleta ' + i + ': aún no ha entrado a Camino, se omite'); continue; }
-              await db.doc('users/' + snap.docs[0].id + '/history/current').set({ days, acts: actDates, recent, updatedAt: Date.now() });
               const uid = snap.docs[0].id;
+              // Recorridos: para las salidas recientes con GPS se guarda una ruta simplificada (users/{uid}/routes/{id}); solo la leen el atleta y su coach.
+              let rOk = 0, rNo = 0, rErr = 0;
+              for (const r of recent.slice(0, 8)) {
+                if (!r.id || !(r.km >= 2)) continue;
+                try {
+                  const ref = db.doc('users/' + uid + '/routes/' + r.id);
+                  if ((await ref.get()).exists) { r.r = true; continue; }
+                  const st = await get('https://intervals.icu/api/v1/activity/' + r.id + '/streams.json?types=latlng,altitude,distance');
+                  const doc = buildRoute(st, r.d);
+                  if (!doc) { rNo++; continue; }
+                  await ref.set(doc); r.r = true; rOk++;
+                } catch (e) { rErr++; }
+              }
+              if (rOk || rNo || rErr) console.log('Atleta ' + i + ': rutas guardadas ' + rOk + ', sin GPS ' + rNo + ', con error ' + rErr);
+              await db.doc('users/' + uid + '/history/current').set({ days, acts: actDates, recent, updatedAt: Date.now() });
               if (sessions && Object.keys(sessions).length) {
                 const pref = db.doc('users/' + uid + '/plan/current');
                 try { await pref.update({ sessions, updatedAt: Date.now() }); } catch (e) { await pref.set({ sessions, updatedAt: Date.now() }, { merge: true }); }
