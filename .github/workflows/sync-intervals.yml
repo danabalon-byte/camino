@@ -110,6 +110,11 @@ jobs:
                 if (typeof x.distance === 'number' && x.distance > 0) r.km = Math.round(x.distance / 100) / 10;
                 if (typeof x.moving_time === 'number' && x.moving_time > 0) r.min = Math.round(x.moving_time / 60);
                 if (typeof x.icu_training_load === 'number') r.l = Math.round(x.icu_training_load);
+                const pw = x.icu_average_watts != null ? x.icu_average_watts : x.average_watts, npw = x.icu_weighted_avg_watts != null ? x.icu_weighted_avg_watts : x.weighted_average_watts;
+                if (typeof pw === 'number' && pw > 0) r.w = Math.round(pw);
+                if (typeof npw === 'number' && npw > 0) r.np = Math.round(npw);
+                if (typeof x.average_heartrate === 'number' && x.average_heartrate > 0) r.hr = Math.round(x.average_heartrate);
+                if (typeof x.max_heartrate === 'number' && x.max_heartrate > 0) r.hrx = Math.round(x.max_heartrate);
                 return r;
               });
               if (!days.length) { skipped++; console.log('Atleta ' + i + ': sin datos de forma, se omite'); continue; }
