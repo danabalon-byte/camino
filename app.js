@@ -57,6 +57,7 @@ const PH = {
   'lightning': ['<path d="M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.66-73.33a8,8,0,0,0-13.69-7l-112,120a8,8,0,0,0,3,13l57.63,21.61L88.16,238.43a8,8,0,0,0,13.69,7l112-120A8,8,0,0,0,215.79,118.17ZM109.37,214l10.47-52.38a8,8,0,0,0-5-9.06L62,132.71l84.62-90.66L136.16,94.43a8,8,0,0,0,5,9.06l52.8,19.8Z"/>', '<path d="M213.85,125.46l-112,120a8,8,0,0,1-13.69-7l14.66-73.33L45.19,143.49a8,8,0,0,1-3-13l112-120a8,8,0,0,1,13.69,7L153.18,90.9l57.63,21.61a8,8,0,0,1,3,12.95Z"/>'],
   'bell': ['<path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"/>', '<path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216Z"/>'],
   'pencil-simple': ['<path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/>', '<path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM192,108.68,147.31,64l24-24L216,84.68Z"/>'],
+  'library': ['<path d="M40 48v160 M88 48v160 M136 64l40-12 36 148-40 12z" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>', '<path d="M40 48v160 M88 48v160 M136 64l40-12 36 148-40 12z" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>'],
   'flag': ['<path d="M48,216V48 M48,48H208l-28,44,28,44H48" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>', '<path d="M40,40a8,8,0,0,1,8,8v8H208a8,8,0,0,1,6.9,12.1L187.9,92l27,39.9A8,8,0,0,1,208,144H56v72a8,8,0,0,1-16,0V48A8,8,0,0,1,40,40Z"/>'],
   'arrows-out': ['<path d="M216,48V96a8,8,0,0,1-16,0V67.31l-42.34,42.35a8,8,0,0,1-11.32-11.32L188.69,56H160a8,8,0,0,1,0-16h48A8,8,0,0,1,216,48ZM98.34,146.34,56,188.69V160a8,8,0,0,0-16,0v48a8,8,0,0,0,8,8H96a8,8,0,0,0,0-16H67.31l42.35-42.34a8,8,0,0,0-11.32-11.32ZM208,152a8,8,0,0,0-8,8v28.69l-42.34-42.35a8,8,0,0,0-11.32,11.32L188.69,200H160a8,8,0,0,0,0,16h48a8,8,0,0,0,8-8V160A8,8,0,0,0,208,152ZM67.31,56H96a8,8,0,0,0,0-16H48a8,8,0,0,0-8,8V96a8,8,0,0,0,16,0V67.31l42.34,42.35a8,8,0,0,0,11.32-11.32Z"/>', '<path d="M109.66,146.34a8,8,0,0,1,0,11.32L83.31,184l18.35,18.34A8,8,0,0,1,96,216H48a8,8,0,0,1-8-8V160a8,8,0,0,1,13.66-5.66L72,172.69l26.34-26.35A8,8,0,0,1,109.66,146.34ZM83.31,72l18.35-18.34A8,8,0,0,0,96,40H48a8,8,0,0,0-8,8V96a8,8,0,0,0,13.66,5.66L72,83.31l26.34,26.35a8,8,0,0,0,11.32-11.32ZM208,40H160a8,8,0,0,0-5.66,13.66L172.69,72,146.34,98.34a8,8,0,0,0,11.32,11.32L184,83.31l18.34,18.35A8,8,0,0,0,216,96V48A8,8,0,0,0,208,40Zm3.06,112.61a8,8,0,0,0-8.72,1.73L184,172.69l-26.34-26.35a8,8,0,0,0-11.32,11.32L172.69,184l-18.35,18.34A8,8,0,0,0,160,216h48a8,8,0,0,0,8-8V160A8,8,0,0,0,211.06,152.61Z"/>'],
   'caret-right': ['<path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/>', '<path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/>'],
@@ -304,15 +305,15 @@ function plainOpts(g, arr, sel, label, cols, valFn, neu, act, isOn) {
 }
 const chips = (g, arr, sel, label, valFn) => plainOpts(g, arr, sel, label, autoCols(arr), valFn, GREENG.indexOf(g) < 0);
 const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCols(arr), (i, l) => l, true, 'multi', (l, v) => (sel || []).indexOf(l) >= 0);
-const NAVIC = { planificar: 'flag', perfil: 'user', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
-const TABLBL = { guia: 'Guía', planificar: 'Planificar' };
+const NAVIC = { biblioteca: 'library', planificar: 'flag', perfil: 'user', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
+const TABLBL = { biblioteca: 'Biblioteca', guia: 'Guía', planificar: 'Planificar' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
 const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
 const ATABS = ['hoy', 'datos', 'ruta', 'perfil', 'ajustes', 'guia'], ATABS_P = ['hoy', 'datos', 'ruta', 'planificar', 'perfil', 'ajustes', 'guia'];
 /* Planificar y modo en vivo: solo el coach principal y los atletas a quienes él lo habilita (users/{id}.features.planificar). */
 const plannerOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.profile.features && ST.profile.features.planificar === true)));
 const atabs = () => (plannerOn() ? ATABS_P : ATABS);
-const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : atabs()) : atabs());
+const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : (isOwner() ? ['cabina', 'biblioteca', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia'])) : atabs()) : atabs());
 /* La Guía de los atletas vive dentro de Ajustes (hide): sigue siendo una ruta válida, pero no ocupa lugar en la barra. */
 const tabs = () => { const ids = tabsIds(), ath = ids === ATABS || ids === ATABS_P; return ids.map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id], hide: ath && id === 'guia' })); };
 const navHtml = () => '<div class="inner">' + tabs().filter((t) => !t.hide).map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id || (t.id === 'ajustes' && UI.view === 'guia' && tabs().some((x) => x.hide)) ? ' aria-current="page"' : '') + '>' + ph(t.ic, 26, 'currentColor', UI.view === t.id) + '<span>' + t.label + '</span></a>').join('') + '</div>';
@@ -1068,7 +1069,7 @@ function manageCard(a) {
     if (np) lines2.push(np + (np === 1 ? ' propuesta' : ' propuestas') + ' por revisar');
     out += mrow(np ? 'var(--accent)' : (b.main ? 'var(--good)' : 'var(--muted)'), 'Perfil y medidas', lines2, '<button type="button" class="chip" data-a="bioTgl" data-v="' + esc(a.id) + '">' + (UI.bioOpen === a.id ? 'Cerrar' : (np ? 'Revisar' : 'Ver')) + '</button>') + (UI.bioOpen === a.id ? bioPanel(a) : ''); }
   // vista del atleta
-  if (isOwner()) { const on = !!(a.features && a.features.planificar === true); out += mrow(on ? 'var(--good)' : 'var(--muted)', 'Planificar y modo en vivo', ['Pestaña para planificar eventos y seguirlos en vivo', on ? 'Habilitado para ' + esc(a.first) : 'No habilitado'], '<button type="button" class="chip" role="switch" aria-checked="' + on + '" aria-pressed="' + on + '" aria-label="Habilitar Planificar para ' + esc(a.first) + '" data-a="featToggle" data-v="' + esc(a.id) + '"' + (UI.busy ? ' disabled' : '') + '>' + (on ? 'Activado' : 'Desactivado') + '</button>'); }
+  if (isOwner()) { const nOn = LIB_TOOLS.filter((t) => libOn(a, t.id)).length; out += mrow(nOn ? 'var(--good)' : 'var(--muted)', 'Herramientas', [nOn ? nOn + (nOn === 1 ? ' herramienta activa' : ' herramientas activas') : 'Sin herramientas extra', 'Se gestionan en Biblioteca'], '<button type="button" class="chip" data-a="libAth" data-v="' + esc(a.id) + '">Abrir</button>'); }
   out += mrow('var(--accent2)', 'Ver la app como ' + esc(a.first), ['Solo lectura: Hoy, Datos y Ruta tal como los ve'], '<button type="button" class="chip" data-a="verComo" data-v="' + esc(a.id) + '">Abrir</button>');
   if (isOwner()) out += mrow('var(--muted)', 'Historial de Tally', ['Trae sus check-ins anteriores a la app', 'No pisa los días que ya tiene'], '<button type="button" class="chip" data-a="importTally" data-v="' + esc(a.id) + '"' + (UI.busy ? ' disabled' : '') + '>Importar</button>');
   return out + '</section>';
@@ -1133,8 +1134,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 62;
+const APP_VER = 63;
 const NEWS = [
+  'Nueva pestaña Biblioteca (solo para el coach principal): activa herramientas por atleta, por equipo o por coach de apoyo, con vista por herramienta y por atleta.',
   'En Planificar, la etiqueta de carbohidratos se acortó a "Carbos (g/h)" para que no se descuadre en pantallas angostas.',
   'La nutrición de Planificar se ajusta a ti: usa tu peso y nivel del perfil para sugerir carbohidratos, líquido y sodio por hora, la carga previa por kg y la cafeína.',
   'Planificar suma nutrición e hidratación: elige si planificas los carbohidratos por hora, por tramo o por producto, y el modo en vivo te recuerda lo que toca en cada tramo.',
@@ -1877,7 +1879,7 @@ function storyHtml() {
 /* ---------- Render ---------- */
 function applyPrefs() { const r = document.documentElement; if (PREF.calm) r.setAttribute('data-calm', ''); else r.removeAttribute('data-calm'); }
 function applyTone() { const r = document.documentElement; if (PREF.tone === 'auto') r.removeAttribute('data-tone'); else r.setAttribute('data-tone', PREF.tone); }
-const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, planificar: viewPlanificar, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
+const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, planificar: viewPlanificar, biblioteca: viewBiblioteca, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
 /* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
@@ -1914,7 +1916,7 @@ function render() {
   tourMaybeOpen();
   story.innerHTML = UI.tour != null ? tourHtml() : ((UI.asId && isCoach() && UI.story != null) ? (asRun(storyHtml) || '') : storyHtml());
 }
-function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes') UI.asId = null; render(); }
+function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes' || h === 'biblioteca') UI.asId = null; render(); }
 let msgTimer = null;
 function say(msg, kind) { UI.msg = msg; UI.msgKind = kind || 'err'; clearTimeout(msgTimer); if (msg) msgTimer = setTimeout(() => { UI.msg = ''; render(); }, (kind || 'err') === 'ok' ? 6000 : 10000); render(); }
 const friendly = (e) => {
@@ -2768,6 +2770,57 @@ setInterval(() => {
 document.addEventListener('input', (e) => { if (LV && e.target && e.target.id === 'lv-msg') { LV.msg = e.target.value; lvSave(); } });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && LV && UI.liveOpen && LV.mode !== 'pre' && LV.mode !== 'fin') { lvWake(); render(); } });
 
+/* ---------- v63: Biblioteca (solo coach principal): qué herramientas ve cada atleta, equipo o coach de apoyo ---------- */
+const LIB_TOOLS = [{ id: 'planificar', name: 'Planificar y modo en vivo', sub: 'Planificar eventos, horarios de controles, nutrición y seguimiento en vivo' }];
+const libOn = (r, t) => !!(r && r.features && r.features[t] === true);
+const libRecips = () => ST.athletes.filter((r) => (r.role === 'athlete' && r.pending !== true) || r.role === 'viewer').sort((a, b) => String(a.name).localeCompare(String(b.name), 'es'));
+function libGroups() {
+  const R = libRecips(), g = [];
+  Object.keys(TEAMS).forEach((k) => { const m = R.filter((r) => r.role === 'athlete' && r.team === k); if (m.length) g.push({ id: k, label: 'Equipo ' + TEAMS[k], m }); });
+  const sin = R.filter((r) => r.role === 'athlete' && !TEAMS[r.team]); if (sin.length) g.push({ id: 'x', label: 'Sin equipo', m: sin });
+  const v = R.filter((r) => r.role === 'viewer'); if (v.length) g.push({ id: 'v', label: 'Coaches de apoyo', m: v });
+  return g;
+}
+function viewBiblioteca() {
+  if (!isOwner()) return '<div class="inner"><div class="stack">' + head('Herramientas', 'Biblioteca') + '<p class="soft">Esta sección es solo del coach principal.</p></div></div>';
+  const L = UI.lib || (UI.lib = { mode: 'tool', open: null }), R = libRecips();
+  let out = '<div class="inner"><div class="stack">' + head('Herramientas para tu gente', 'Biblioteca')
+    + '<p class="soft" style="font-size:15px">Aquí decides quién ve cada herramienta: un atleta, un equipo completo o un coach de apoyo. Solo tú ves esta pestaña.</p>'
+    + '<div class="seggroup" role="group" aria-label="Cómo ver la Biblioteca">' + [['tool', 'Por herramienta'], ['ath', 'Por atleta']].map((m) => '<button type="button" data-a="libMode" data-v="' + m[0] + '" aria-pressed="' + (L.mode === m[0]) + '">' + m[1] + '</button>').join('') + '</div>';
+  if (!R.length) out += '<section class="card"><p class="soft">Aún no tienes atletas ni coaches de apoyo asignados.</p></section>';
+  else if (L.mode === 'tool') {
+    out += LIB_TOOLS.map((t) => {
+      const n = R.filter((r) => libOn(r, t.id)).length;
+      return '<section class="card col g12" aria-label="' + esc(t.name) + '"><div class="row between g8" style="align-items:baseline"><h2 class="h2">' + esc(t.name) + '</h2><span class="muted" style="font-size:14px">' + n + ' de ' + R.length + '</span></div><p class="soft" style="font-size:14px">' + esc(t.sub) + '</p>'
+        + libGroups().map((g) => { const all = g.m.every((r) => libOn(r, t.id));
+          return '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row between g8" style="align-items:center"><span class="eyebrow">' + esc(g.label) + '</span><button type="button" class="chip" data-a="libGroup" data-v="' + t.id + '|' + g.id + '" aria-pressed="' + all + '"' + (UI.busy ? ' disabled' : '') + '>' + (all ? 'Quitar a todos' : 'Activar a todos') + '</button></div><div class="chips" role="group" aria-label="' + esc(g.label) + '">' + g.m.map((r) => '<button type="button" class="chip" data-a="libSet" data-v="' + esc(r.id) + '|' + t.id + '" aria-pressed="' + libOn(r, t.id) + '"' + (UI.busy ? ' disabled' : '') + '>' + esc(firstName(r.name)) + '</button>').join('') + '</div></div>'; }).join('')
+        + '</section>';
+    }).join('');
+  } else {
+    out += libGroups().map((g) => '<section class="card col g8" aria-label="' + esc(g.label) + '"><div class="eyebrow">' + esc(g.label) + '</div>' + g.m.map((r) => {
+      const nOn = LIB_TOOLS.filter((t) => libOn(r, t.id)).length, op = L.open === r.id;
+      return '<div class="col g8" style="border-top:1px solid var(--line);padding-top:8px"><button type="button" class="row between g12" data-a="libOpen" data-v="' + esc(r.id) + '" aria-expanded="' + op + '" style="width:100%;min-height:52px;text-align:left;background:none;border:0;color:inherit;font:inherit;align-items:center"><span class="col grow g4"><span style="font-weight:600;font-size:16px">' + esc(r.name) + '</span><span class="muted" style="font-size:13px">' + (nOn ? nOn + (nOn === 1 ? ' herramienta activa' : ' herramientas activas') : 'Sin herramientas extra') + '</span></span><span aria-hidden="true" class="muted">' + (op ? '▾' : '▸') + '</span></button>'
+        + (op ? '<div class="setlist">' + LIB_TOOLS.map((t) => setRow(esc(t.name), esc(t.sub), libOn(r, t.id), 'libSet', esc(r.id) + '|' + t.id)).join('') + '</div>' : '') + '</div>';
+    }).join('') + '</section>').join('');
+  }
+  out += '<p class="muted" style="font-size:13px">Los cambios aplican en segundos. Quien tenga la app abierta debe recargarla para ver la pestaña nueva.</p></div></div>';
+  return out;
+}
+async function libWrite(r, tool, on) { await be.saveProfile(r.id, { features: Object.assign({}, r.features || {}, { [tool]: on }) }); }
+Object.assign(ACT, {
+  libMode(v) { (UI.lib || (UI.lib = {})).mode = v === 'ath' ? 'ath' : 'tool'; render(); },
+  libOpen(v) { const L = UI.lib || (UI.lib = { mode: 'ath' }); L.open = L.open === v ? null : v; render(); },
+  libAth(v) { UI.lib = { mode: 'ath', open: v }; UI.asId = null; if (location.hash === '#biblioteca') render(); else location.hash = '#biblioteca'; },
+  async libSet(v) {
+    if (!isOwner() || UI.busy) return; const [id, tool] = String(v).split('|'), r = ST.athletes.find((x) => x.id === id); if (!r || !LIB_TOOLS.some((t) => t.id === tool)) return; const on = !libOn(r, tool), nm = (LIB_TOOLS.find((t) => t.id === tool) || {}).name;
+    try { await libWrite(r, tool, on); say(nm + (on ? ' activado para ' : ' desactivado para ') + firstName(r.name) + '.', 'ok'); } catch (e) { say(friendly(e)); }
+  },
+  async libGroup(v) {
+    if (!isOwner() || UI.busy) return; const [tool, gid] = String(v).split('|'), g = libGroups().find((x) => x.id === gid); if (!g || !LIB_TOOLS.some((t) => t.id === tool)) return; const on = !g.m.every((r) => libOn(r, tool)), nm = (LIB_TOOLS.find((t) => t.id === tool) || {}).name;
+    UI.busy = true; render();
+    try { for (const r of g.m) { if (libOn(r, tool) !== on) await libWrite(r, tool, on); } UI.busy = false; say(nm + (on ? ' activado' : ' desactivado') + ' para ' + g.label.toLowerCase() + ' (' + g.m.length + ').', 'ok'); } catch (e) { UI.busy = false; say(friendly(e)); }
+  }
+});
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-a]'); if (!t) return; const fn = ACT[t.dataset.a]; if (fn) fn(t.dataset.v, t); });
 document.addEventListener('input', (e) => {
   if (plInput(e.target)) return;
