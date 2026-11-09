@@ -969,6 +969,9 @@ function actSheetHtml() {
   const km = x.km || (r && r.km) || 0, tiles = [];
   if (km) tiles.push(tile(String(km).replace('.', ',') + ' km', 'Distancia'));
   if (x.min) tiles.push(tile(minText(x.min), 'Tiempo en movimiento'));
+  const stopped = (x.el && x.min && x.el >= x.min) ? x.el - x.min : null;
+  if (x.el) tiles.push(tile(minText(x.el), 'Tiempo total'));
+  if (stopped != null) tiles.push(tile(minText(stopped), 'Tiempo detenido'));
   if (km && x.min) tiles.push(tile(f1(km / (x.min / 60)) + ' km/h', 'Velocidad media'));
   if (r && r.gain != null) tiles.push(tile(r.gain + ' m', 'Desnivel positivo'));
   if (r && r.max != null) tiles.push(tile(r.max + ' m', 'Altitud máxima'));
@@ -983,6 +986,7 @@ function actSheetHtml() {
     + (elevSvg(r) ? '<section class="card col g6" aria-label="Perfil de altitud"><div class="row between"><div class="eyebrow">Perfil de altitud</div><span class="muted" style="font-size:12px">' + r.min + ' – ' + r.max + ' m</span></div>' + elevSvg(r) + '</section>' : '');
   return '<div class="inner"><div class="stack"><div class="row between"><div class="col g4" style="min-width:0"><div class="muted" style="font-size:14px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</div><h1 class="title">' + esc(x.n || 'Actividad') + '</h1></div><button type="button" class="x" data-a="actClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>'
     + '<div class="row g8"><span class="pill">' + (x.p ? 'Del plan' : 'Extra') + '</span></div>' + body
+    + (stopped != null && x.el > 0 ? '<section class="card col g8" aria-label="Pedaleado y detenido"><div class="eyebrow">Pedaleado vs. detenido</div><div role="img" aria-label="' + Math.round(x.min / x.el * 100) + ' por ciento del tiempo en movimiento y ' + Math.round(stopped / x.el * 100) + ' por ciento detenido" style="display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--track)"><i style="flex:' + x.min + ';background:var(--accent)"></i><i style="flex:' + Math.max(stopped, 0) + ';background:var(--track)"></i></div><div class="row between" style="font-size:13px"><span><b>' + Math.round(x.min / x.el * 100) + '%</b> en movimiento · ' + minText(x.min) + '</span><span><b>' + Math.round(stopped / x.el * 100) + '%</b> detenido · ' + minText(stopped) + '</span></div></section>' : '')
     + (tiles.length ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + tiles.join('') + '</div>' : '') + '</div></div>';
 }
 function viewDatos() {

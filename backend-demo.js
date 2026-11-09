@@ -34,7 +34,7 @@ function mkHistory(lvl, nDays, ctl0, atl0, noL) {
   for (let n = -(nDays - 1); n <= 0; n++) {
     const L = loadAt(n, lvl); ctl += (L - ctl) / 42; atl += (L - atl) / 7;
     days.push(Object.assign({ d: off(n), ctl: Math.round(ctl * 10) / 10, atl: Math.round(atl * 10) / 10 }, noL ? {} : { l: L }));
-    if (L > 0 && n < 0) { acts.push(off(n)); if (n >= -21) { const extra = Math.abs(n) % 4 === 2; recent.push(Object.assign({ d: off(n), n: extra ? 'Salida por mi cuenta' : (RN[wkOf(n)] || 'Rodaje'), t: 'Ride', km: Math.round(L * 0.42), min: Math.round(L * 0.9), l: L, p: !extra, id: 'demo-' + Math.abs(n), w: Math.round(L * 0.9 + 95), np: Math.round(L * 0.9 + 112), hr: 118 + (L % 30), hrx: 150 + (L % 25) }, Math.abs(n) % 3 === 0 ? {} : { r: true })); } }
+    if (L > 0 && n < 0) { acts.push(off(n)); if (n >= -21) { const extra = Math.abs(n) % 4 === 2; recent.push(Object.assign({ d: off(n), n: extra ? 'Salida por mi cuenta' : (RN[wkOf(n)] || 'Rodaje'), t: 'Ride', km: Math.round(L * 0.42), min: Math.round(L * 0.9), el: Math.round(L * 0.9 * (1.08 + (L % 7) / 40)), l: L, p: !extra, id: 'demo-' + Math.abs(n), w: Math.round(L * 0.9 + 95), np: Math.round(L * 0.9 + 112), hr: 118 + (L % 30), hrx: 150 + (L % 25) }, Math.abs(n) % 3 === 0 ? {} : { r: true })); } }
   }
   return { days: days.slice(-120), acts: acts.slice(-200), recent: recent.slice(-25).reverse(), updatedAt: Date.now() - 50 * 60000 };
 }
