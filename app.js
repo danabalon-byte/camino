@@ -57,6 +57,7 @@ const PH = {
   'lightning': ['<path d="M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.66-73.33a8,8,0,0,0-13.69-7l-112,120a8,8,0,0,0,3,13l57.63,21.61L88.16,238.43a8,8,0,0,0,13.69,7l112-120A8,8,0,0,0,215.79,118.17ZM109.37,214l10.47-52.38a8,8,0,0,0-5-9.06L62,132.71l84.62-90.66L136.16,94.43a8,8,0,0,0,5,9.06l52.8,19.8Z"/>', '<path d="M213.85,125.46l-112,120a8,8,0,0,1-13.69-7l14.66-73.33L45.19,143.49a8,8,0,0,1-3-13l112-120a8,8,0,0,1,13.69,7L153.18,90.9l57.63,21.61a8,8,0,0,1,3,12.95Z"/>'],
   'bell': ['<path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"/>', '<path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216Z"/>'],
   'pencil-simple': ['<path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z"/>', '<path d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM192,108.68,147.31,64l24-24L216,84.68Z"/>'],
+  'flag': ['<path d="M48,216V48 M48,48H208l-28,44,28,44H48" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>', '<path d="M40,40a8,8,0,0,1,8,8v8H208a8,8,0,0,1,6.9,12.1L187.9,92l27,39.9A8,8,0,0,1,208,144H56v72a8,8,0,0,1-16,0V48A8,8,0,0,1,40,40Z"/>'],
   'arrows-out': ['<path d="M216,48V96a8,8,0,0,1-16,0V67.31l-42.34,42.35a8,8,0,0,1-11.32-11.32L188.69,56H160a8,8,0,0,1,0-16h48A8,8,0,0,1,216,48ZM98.34,146.34,56,188.69V160a8,8,0,0,0-16,0v48a8,8,0,0,0,8,8H96a8,8,0,0,0,0-16H67.31l42.35-42.34a8,8,0,0,0-11.32-11.32ZM208,152a8,8,0,0,0-8,8v28.69l-42.34-42.35a8,8,0,0,0-11.32,11.32L188.69,200H160a8,8,0,0,0,0,16h48a8,8,0,0,0,8-8V160A8,8,0,0,0,208,152ZM67.31,56H96a8,8,0,0,0,0-16H48a8,8,0,0,0-8,8V96a8,8,0,0,0,16,0V67.31l42.34,42.35a8,8,0,0,0,11.32-11.32Z"/>', '<path d="M109.66,146.34a8,8,0,0,1,0,11.32L83.31,184l18.35,18.34A8,8,0,0,1,96,216H48a8,8,0,0,1-8-8V160a8,8,0,0,1,13.66-5.66L72,172.69l26.34-26.35A8,8,0,0,1,109.66,146.34ZM83.31,72l18.35-18.34A8,8,0,0,0,96,40H48a8,8,0,0,0-8,8V96a8,8,0,0,0,13.66,5.66L72,83.31l26.34,26.35a8,8,0,0,0,11.32-11.32ZM208,40H160a8,8,0,0,0-5.66,13.66L172.69,72,146.34,98.34a8,8,0,0,0,11.32,11.32L184,83.31l18.34,18.35A8,8,0,0,0,216,96V48A8,8,0,0,0,208,40Zm3.06,112.61a8,8,0,0,0-8.72,1.73L184,172.69l-26.34-26.35a8,8,0,0,0-11.32,11.32L172.69,184l-18.35,18.34A8,8,0,0,0,160,216h48a8,8,0,0,0,8-8V160A8,8,0,0,0,211.06,152.61Z"/>'],
   'caret-right': ['<path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/>', '<path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"/>'],
   'caret-down': ['<path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>', '<path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/>'],
@@ -95,7 +96,7 @@ if (!['auto', 'noche', 'tierra', 'dia'].includes(PREF.tone)) PREF.tone = 'auto';
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { props: [], ready: false, user: null, myBio: null, athBio: {}, profile: null, myPlan: null, myHist: null, athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const ST = { props: [], ready: false, user: null, myBio: null, athBio: {}, profile: null, myPlan: null, myHist: null, myEvents: [], athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {}, chatSubs = {};
 
@@ -303,11 +304,11 @@ function plainOpts(g, arr, sel, label, cols, valFn, neu, act, isOn) {
 }
 const chips = (g, arr, sel, label, valFn) => plainOpts(g, arr, sel, label, autoCols(arr), valFn, GREENG.indexOf(g) < 0);
 const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCols(arr), (i, l) => l, true, 'multi', (l, v) => (sel || []).indexOf(l) >= 0);
-const NAVIC = { perfil: 'user', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
-const TABLBL = { guia: 'Guía' };
+const NAVIC = { planificar: 'flag', perfil: 'user', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
+const TABLBL = { guia: 'Guía', planificar: 'Planificar' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
 const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
-const ATABS = ['hoy', 'datos', 'ruta', 'perfil', 'ajustes', 'guia'];
+const ATABS = ['hoy', 'datos', 'ruta', 'planificar', 'perfil', 'ajustes', 'guia'];
 const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia']) : ATABS) : ATABS);
 /* La Guía de los atletas vive dentro de Ajustes (hide): sigue siendo una ruta válida, pero no ocupa lugar en la barra. */
 const tabs = () => { const ids = tabsIds(), ath = ids === ATABS; return ids.map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id], hide: ath && id === 'guia' })); };
@@ -1128,8 +1129,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 54;
+const APP_VER = 55;
 const NEWS = [
+  'Nueva pestaña Planificar: crea un evento (por ejemplo un brevet), carga su recorrido en GPX y calcula tus horarios con las ventanas de apertura y cierre de cada control.',
   'El detalle de la actividad ahora incluye potencia, frecuencia cardíaca y tiempo pedaleado frente a detenido. Las salidas muy cortas ya no se listan y los nombres de Garmin salen en español.',
   'Ahora puedes tocar una actividad para ver su detalle: distancia, tiempo, desnivel y el recorrido dibujado con su perfil de altitud. Solo lo ves tú y tu coach.',
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
@@ -1865,7 +1867,7 @@ function storyHtml() {
 /* ---------- Render ---------- */
 function applyPrefs() { const r = document.documentElement; if (PREF.calm) r.setAttribute('data-calm', ''); else r.removeAttribute('data-calm'); }
 function applyTone() { const r = document.documentElement; if (PREF.tone === 'auto') r.removeAttribute('data-tone'); else r.setAttribute('data-tone', PREF.tone); }
-const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
+const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, planificar: viewPlanificar, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
 /* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
@@ -1946,7 +1948,7 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; ST.myBio = null; ST.athBio = {}; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; ST.chat = {}; UI.chatOpen = null; UI.chatDraft = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; ST.myEvents = []; UI.pl = null; ST.myBio = null; ST.athBio = {}; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; ST.chat = {}; UI.chatOpen = null; UI.chatDraft = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e) + ' [' + ((e && e.step) || 'perfil') + ': ' + String((e && e.code) || '').replace('firestore/', '') + ' | ' + (user.email || 'sin correo') + ' | ' + String(user.uid).slice(0, 6) + ']'));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
@@ -1954,6 +1956,7 @@ function startSession(user) {
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));
   ownUnsubs.push(be.listenPlan(user.uid, (pl) => { ST.myPlan = pl; soft(); }));
   ownUnsubs.push(be.listenHistory(user.uid, (h) => { ST.myHist = h; soft(); }));
+  ownUnsubs.push(be.listenEvents(user.uid, (rows) => { ST.myEvents = rows; soft(); }));
   ownUnsubs.push(be.listenBio(user.uid, (b) => { ST.myBio = b; soft(); }, { priv: true, migrate: true }));
 }
 
@@ -2330,8 +2333,182 @@ document.addEventListener('scroll', (e) => { if (e.target && e.target.id === 'gt
 ['accept','saveMeta','importTally','fbMark','fbDel','preset','copyDemo','accTeam','accAth','accEdit','accProf','propOk','propNo'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (!isOwner()) { say('Solo el coach principal puede hacer esto.'); return; } return f.apply(this, arguments); }; });
 ['sendReply','nextReply','saveHist','savePlan'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (!canEdit()) { say('Tu cuenta está en solo lectura: pídele al coach principal el permiso para editar.'); return; } return f.apply(this, arguments); }; });
 ['bioOk','bioNo','bioSet'].forEach((k) => { const f = ACT[k]; if (typeof f === 'function') ACT[k] = function () { if (!(canEdit() && canProfile())) { say('Necesitas permiso de edición y de perfil para cambiar medidas.'); return; } return f.apply(this, arguments); }; });
+/* ---------- Planificar: eventos, track GPX y controles (v55) ---------- */
+const PL_BRV = [200, 300, 400, 600, 1000];
+const PL_BANDS = [[0, 200, 34, 15], [200, 400, 32, 15], [400, 600, 30, 15], [600, 1000, 28, 11.428], [1000, 1300, 26, 13.333]];
+const PL_FIN = { 200: 13.5, 300: 20, 400: 27, 600: 40, 1000: 75 };
+const plHav = (a, b) => { const r = Math.PI / 180, dl = (b[0] - a[0]) * r, dn = (b[1] - a[1]) * r, x = Math.sin(dl / 2) * Math.sin(dl / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dn / 2) * Math.sin(dn / 2); return 12742.0176 * Math.asin(Math.sqrt(x)); };
+function plEncPoly(P) { let o = '', pa = 0, po = 0; const e = (v) => { v = v < 0 ? ~(v << 1) : v << 1; let s = ''; while (v >= 32) { s += String.fromCharCode((32 | (v & 31)) + 63); v >>= 5; } return s + String.fromCharCode(v + 63); }; P.forEach((q) => { const la = Math.round(q[0] * 1e5), lo = Math.round(q[1] * 1e5); o += e(la - pa) + e(lo - po); pa = la; po = lo; }); return o; }
+/* Simplifica con Ramer-Douglas-Peucker (iterativo) sobre metros planos. */
+function plRdp(X, Y, eps) {
+  const n = X.length, keep = new Uint8Array(n); keep[0] = 1; keep[n - 1] = 1; const st = [[0, n - 1]];
+  while (st.length) {
+    const s = st.pop(), a = s[0], b = s[1]; if (b <= a + 1) continue;
+    const dx = X[b] - X[a], dy = Y[b] - Y[a], L = Math.hypot(dx, dy); let mx = -1, mi = -1;
+    for (let i = a + 1; i < b; i++) { const d = L < 1e-9 ? Math.hypot(X[i] - X[a], Y[i] - Y[a]) : Math.abs(dy * (X[i] - X[a]) - dx * (Y[i] - Y[a])) / L; if (d > mx) { mx = d; mi = i; } }
+    if (mx > eps) { keep[mi] = 1; st.push([a, mi], [mi, b]); }
+  }
+  const out = []; for (let i = 0; i < n; i++) if (keep[i]) out.push(i); return out;
+}
+/* Lee un GPX (track o ruta) y devuelve el trazo simplificado con la forma de los recorridos de Camino. */
+function plParseGpx(text) {
+  let doc; try { doc = new DOMParser().parseFromString(text, 'application/xml'); } catch (e) { return { err: 'No pude leer el archivo.' }; }
+  if (!doc || doc.getElementsByTagName('parsererror').length) return { err: 'El archivo no es un GPX válido.' };
+  let nodes = doc.getElementsByTagName('trkpt'); if (!nodes.length) nodes = doc.getElementsByTagName('rtept');
+  if (nodes.length < 10) return { err: 'El GPX no trae un recorrido con puntos suficientes.' };
+  if (nodes.length > 250000) return { err: 'El GPX es demasiado grande. Prueba con uno más corto.' };
+  const P = []; for (let i = 0; i < nodes.length; i++) { const la = parseFloat(nodes[i].getAttribute('lat')), lo = parseFloat(nodes[i].getAttribute('lon')); if (!isFinite(la) || !isFinite(lo)) continue; const el = nodes[i].getElementsByTagName('ele')[0], ev = el ? parseFloat(el.textContent) : NaN; P.push([la, lo, isFinite(ev) ? ev : null]); }
+  if (P.length < 10) return { err: 'El GPX no trae un recorrido con puntos suficientes.' };
+  const nm = doc.getElementsByTagName('name')[0];
+  const T = [P[0]], cum = [0]; let tot = 0, last = P[0];
+  for (let i = 1; i < P.length; i++) { const d = plHav(last, P[i]); if (d >= 0.003 || i === P.length - 1) { tot += d; T.push(P[i]); cum.push(tot); last = P[i]; } }
+  const allEle = T.every((q) => q[2] != null);
+  let gain = 0, ref = allEle ? T[0][2] : 0; if (allEle) T.forEach((q) => { const v = q[2]; if (v - ref >= 3) { gain += v - ref; ref = v; } else if (ref - v >= 3) ref = v; });
+  const la0 = T[0][0], kx = Math.cos(la0 * Math.PI / 180) * 111320, X = T.map((q) => q[1] * kx), Y = T.map((q) => q[0] * 110540);
+  let eps = 8, idx = plRdp(X, Y, eps); while (idx.length > 400 && eps < 400) { eps *= 1.5; idx = plRdp(X, Y, eps); }
+  const S = idx.map((i) => T[i]);
+  const tr = { p: plEncPoly(S), km: Math.round(tot * 10) / 10, n: S.length };
+  if (allEle) { const A = S.map((q) => Math.round(q[2])); tr.a = A; tr.max = Math.max.apply(null, A); tr.min = Math.min.apply(null, A); tr.gain = Math.round(gain); }
+  return { track: tr, name: nm && nm.textContent ? nm.textContent.trim().slice(0, 80) : '' };
+}
+/* Ventanas ACP de cada control (minutos desde la salida). */
+function plWindow(km, nominal) {
+  let o = 0, c = 0; PL_BANDS.forEach((b) => { const seg = Math.max(0, Math.min(km, b[1]) - b[0]); o += seg / b[2]; c += seg / b[3]; });
+  let open = Math.round(o * 60), close = Math.round(c * 60);
+  if (km <= 60) close = Math.round((km / 20 + 1) * 60);
+  if (km >= nominal && PL_FIN[nominal]) close = Math.round(PL_FIN[nominal] * 60);
+  if (km === 0) close = 60;
+  return { open, close };
+}
+const plMin = (x) => Math.round(x);
+function plClock(startHm, plus) { const p = String(startHm || '06:00').split(':'), t = (+p[0] || 0) * 60 + (+p[1] || 0) + plus, d = Math.floor(t / 1440), m = ((t % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ':' + pad(m % 60) + (d > 0 ? ' (+' + d + ' d)' : ''); }
+const plDur = (m) => { m = Math.round(m); return Math.floor(m / 60) + ':' + pad(m % 60) + ' h'; };
+function plCalc(d) {
+  const brv = d.kind === 'brevet', total = Number(d.km) || 0, v = Number(d.speed) || 0, def = Number(d.stop);
+  if (!(total > 0) || !(v > 0)) return null;
+  const cs = (d.ctl || []).map((c) => ({ n: c.name || '', km: Number(c.km), stop: c.stop === '' || c.stop == null ? (isFinite(def) ? def : 10) : Number(c.stop) })).filter((c) => c.km > 0 && c.km < total).sort((a, b) => a.km - b.km);
+  cs.push({ n: 'Meta', km: total, stop: 0, meta: true });
+  let t = 0, prev = 0, rows = [], ok = true;
+  cs.forEach((c) => {
+    const arr = t + (c.km - prev) / v * 60; let rec = arr, wait = 0, w = null, margin = null, flag = '';
+    if (brv) { w = plWindow(c.km, total); if (arr < w.open) { wait = w.open - arr; rec = w.open; flag = 'wait'; } margin = w.close - rec; if (margin < 0) { flag = 'late'; ok = false; } }
+    rows.push({ n: c.n, km: c.km, meta: !!c.meta, arr: Math.round(arr), rec: Math.round(rec), wait: Math.round(wait), w, margin: margin == null ? null : Math.round(margin), stop: c.stop, flag });
+    t = rec + c.stop; prev = c.km;
+  });
+  const last = rows[rows.length - 1];
+  return { rows, ok, finish: last.rec, moving: Math.round(total / v * 60), stops: cs.reduce((s, c) => s + (c.meta ? 0 : c.stop), 0), waits: rows.reduce((s, r) => s + r.wait, 0) };
+}
+function plResHtml(d) {
+  const r = plCalc(d), brv = d.kind === 'brevet';
+  if (!r) return '<p class="soft" style="font-size:14px">Indica la distancia y tu velocidad media para ver los horarios.</p>';
+  const rows = r.rows.map((x) => {
+    const nm = x.meta ? 'Meta' : (x.n ? esc(x.n) : 'Control'), ln1 = brv ? 'Abre ' + plClock(d.start, x.w.open) + ' · cierra ' + plClock(d.start, x.w.close) : '';
+    let ln2 = 'Llegas ' + plClock(d.start, x.rec); if (x.flag === 'wait') ln2 += ' (esperas ' + plDur(x.wait) + ' a que abra)';
+    const tag = brv ? (x.flag === 'late' ? '<span class="pill" style="border-color:var(--warn);color:var(--text);font-weight:700">Fuera de tiempo</span>' : '<span class="muted" style="font-size:12px">Margen ' + plDur(x.margin) + '</span>') : '';
+    return '<div class="mrow"><div class="col grow g4" style="min-width:0"><span style="font-weight:600;font-size:16px">' + nm + ' · km ' + String(x.km).replace('.', ',') + '</span>' + (ln1 ? '<span class="muted" style="font-size:13px">' + ln1 + '</span>' : '') + '<span class="muted" style="font-size:13px">' + ln2 + '</span></div>' + tag + '</div>';
+  }).join('');
+  const sum = '<div class="row g12 wrap" style="margin-top:6px"><div class="col g4"><span class="num" style="font-size:22px">' + plDur(r.finish) + '</span><span class="muted" style="font-size:12px">Tiempo total</span></div><div class="col g4"><span class="num" style="font-size:22px">' + plDur(r.moving) + '</span><span class="muted" style="font-size:12px">En movimiento</span></div><div class="col g4"><span class="num" style="font-size:22px">' + plDur(r.stops + r.waits) + '</span><span class="muted" style="font-size:12px">Paradas y esperas</span></div></div>';
+  const msg = brv ? (r.ok ? '<p class="soft" style="font-size:13px;margin-top:8px">Con ese ritmo llegas dentro de todas las ventanas. Las ventanas siguen las reglas de Audax (ACP).</p>' : '<p style="font-size:13px;margin-top:8px;font-weight:600">Con ese ritmo llegarías después del cierre de al menos un control. Prueba con más velocidad o paradas más cortas.</p>') : '';
+  return rows + sum + msg;
+}
+function plNew() { return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, ctl: [] } }; }
+function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop })) } }; }
+function plEvName(e) { return e.name || 'Evento'; }
+function viewPlanificar() {
+  const P = UI.pl;
+  if (P) return plEditHtml(P);
+  const evs = (ST.myEvents || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date))), today = off(0);
+  let out = '<div class="inner"><div class="stack">' + head('Organiza tu próximo reto', 'Planificar') + msgBanner();
+  if (!evs.length) out += '<section class="card col g12" aria-label="Sin eventos"><div class="eyebrow">Tus eventos</div><p class="soft">Crea un evento, carga su recorrido y calcula horarios y controles antes de salir. Sirve para un brevet o para cualquier salida larga.</p></section>';
+  else {
+    out += '<section class="card" aria-label="Tus eventos" style="padding-bottom:8px"><div class="eyebrow" style="margin-bottom:6px">Tus eventos</div>' + evs.map((e) => {
+      const dd = e.date >= today ? diffDays(today, e.date) : -1, when = dd < 0 ? 'ya pasó' : (dd === 0 ? 'hoy' : 'en ' + dd + (dd === 1 ? ' día' : ' días')), dt = parse(e.date);
+      return '<button type="button" class="mrow" data-a="plOpen" data-v="' + esc(e.id) + '" style="width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);min-height:64px"><span class="col grow g4" style="min-width:0"><span style="font-weight:600;font-size:16px">' + esc(plEvName(e)) + '</span><span class="muted" style="font-size:13px">' + cap(WD[dt.getDay()]) + ' ' + dt.getDate() + ' ' + FC_MES[dt.getMonth()] + ' · ' + when + '</span><span class="muted" style="font-size:13px">' + (e.kind === 'brevet' ? 'Brevet ' : '') + (e.km ? String(e.km).replace('.', ',') + ' km' : '') + (e.track ? ' · con recorrido' : '') + ((e.ctl || []).length ? ' · ' + e.ctl.length + (e.ctl.length === 1 ? ' control' : ' controles') : '') + '</span></span>' + ph('caret-right', 20, 'var(--muted)') + '</button>';
+    }).join('') + '</section>';
+  }
+  out += '<button type="button" class="btn primary" data-a="plNew"><span>Nuevo evento</span>' + ph('arrow-right', 22) + '</button></div></div>';
+  return out;
+}
+function plEditHtml(P) {
+  const d = P.d, brv = d.kind === 'brevet', tr = d.track, lab = (id, t) => '<label for="' + id + '" class="muted" style="font-size:13px">' + t + '</label>';
+  const f = (id, t, inner) => '<div class="col g8">' + lab(id, t) + inner + '</div>';
+  let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4" style="min-width:0"><div class="muted" style="font-size:14px">' + (P.id ? 'Editar evento' : 'Nuevo evento') + '</div><h1 class="title">' + esc(d.name || 'Evento') + '</h1></div><button type="button" class="chip" data-a="plClose">Cerrar</button></div>' + msgBanner();
+  out += '<section class="card col g12" aria-label="Datos del evento"><div class="eyebrow">El evento</div>'
+    + f('pl-name', 'Nombre', '<input class="field" id="pl-name" data-pl="name" type="text" maxlength="80" value="' + esc(d.name) + '" placeholder="Ejemplo: Brevet 200 km">')
+    + '<div class="row g8"><div class="col g8 grow">' + lab('pl-date', 'Fecha') + '<input class="field" id="pl-date" data-pl="date" type="date" value="' + esc(d.date) + '"></div><div class="col g8 grow">' + lab('pl-start', 'Hora de salida') + '<input class="field" id="pl-start" data-pl="start" type="time" value="' + esc(d.start) + '"></div></div>'
+    + '<div class="col g8"><span class="muted" style="font-size:13px">Tipo</span><div class="seggroup" role="group" aria-label="Tipo de evento"><button type="button" data-a="plKind" data-v="brevet" aria-pressed="' + brv + '">Brevet</button><button type="button" data-a="plKind" data-v="otro" aria-pressed="' + !brv + '">Otro</button></div></div>'
+    + (brv ? '<div class="col g8"><span class="muted" style="font-size:13px">Distancia del brevet</span><div class="chips" role="group" aria-label="Distancia del brevet">' + PL_BRV.map((k) => '<button type="button" class="chip" data-a="plBrv" data-v="' + k + '" aria-pressed="' + (Number(d.km) === k) + '">' + k + ' km</button>').join('') + '</div></div>' : f('pl-km', 'Distancia (km)', '<input class="field" id="pl-km" data-pl="km" type="number" inputmode="decimal" min="1" max="2000" value="' + esc(d.km) + '">'))
+    + '</section>';
+  out += '<section class="card col g12" aria-label="Recorrido"><div class="eyebrow">Recorrido</div>';
+  if (tr) {
+    const near = brv && Math.abs(tr.km - Number(d.km)) > Number(d.km) * 0.1;
+    out += routeSvg(tr) + (tr.a ? elevSvg(tr) : '') + '<div class="row g12 wrap"><div class="col g4"><span class="num" style="font-size:22px">' + String(tr.km).replace('.', ',') + ' km</span><span class="muted" style="font-size:12px">Distancia</span></div>' + (tr.gain != null ? '<div class="col g4"><span class="num" style="font-size:22px">' + tr.gain.toLocaleString('es-CL') + ' m</span><span class="muted" style="font-size:12px">Desnivel positivo</span></div><div class="col g4"><span class="num" style="font-size:22px">' + tr.max + ' m</span><span class="muted" style="font-size:12px">Altitud máxima</span></div>' : '') + '</div>'
+      + (near ? '<p style="font-size:13px;font-weight:600">La ruta mide ' + String(tr.km).replace('.', ',') + ' km y el brevet es de ' + d.km + ' km. Revisa que sea la ruta correcta.</p>' : '')
+      + '<div class="row g8 wrap"><label class="chip" for="pl-file" style="display:inline-flex;align-items:center;cursor:pointer">Cambiar archivo</label><button type="button" class="chip" data-a="plNoTrack">Quitar recorrido</button></div>';
+  } else out += '<p class="soft" style="font-size:14px">Carga el archivo GPX del recorrido para ver el mapa, la distancia y el desnivel. Lo descargas desde Garmin Connect, RideWithGPS o Strava (en una ruta o actividad, opción exportar GPX).</p><label class="btn primary" for="pl-file" style="cursor:pointer;justify-content:center"><span>Cargar archivo GPX</span></label>';
+  out += '<input id="pl-file" data-pl="file" type="file" accept=".gpx,application/gpx+xml,text/xml,application/xml" style="position:absolute;left:-9999px;width:1px;height:1px" aria-label="Archivo GPX"><p class="muted" style="font-size:12px">El archivo se procesa en tu teléfono y solo se guarda un trazo simplificado.</p></section>';
+  out += '<section class="card col g12" aria-label="Controles"><div class="eyebrow">' + (brv ? 'Controles' : 'Paradas') + '</div><p class="soft" style="font-size:13px">' + (brv ? 'Escribe el kilómetro de cada control intermedio. La meta se agrega sola.' : 'Escribe el kilómetro de cada parada planificada.') + '</p>';
+  (d.ctl || []).forEach((c, i) => { out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4 grow">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '"></div></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '"><button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button></div></div>'; });
+  out += '<button type="button" class="chip" data-a="plCtlAdd" style="align-self:flex-start;border-color:var(--accent);color:var(--accent);font-weight:600">Agregar ' + (brv ? 'control' : 'parada') + '</button></section>';
+  out += '<section class="card col g12" aria-label="Tu ritmo"><div class="eyebrow">Tu ritmo</div><div class="row g8"><div class="col g8 grow">' + lab('pl-speed', 'Velocidad media (km/h)') + '<input class="field" id="pl-speed" data-pl="speed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.speed) + '"></div><div class="col g8 grow">' + lab('pl-stop', 'Parada típica (min)') + '<input class="field" id="pl-stop" data-pl="stop" type="number" inputmode="numeric" min="0" max="600" value="' + esc(d.stop) + '"></div></div><p class="muted" style="font-size:12px">La velocidad es en movimiento, sin contar las paradas.</p></section>';
+  out += '<section class="card col g8" aria-label="Horarios"><div class="eyebrow">' + (brv ? 'Horarios y ventanas de control' : 'Horarios estimados') + '</div><div id="pl-res">' + plResHtml(d) + '</div></section>';
+  out += '<button type="button" class="btn primary" data-a="plSave"' + (UI.busy ? ' disabled' : '') + '><span>Guardar evento</span>' + ph('check', 22) + '</button>';
+  if (P.id) out += P.del ? '<div class="row g8 wrap"><button type="button" class="chip" data-a="plDelYes" style="border-color:var(--warn);font-weight:700">Sí, eliminar este evento</button><button type="button" class="chip" data-a="plDelNo">No, conservarlo</button></div>' : '<button type="button" class="btn ghost" data-a="plDel">Eliminar evento</button>';
+  return out + '</div></div>';
+}
+function plInput(t) {
+  const P = UI.pl, k = t.dataset && t.dataset.pl; if (!P || !k) return false; const d = P.d, v = t.value;
+  if (k === 'file') return true;
+  if (k === 'name') { d.name = v; const h = document.querySelector('h1.title'); if (h) h.textContent = v || 'Evento'; return true; }
+  if (k === 'date' || k === 'start' || k === 'km' || k === 'speed' || k === 'stop') d[k] = v;
+  else { const c = d.ctl[+t.dataset.i]; if (!c) return true; if (k === 'ck') c.km = v; else if (k === 'cs') c.stop = v; else if (k === 'cn') c.name = v; }
+  const r = document.getElementById('pl-res'); if (r) r.innerHTML = plResHtml(d);
+  return true;
+}
+function plValid(d) {
+  if (!String(d.name || '').trim()) return 'Ponle un nombre al evento.';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date || '')) return 'Elige la fecha del evento.';
+  if (!/^\d{2}:\d{2}$/.test(d.start || '')) return 'Indica la hora de salida.';
+  const km = Number(d.km); if (!(km > 0 && km <= 2000)) return 'Indica la distancia del evento.';
+  const v = Number(d.speed); if (!(v >= 5 && v <= 60)) return 'La velocidad media debe estar entre 5 y 60 km/h.';
+  for (const c of d.ctl || []) { const k = Number(c.km); if (!(k > 0 && k < km)) return 'Cada control debe estar entre 0 y ' + km + ' km.'; if (c.stop !== '' && c.stop != null && !(Number(c.stop) >= 0 && Number(c.stop) <= 600)) return 'Las paradas van de 0 a 600 minutos.'; }
+  return '';
+}
+Object.assign(ACT, {
+  plNew() { UI.pl = plNew(); render(); window.scrollTo(0, 0); },
+  plOpen(v) { const e = (ST.myEvents || []).find((x) => x.id === v); if (!e) return; UI.pl = plFromEv(e); render(); window.scrollTo(0, 0); },
+  plClose() { UI.pl = null; render(); },
+  plKind(v) { const d = UI.pl.d; if (d.kind === v) return; d.kind = v; if (v === 'brevet' && PL_BRV.indexOf(Number(d.km)) < 0) d.km = 200; render(); },
+  plBrv(v) { UI.pl.d.km = Number(v); render(); },
+  plCtlAdd() { UI.pl.d.ctl.push({ km: '', name: '', stop: '' }); render(); },
+  plCtlDel(v) { UI.pl.d.ctl.splice(+v, 1); render(); },
+  plNoTrack() { UI.pl.d.track = null; render(); },
+  plDel() { UI.pl.del = true; render(); },
+  plDelNo() { UI.pl.del = false; render(); },
+  async plDelYes() { const P = UI.pl; if (!P || !P.id || !ST.user) return; UI.busy = true; try { await be.deleteEvent(ST.user.uid, P.id); UI.pl = null; say('Evento eliminado.', 'ok'); } catch (e) { say(friendly(e)); } UI.busy = false; render(); },
+  async plSave() {
+    const P = UI.pl; if (!P || !ST.user || UI.busy) return; const d = P.d, er = plValid(d); if (er) { say(er); return; }
+    const ctl = (d.ctl || []).filter((c) => Number(c.km) > 0).map((c) => ({ km: Number(c.km), name: String(c.name || '').slice(0, 40), stop: c.stop === '' || c.stop == null ? null : Number(c.stop) })).sort((a, b) => a.km - b.km);
+    const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), stop: Number(d.stop) || 0, track: d.track || null, ctl, updatedAt: Date.now() };
+    UI.busy = true; render();
+    try { await be.saveEvent(ST.user.uid, P.id || ('e' + Date.now().toString(36)), data); UI.pl = null; say('Evento guardado.', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  }
+});
+async function plFile(f) {
+  const P = UI.pl; if (!P || !f) return;
+  if (f.size > 12 * 1024 * 1024) { say('El archivo pesa demasiado (máximo 12 MB).'); return; }
+  let txt; try { txt = await f.text(); } catch (e) { say('No pude leer el archivo.'); return; }
+  const r = plParseGpx(txt); if (r.err) { say(r.err); return; }
+  P.d.track = r.track; if (!String(P.d.name).trim() && r.name) P.d.name = r.name;
+  if (P.d.kind === 'otro' && !(Number(P.d.km) > 0)) P.d.km = Math.round(r.track.km);
+  say('Recorrido cargado: ' + String(r.track.km).replace('.', ',') + ' km.', 'ok');
+}
+document.addEventListener('change', (e) => { const t = e.target; if (t && t.dataset && t.dataset.pl === 'file' && t.files && t.files[0]) { const f = t.files[0]; t.value = ''; plFile(f); } });
+
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-a]'); if (!t) return; const fn = ACT[t.dataset.a]; if (fn) fn(t.dataset.v, t); });
 document.addEventListener('input', (e) => {
+  if (plInput(e.target)) return;
   const id = e.target.id;
   if (id === 'fbText') { UI.fbDraft = e.target.value; UI.fbOk = false; const c = document.getElementById('fbCount'), b = document.getElementById('fbSend'); if (c) c.textContent = e.target.value.length + ' / 1000'; if (b) b.disabled = !e.target.value.trim() || UI.busy; }
   if (id && id.indexOf('pf-') === 0 && UI.prof) UI.prof.d[id.slice(3)] = e.target.value;

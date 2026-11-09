@@ -122,6 +122,12 @@ const be = {
   },
   savePlan(uid, data) { return setDoc(doc(db, 'users', uid, 'plan', 'current'), clean(data)); },
   // Recorrido simplificado de una salida (lo escribe el sync; lo leen el atleta y su coach)
+  // Eventos planificados por el atleta (brevet u otros): recorrido simplificado, controles y ritmo
+  listenEvents(uid, cb) {
+    return onSnapshot(collection(db, 'users', uid, 'events'), (s) => cb(s.docs.map((d) => Object.assign({ id: d.id }, d.data()))), fail('eventos'));
+  },
+  saveEvent(uid, id, data) { return setDoc(doc(db, 'users', uid, 'events', String(id)), clean(data)); },
+  deleteEvent(uid, id) { return deleteDoc(doc(db, 'users', uid, 'events', String(id))); },
   async getRoute(uid, id) { const s = await getDoc(doc(db, 'users', uid, 'routes', String(id))); return s.exists() ? s.data() : null; },
   listenHistory(uid, cb) {
     return onSnapshot(doc(db, 'users', uid, 'history', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('historial'));
