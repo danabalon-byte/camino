@@ -921,7 +921,12 @@ function formaCard(fi, link) {
 }
 /* ---------- Vista: Datos (historial del propio atleta) ---------- */
 /* Ultimas actividades (desde intervals.icu): las que estaban en el plan y las que el atleta hizo por su cuenta. */
-const recentActs = (h) => (h && Array.isArray(h.recent) ? h.recent.filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.d || ''))).slice(0, 25) : []);
+/* Salidas triviales (menos de 2 km o de 10 min) no se listan: suelen ser pruebas de sensor o inicios accidentales. */
+const trivialAct = (x) => (x.km != null && Number(x.km) < 2) || (x.min != null && Number(x.min) < 10);
+const recentActs = (h) => (h && Array.isArray(h.recent) ? h.recent.filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.d || '')) && !trivialAct(x)).slice(0, 25) : []);
+/* Nombres por defecto de Garmin en inglés, a español. */
+const ACTNM = [[/\bIndoor Cycling\b/i, 'Ciclismo indoor'], [/\bVirtual Cycling\b/i, 'Ciclismo virtual'], [/\bRoad Cycling\b/i, 'Ciclismo de ruta'], [/\b(Gravel|Unpaved) Cycling\b/i, 'Ciclismo gravel'], [/\bMountain Biking\b/i, 'Mountain bike'], [/\bStrength Training\b/i, 'Fuerza'], [/\bCycling\b/i, 'Ciclismo']];
+const actName = (n) => { let t = String(n || 'Actividad'); for (let i = 0; i < ACTNM.length; i++) if (ACTNM[i][0].test(t)) { t = t.replace(ACTNM[i][0], ACTNM[i][1]); break; } return t; };
 function syncAgo(h) {
   if (!h || !h.updatedAt) return null; const hrs = Math.floor((Date.now() - Number(h.updatedAt)) / 3600000);
   return { hrs, late: hrs >= 48, txt: hrs < 1 ? 'hace menos de 1 hora' : hrs < 24 ? 'hace ' + hrs + (hrs === 1 ? ' hora' : ' horas') : 'hace ' + Math.floor(hrs / 24) + (Math.floor(hrs / 24) === 1 ? ' día' : ' días') };
@@ -930,7 +935,7 @@ function recentCard(h, n) {
   const rs = recentActs(h).slice(0, n || 5), sy = syncAgo(h); if (!rs.length && !sy) return '';
   const rows = rs.map((x, i) => {
     const d = parse(x.d), meta = [x.km ? String(x.km).replace('.', ',') + ' km' : '', x.min ? minText(x.min) : '', x.l ? 'carga ' + x.l : ''].filter(Boolean).join(' · ');
-    return '<button type="button" class="row between g12" data-a="actOpen" data-v="' + i + '" aria-label="Ver detalle de ' + esc(x.n || 'Actividad') + '" style="align-items:center;width:100%;min-height:56px;padding:8px 0 0;border:0;border-top:1px solid var(--line);background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer"><span class="col g4" style="min-width:0"><span style="font-weight:600">' + esc(x.n || 'Actividad') + '</span><span class="muted" style="font-size:13px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + (meta ? ' · ' + esc(meta) : '') + '</span></span><span class="row g8" style="align-items:center"><span class="pill">' + (x.p ? 'Del plan' : 'Extra') + '</span>' + (x.r ? '<span class="pill" title="Tiene recorrido">Mapa</span>' : '') + '<span aria-hidden="true" style="display:inline-flex">' + ph('caret-right', 16) + '</span></span></button>';
+    return '<button type="button" class="row between g12" data-a="actOpen" data-v="' + i + '" aria-label="Ver detalle de ' + esc(actName(x.n)) + '" style="align-items:center;width:100%;min-height:56px;padding:8px 0 0;border:0;border-top:1px solid var(--line);background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer"><span class="col g4" style="min-width:0"><span style="font-weight:600">' + esc(actName(x.n)) + '</span><span class="muted" style="font-size:13px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + (meta ? ' · ' + esc(meta) : '') + '</span></span><span class="row g8" style="align-items:center"><span class="pill">' + (x.p ? 'Del plan' : 'Extra') + '</span>' + (x.r ? '<span class="pill" title="Tiene recorrido">Mapa</span>' : '') + '<span aria-hidden="true" style="display:inline-flex">' + ph('caret-right', 16) + '</span></span></button>';
   }).join('');
   return '<section class="card col g10" aria-label="Últimas actividades"><div class="eyebrow">Últimas actividades</div>' + (rows || '<p class="soft">Cuando se sincronice una salida, aparecerá aquí.</p>')
     + (sy ? '<p class="muted" style="font-size:12px;margin-top:6px">Sincronizado con intervals.icu ' + sy.txt + '.' + (sy.late ? ' Hace tiempo que no llegan datos nuevos: avísale a tu coach para revisarlo.' : '') + '</p>' : '') + '</section>';
@@ -955,7 +960,7 @@ function routeSvg(r) {
   const path = 'M' + xy.map((q) => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' L');
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Trazo del recorrido de la salida" style="display:block;border-radius:16px;background:var(--track);max-height:340px"><path d="' + path + '" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
     + '<circle cx="' + xy[0][0].toFixed(1) + '" cy="' + xy[0][1].toFixed(1) + '" r="6" fill="var(--good)" stroke="var(--surface)" stroke-width="2"/>'
-    + (fd > 14 ? '<circle cx="' + xy[far][0].toFixed(1) + '" cy="' + xy[far][1].toFixed(1) + '" r="6" fill="var(--text)" stroke="var(--surface)" stroke-width="2"/>' : '') + '</svg>';
+    + (fd > 14 ? '<circle cx="' + xy[far][0].toFixed(1) + '" cy="' + xy[far][1].toFixed(1) + '" r="6" fill="var(--text)" stroke="var(--surface)" stroke-width="2"/><text x="' + (xy[far][0] > W / 2 ? (xy[far][0] - 11).toFixed(1) : (xy[far][0] + 11).toFixed(1)) + '" y="' + (xy[far][1] + 4).toFixed(1) + '" font-size="12" font-weight="700" fill="var(--text)" text-anchor="' + (xy[far][0] > W / 2 ? 'end' : 'start') + '">Más lejano</text>' : '') + '</svg>';
 }
 function elevSvg(r) {
   const A = Array.isArray(r.a) ? r.a.filter((v) => typeof v === 'number') : []; if (A.length < 3) return '';
@@ -984,7 +989,7 @@ function actSheetHtml() {
   else if (!r) body = '<section class="card col g8"><div class="eyebrow">Recorrido</div><p class="soft">' + (A.err ? 'No pudimos cargar el recorrido ahora. Reintenta en un momento.' : 'Esta salida no trae recorrido. Ocurre cuando viene de Strava o se grabó sin GPS.') + '</p></section>';
   else body = '<section class="card col g10" aria-label="Recorrido">' + routeSvg(r) + '<div class="row g12" style="font-size:12px;flex-wrap:wrap"><span class="row g8" style="align-items:center"><i style="width:10px;height:10px;border-radius:5px;background:var(--good);display:inline-block"></i>Salida</span><span class="row g8" style="align-items:center"><i style="width:10px;height:10px;border-radius:5px;background:var(--text);display:inline-block"></i>Punto más lejano</span></div><p class="muted" style="font-size:12px">Solo la ven tú y tu coach. No se comparte con nadie más.</p></section>'
     + (elevSvg(r) ? '<section class="card col g6" aria-label="Perfil de altitud"><div class="row between"><div class="eyebrow">Perfil de altitud</div><span class="muted" style="font-size:12px">' + r.min + ' – ' + r.max + ' m</span></div>' + elevSvg(r) + '</section>' : '');
-  return '<div class="inner"><div class="stack"><div class="row between"><div class="col g4" style="min-width:0"><div class="muted" style="font-size:14px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</div><h1 class="title">' + esc(x.n || 'Actividad') + '</h1></div><button type="button" class="x" data-a="actClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>'
+  return '<div class="inner"><div class="stack"><div class="row between"><div class="col g4" style="min-width:0"><div class="muted" style="font-size:14px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</div><h1 class="title">' + esc(actName(x.n)) + '</h1></div><button type="button" class="x" data-a="actClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>'
     + '<div class="row g8"><span class="pill">' + (x.p ? 'Del plan' : 'Extra') + '</span></div>' + body
     + (stopped != null && x.el > 0 ? '<section class="card col g8" aria-label="Pedaleado y detenido"><div class="eyebrow">Pedaleado vs. detenido</div><div role="img" aria-label="' + Math.round(x.min / x.el * 100) + ' por ciento del tiempo en movimiento y ' + Math.round(stopped / x.el * 100) + ' por ciento detenido" style="display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--track)"><i style="flex:' + x.min + ';background:var(--accent)"></i><i style="flex:' + Math.max(stopped, 0) + ';background:var(--track)"></i></div><div class="row between" style="font-size:13px"><span><b>' + Math.round(x.min / x.el * 100) + '%</b> en movimiento · ' + minText(x.min) + '</span><span><b>' + Math.round(stopped / x.el * 100) + '%</b> detenido · ' + minText(stopped) + '</span></div></section>' : '')
     + (tiles.length ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + tiles.join('') + '</div>' : '') + '</div></div>';
@@ -1123,8 +1128,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 53;
+const APP_VER = 54;
 const NEWS = [
+  'El detalle de la actividad ahora incluye potencia, frecuencia cardíaca y tiempo pedaleado frente a detenido. Las salidas muy cortas ya no se listan y los nombres de Garmin salen en español.',
   'Ahora puedes tocar una actividad para ver su detalle: distancia, tiempo, desnivel y el recorrido dibujado con su perfil de altitud. Solo lo ves tú y tu coach.',
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
   'Nueva tarjeta de últimas actividades: ves lo que hiciste, con nombre, km y carga, y si estaba en tu plan o fue extra. Tu plan se sincroniza solo desde intervals.icu.',
