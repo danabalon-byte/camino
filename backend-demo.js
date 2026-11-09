@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v8';
+const KEY = 'camino-demo-v9';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -22,6 +22,7 @@ function mkCheckins(arr, last, pain) {
 
 
 /* ---- Datos ficticios ricos: historial de forma, plan y check-ins generados con fechas relativas a hoy ---- */
+const DEMO_ROUTE = {"p":"lvlkEl~zmLiDqKePkKiAsLqDsHiHkEtDiKxCyKxE{HVwKdQus@qGyFgIcF{CcIfLof@oCoEuVaBkn@eCkJqCcIgEiU{Hm\\cV}IgDyHaGmUiGwJeB_IaEqa@yHoBcViJwAih@a[iI_EyGxF_IdFgJjCuJVkIzEgJfCuJZy@vIsDtIoJ|@{IHq@}LaHcCaJh@iB|Iod@lHkGwCcJjCkIzAuPyCmUnE{J\\oA{JSgMiJo@oVQ{IaDeIgFoGkHgEqJqG}HmHmGqE{HwBuKo[il@iGiEcEqIyDqKmGy@{SrKgJzCcIpFoGvHiAzJaG~WqArLk@`MyBhK}DrIVhM_DnJqGbHqAbLSrLaId@cIkFmHWeIbF_m@pIeIhEgJdCkA~JsCxK_IbFuVl@qJoAwJ`@}IcCeAoLoDgKcIoEk\\xU}GrHRnI~A|KuEpJ}FlH_HtGgFtIaG`IcQ|a@R|@pDgKdK_VhGyHjFiJdHgGpF}G|EsJUgLqCuGxFmIhS}M`HwGhI~BfE|Jv@xLnI`ErJc@xJx@nVHtIaEjEuJDuLbIqDpTwGrJoBfVwBhIqF`HcCjHzGpJtA`BiCLiLfBeL~GuGtBiKYmMnFsHpAiLf@eMtEaYpFyWxRyGfDnKzA~L`ErJxGmBxFxBzHqD`SeM~F~FhMbUtE|JpApKzHvFfHxGhF~InEnJhSvLvJ|@tJL|JDbKs@zTmIx`@qL|F~BzE|Y|C~K|GwFfJ}@~Iz@`FtDxJChHpBvV}A|A`KjCdi@vIf@rV\\tBbK~DbGvGjGvJ`@xGxGvF`JhICzEvD~Dlw@|BlKlIV`b@_DpJbA`VlEpJhCrInDda@hKxEtGuQpr@aF|v@UhMfAfIzdDzG~Ie@ViMpB}I","a":[576,577,577,580,583,585,588,591,594,598,618,620,621,624,643,643,641,637,636,637,638,638,638,641,641,645,649,659,668,672,700,711,711,708,708,708,708,707,707,701,696,695,694,699,702,703,698,698,700,703,706,718,720,725,727,736,742,747,750,753,756,761,765,768,771,775,790,793,798,802,803,802,796,795,793,799,807,809,810,811,812,815,815,817,818,820,822,824,826,828,842,845,849,850,855,859,860,861,861,867,865,869,875,878,878,880,889,899,920,939,956,955,975,977,970,956,963,952,937,917,900,888,883,881,879,879,875,870,870,866,864,865,862,858,855,852,849,847,838,832,829,828,827,824,819,820,819,817,816,814,812,811,810,806,796,798,792,787,782,786,789,790,791,786,779,777,773,770,766,763,757,753,750,747,743,746,745,725,719,706,703,704,704,702,700,700,698,700,695,679,677,674,670,666,661,660,656,651,649,645,632,629,627,621,620,613,610,609,603,600,592,584,583,580,570,571,574,576],"km":63.1,"max":977,"min":569,"gain":451}; // recorrido de ejemplo (simplificado)
 const WK = { 1: 55, 2: 70, 3: 0, 4: 88, 5: 32, 6: 150, 0: 95 }; // carga base por dia de la semana (lunes=1 ... domingo=0)
 const wkOf = (n) => new Date(off(n) + 'T12:00:00').getDay();
 // factor de carga por semana (n = semanas atras): rampa, semana de descarga cada 4 y bloque fuerte reciente
@@ -33,7 +34,7 @@ function mkHistory(lvl, nDays, ctl0, atl0, noL) {
   for (let n = -(nDays - 1); n <= 0; n++) {
     const L = loadAt(n, lvl); ctl += (L - ctl) / 42; atl += (L - atl) / 7;
     days.push(Object.assign({ d: off(n), ctl: Math.round(ctl * 10) / 10, atl: Math.round(atl * 10) / 10 }, noL ? {} : { l: L }));
-    if (L > 0 && n < 0) { acts.push(off(n)); if (n >= -21) { const extra = Math.abs(n) % 4 === 2; recent.push({ d: off(n), n: extra ? 'Salida por mi cuenta' : (RN[wkOf(n)] || 'Rodaje'), t: 'Ride', km: Math.round(L * 0.42), min: Math.round(L * 0.9), l: L, p: !extra }); } }
+    if (L > 0 && n < 0) { acts.push(off(n)); if (n >= -21) { const extra = Math.abs(n) % 4 === 2; recent.push(Object.assign({ d: off(n), n: extra ? 'Salida por mi cuenta' : (RN[wkOf(n)] || 'Rodaje'), t: 'Ride', km: Math.round(L * 0.42), min: Math.round(L * 0.9), l: L, p: !extra, id: 'demo-' + Math.abs(n) }, Math.abs(n) % 3 === 0 ? {} : { r: true })); } }
   }
   return { days: days.slice(-120), acts: acts.slice(-200), recent: recent.slice(-25).reverse(), updatedAt: Date.now() - 50 * 60000 };
 }
@@ -148,6 +149,7 @@ const be = {
   listenNotes(uid, cb) { return live(() => cb(store.users[uid].notes.map(n => ({ ...n })))); },
   listenPlan(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].plan ? JSON.parse(JSON.stringify(store.users[uid].plan)) : null)); },
   async savePlan(uid, data) { store.users[uid].plan = data; notify(); },
+  getRoute(uid, id) { return Promise.resolve(String(id).indexOf('demo-') === 0 ? Object.assign({}, DEMO_ROUTE) : null); },
   listenHistory(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].history ? JSON.parse(JSON.stringify(store.users[uid].history)) : null)); },
   async saveHistory(uid, data) { store.users[uid].history = data; notify(); },
   listenTeamKm(team, cb) { return live(() => cb(Object.entries(store.km[team] || {}).map(([id, v]) => ({ id, ...v })))); },

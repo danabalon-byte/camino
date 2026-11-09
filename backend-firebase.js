@@ -121,6 +121,8 @@ const be = {
     return onSnapshot(doc(db, 'users', uid, 'plan', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('plan'));
   },
   savePlan(uid, data) { return setDoc(doc(db, 'users', uid, 'plan', 'current'), clean(data)); },
+  // Recorrido simplificado de una salida (lo escribe el sync; lo leen el atleta y su coach)
+  async getRoute(uid, id) { const s = await getDoc(doc(db, 'users', uid, 'routes', String(id))); return s.exists() ? s.data() : null; },
   listenHistory(uid, cb) {
     return onSnapshot(doc(db, 'users', uid, 'history', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('historial'));
   },

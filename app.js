@@ -928,12 +928,59 @@ function syncAgo(h) {
 }
 function recentCard(h, n) {
   const rs = recentActs(h).slice(0, n || 5), sy = syncAgo(h); if (!rs.length && !sy) return '';
-  const rows = rs.map((x) => {
-    const d = parse(x.d), meta = [x.km ? x.km + ' km' : '', x.min ? minText(x.min) : '', x.l ? 'carga ' + x.l : ''].filter(Boolean).join(' · ');
-    return '<div class="row between g12" style="align-items:flex-start;padding-top:8px;border-top:1px solid var(--line)"><div class="col g4" style="min-width:0"><span style="font-weight:600">' + esc(x.n || 'Actividad') + '</span><span class="muted" style="font-size:13px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + (meta ? ' · ' + esc(meta) : '') + '</span></div><span class="pill" title="' + (x.p ? 'Estaba en tu plan' : 'No estaba en tu plan: la hiciste por tu cuenta') + '">' + (x.p ? 'Del plan' : 'Extra') + '</span></div>';
+  const rows = rs.map((x, i) => {
+    const d = parse(x.d), meta = [x.km ? String(x.km).replace('.', ',') + ' km' : '', x.min ? minText(x.min) : '', x.l ? 'carga ' + x.l : ''].filter(Boolean).join(' · ');
+    return '<button type="button" class="row between g12" data-a="actOpen" data-v="' + i + '" aria-label="Ver detalle de ' + esc(x.n || 'Actividad') + '" style="align-items:center;width:100%;min-height:56px;padding:8px 0 0;border:0;border-top:1px solid var(--line);background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer"><span class="col g4" style="min-width:0"><span style="font-weight:600">' + esc(x.n || 'Actividad') + '</span><span class="muted" style="font-size:13px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + (meta ? ' · ' + esc(meta) : '') + '</span></span><span class="row g8" style="align-items:center"><span class="pill">' + (x.p ? 'Del plan' : 'Extra') + '</span>' + (x.r ? '<span class="pill" title="Tiene recorrido">Mapa</span>' : '') + '<span aria-hidden="true" style="display:inline-flex">' + ph('caret-right', 16) + '</span></span></button>';
   }).join('');
   return '<section class="card col g10" aria-label="Últimas actividades"><div class="eyebrow">Últimas actividades</div>' + (rows || '<p class="soft">Cuando se sincronice una salida, aparecerá aquí.</p>')
     + (sy ? '<p class="muted" style="font-size:12px;margin-top:6px">Sincronizado con intervals.icu ' + sy.txt + '.' + (sy.late ? ' Hace tiempo que no llegan datos nuevos: avísale a tu coach para revisarlo.' : '') + '</p>' : '') + '</section>';
+}
+
+/* ---------- Detalle de actividad y recorrido ---------- */
+function decodePoly(str) {
+  const out = []; let i = 0, la = 0, lo = 0;
+  while (i < str.length) {
+    let b, sh = 0, r = 0; do { b = str.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5; } while (b >= 32 && i <= str.length); la += (r & 1) ? ~(r >> 1) : (r >> 1);
+    sh = 0; r = 0; do { b = str.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5; } while (b >= 32 && i <= str.length); lo += (r & 1) ? ~(r >> 1) : (r >> 1);
+    out.push([la / 1e5, lo / 1e5]);
+  }
+  return out;
+}
+function routeSvg(r) {
+  const P = decodePoly(String(r.p || '')); if (P.length < 2) return '';
+  const W = 342, H = 300, la = P.map((q) => q[0]), lo = P.map((q) => q[1]), y0 = Math.min.apply(null, la), y1 = Math.max.apply(null, la), x0 = Math.min.apply(null, lo), x1 = Math.max.apply(null, lo), k = Math.cos((y0 + y1) / 2 * Math.PI / 180);
+  const sc = Math.min((W - 40) / Math.max((x1 - x0) * k, 1e-6), (H - 40) / Math.max(y1 - y0, 1e-6)), ox = (W - (x1 - x0) * k * sc) / 2, oy = (H - (y1 - y0) * sc) / 2;
+  const xy = P.map((q) => [ox + (q[1] - x0) * k * sc, oy + (y1 - q[0]) * sc]);
+  let far = 0, fd = -1; xy.forEach((q, j) => { const d = Math.hypot(q[0] - xy[0][0], q[1] - xy[0][1]); if (d > fd) { fd = d; far = j; } });
+  const path = 'M' + xy.map((q) => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' L');
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Trazo del recorrido de la salida" style="display:block;border-radius:16px;background:var(--track);max-height:340px"><path d="' + path + '" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<circle cx="' + xy[0][0].toFixed(1) + '" cy="' + xy[0][1].toFixed(1) + '" r="6" fill="var(--good)" stroke="var(--surface)" stroke-width="2"/>'
+    + (fd > 14 ? '<circle cx="' + xy[far][0].toFixed(1) + '" cy="' + xy[far][1].toFixed(1) + '" r="6" fill="var(--text)" stroke="var(--surface)" stroke-width="2"/>' : '') + '</svg>';
+}
+function elevSvg(r) {
+  const A = Array.isArray(r.a) ? r.a.filter((v) => typeof v === 'number') : []; if (A.length < 3) return '';
+  const mn = Math.min.apply(null, A), mx = Math.max.apply(null, A), sp = Math.max(mx - mn, 1), n = A.length;
+  const pts = A.map((v, i) => (i / (n - 1) * 342).toFixed(1) + ' ' + (80 - (v - mn) / sp * 70).toFixed(1));
+  return '<svg viewBox="0 0 342 90" width="100%" role="img" aria-label="Perfil de altitud de ' + Math.round(mn) + ' a ' + Math.round(mx) + ' metros" style="display:block"><path d="M' + pts.join(' L') + ' L342 90 L0 90Z" fill="var(--accent)" fill-opacity=".18" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg>';
+}
+function actSheetHtml() {
+  const A = UI.act, x = A.x, r = A.route, d = parse(x.d);
+  const tile = (v, l) => '<div class="col g4" style="background:var(--surface);border-radius:16px;padding:12px 14px"><span class="num" style="font-size:24px;line-height:1.05">' + v + '</span><span class="muted" style="font-size:12px">' + l + '</span></div>';
+  const km = x.km || (r && r.km) || 0, tiles = [];
+  if (km) tiles.push(tile(String(km).replace('.', ',') + ' km', 'Distancia'));
+  if (x.min) tiles.push(tile(minText(x.min), 'Tiempo en movimiento'));
+  if (km && x.min) tiles.push(tile(f1(km / (x.min / 60)) + ' km/h', 'Velocidad media'));
+  if (r && r.gain != null) tiles.push(tile(r.gain + ' m', 'Desnivel positivo'));
+  if (r && r.max != null) tiles.push(tile(r.max + ' m', 'Altitud máxima'));
+  if (x.l) tiles.push(tile(x.l, 'Carga de la salida'));
+  let body;
+  if (r === undefined) body = '<section class="card" aria-live="polite"><p class="soft">Cargando recorrido…</p></section>';
+  else if (!r) body = '<section class="card col g8"><div class="eyebrow">Recorrido</div><p class="soft">' + (A.err ? 'No pudimos cargar el recorrido ahora. Reintenta en un momento.' : 'Esta salida no trae recorrido. Ocurre cuando viene de Strava o se grabó sin GPS.') + '</p></section>';
+  else body = '<section class="card col g10" aria-label="Recorrido">' + routeSvg(r) + '<div class="row g12" style="font-size:12px;flex-wrap:wrap"><span class="row g8" style="align-items:center"><i style="width:10px;height:10px;border-radius:5px;background:var(--good);display:inline-block"></i>Salida</span><span class="row g8" style="align-items:center"><i style="width:10px;height:10px;border-radius:5px;background:var(--text);display:inline-block"></i>Punto más lejano</span></div><p class="muted" style="font-size:12px">Solo la ven tú y tu coach. No se comparte con nadie más.</p></section>'
+    + (elevSvg(r) ? '<section class="card col g6" aria-label="Perfil de altitud"><div class="row between"><div class="eyebrow">Perfil de altitud</div><span class="muted" style="font-size:12px">' + r.min + ' – ' + r.max + ' m</span></div>' + elevSvg(r) + '</section>' : '');
+  return '<div class="inner"><div class="stack"><div class="row between"><div class="col g4" style="min-width:0"><div class="muted" style="font-size:14px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</div><h1 class="title">' + esc(x.n || 'Actividad') + '</h1></div><button type="button" class="x" data-a="actClose" style="color:var(--text);min-height:44px;border:0;background:transparent;font-weight:600;font-size:16px">Cerrar</button></div>'
+    + '<div class="row g8"><span class="pill">' + (x.p ? 'Del plan' : 'Extra') + '</span></div>' + body
+    + (tiles.length ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + tiles.join('') + '</div>' : '') + '</div></div>';
 }
 function viewDatos() {
   const a = meA(), fi = formaInfo(ST.myHist);
@@ -1069,8 +1116,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 52;
+const APP_VER = 53;
 const NEWS = [
+  'Ahora puedes tocar una actividad para ver su detalle: distancia, tiempo, desnivel y el recorrido dibujado con su perfil de altitud. Solo lo ves tú y tu coach.',
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
   'Nueva tarjeta de últimas actividades: ves lo que hiciste, con nombre, km y carga, y si estaba en tu plan o fue extra. Tu plan se sincroniza solo desde intervals.icu.',
   'Los coaches de apoyo ahora tienen el interruptor Coach/Atleta: pueden ver su propia forma, aptitud y plan como cualquier atleta.',
@@ -1757,7 +1805,7 @@ function feedbackHtml() {
   out += ckActions();
   return out + '<div class="col g8"><a href="#ruta" data-a="closeFb" class="btn primary"><span>Ver mi ruta</span>' + arrow() + '</a><button type="button" class="btn ghost" data-a="closeFb">Volver a Hoy</button></div></div></div>';
 }
-const overlayHtml = () => (UI.prof ? profHtml() : (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : (UI.wk ? weekSheetHtml() : ''))))));
+const overlayHtml = () => (UI.act ? actSheetHtml() : UI.prof ? profHtml() : (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : (UI.wk ? weekSheetHtml() : ''))))));
 
 /* ---------- Historia: tu camino recorrido ---------- */
 function bestWeekMin(a) {
@@ -2150,6 +2198,13 @@ const ACT = {
   closeFb() { UI.feedback = null; render(); },
   wkOpen(v) { const t0 = parse(off(0)); t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)); const sh = v ? Math.floor(diffDays(ymd(t0), v) / 7) : 0; UI.wk = { shift: sh, focus: v || null }; render(); if (v) { const el = document.getElementById('wkd-' + v); if (el) el.scrollIntoView({ block: 'center' }); } },
   wkClose() { UI.wk = null; render(); },
+  actOpen(v) {
+    const coachView = !!(UI.asId && isCoach()), h = coachView ? ST.athHist[UI.asId] : ST.myHist, x = recentActs(h)[Number(v)]; if (!x) return;
+    const uid = coachView ? UI.asId : (ST.user && ST.user.uid), cur = UI.act = { x: x, uid: uid, route: (x.r && x.id) ? undefined : null };
+    render(); if (cur.route !== undefined || !uid) return;
+    be.getRoute(uid, x.id).then((r) => { if (UI.act === cur) { cur.route = r || null; render(); } }).catch(() => { if (UI.act === cur) { cur.route = null; cur.err = true; render(); } });
+  },
+  actClose() { UI.act = null; render(); },
   wkShift(v) { UI.wk = { shift: Math.max(-8, Math.min(12, Number(v) || 0)), focus: null }; render(); const ov = document.getElementById('overlay'); if (ov) ov.scrollTop = 0; },
   async copyDemo(v) {
     const dl = demoLink(v); let ok = false;
