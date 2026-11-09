@@ -441,6 +441,7 @@ function viewHoy() {
   }
 
   const fiH = formaInfo(ST.myHist); if (fiH) out += formaCard(fiH, true);
+  out += recentCard(ST.myHist, 3);
   const wk = weekInfo(a); let cols = '';
   wk.days.forEach((d) => {
     const ph = d.p ? Math.min(64, Math.max(8, Math.round((d.p.min || 30) / 180 * 64))) : 4, dh = d.done && d.p ? ph : 0, bd = d.p ? (d.today ? '1.5px dashed var(--accent)' : '1.5px dashed var(--muted)') : '1.5px solid var(--line)';
@@ -919,6 +920,21 @@ function formaCard(fi, link) {
   return '<section class="card col g10" aria-label="Tu forma"><div class="row between"><div class="eyebrow">Tu forma</div>' + (link ? '<a href="#datos" class="muted" style="font-size:13px;text-decoration:underline">Ver mis datos</a>' : '') + '</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr">' + [[(t > 0 ? '+' : '') + t, z.c, 'Forma'], [f1(fi.last.ctl), 'var(--accent2)', 'Aptitud'], [f1(fi.last.atl), 'var(--accent)', 'Fatiga']].map(function (x, i) { return '<div class="col g6" style="align-items:center;text-align:center;padding:4px 4px;' + (i ? 'border-left:1px solid var(--line)' : '') + '"><span class="num" style="font-size:38px;line-height:1;color:' + x[1] + '">' + x[0] + '</span><span class="muted" style="font-size:13px">' + x[2] + '</span></div>'; }).join('') + '</div><div class="fzone" style="border-color:' + z.c + '"><b style="color:' + z.c + '">' + z.n + '</b><span class="muted">Forma ' + (t > 0 ? '+' : '') + t + ' · zona de ' + FZ_RNG[z.n] + '</span></div>' + formaGauge(t) + '<p class="soft" style="font-size:15px;margin-top:4px">' + formaLectura(t) + '</p></section>';
 }
 /* ---------- Vista: Datos (historial del propio atleta) ---------- */
+/* Ultimas actividades (desde intervals.icu): las que estaban en el plan y las que el atleta hizo por su cuenta. */
+const recentActs = (h) => (h && Array.isArray(h.recent) ? h.recent.filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.d || ''))).slice(0, 25) : []);
+function syncAgo(h) {
+  if (!h || !h.updatedAt) return null; const hrs = Math.floor((Date.now() - Number(h.updatedAt)) / 3600000);
+  return { hrs, late: hrs >= 48, txt: hrs < 1 ? 'hace menos de 1 hora' : hrs < 24 ? 'hace ' + hrs + (hrs === 1 ? ' hora' : ' horas') : 'hace ' + Math.floor(hrs / 24) + (Math.floor(hrs / 24) === 1 ? ' día' : ' días') };
+}
+function recentCard(h, n) {
+  const rs = recentActs(h).slice(0, n || 5), sy = syncAgo(h); if (!rs.length && !sy) return '';
+  const rows = rs.map((x) => {
+    const d = parse(x.d), meta = [x.km ? x.km + ' km' : '', x.min ? minText(x.min) : '', x.l ? 'carga ' + x.l : ''].filter(Boolean).join(' · ');
+    return '<div class="row between g12" style="align-items:flex-start;padding-top:8px;border-top:1px solid var(--line)"><div class="col g4" style="min-width:0"><span style="font-weight:600">' + esc(x.n || 'Actividad') + '</span><span class="muted" style="font-size:13px">' + cap(WD[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + (meta ? ' · ' + esc(meta) : '') + '</span></div><span class="pill" title="' + (x.p ? 'Estaba en tu plan' : 'No estaba en tu plan: la hiciste por tu cuenta') + '">' + (x.p ? 'Del plan' : 'Extra') + '</span></div>';
+  }).join('');
+  return '<section class="card col g10" aria-label="Últimas actividades"><div class="eyebrow">Últimas actividades</div>' + (rows || '<p class="soft">Cuando se sincronice una salida, aparecerá aquí.</p>')
+    + (sy ? '<p class="muted" style="font-size:12px;margin-top:6px">Sincronizado con intervals.icu ' + sy.txt + '.' + (sy.late ? ' Hace tiempo que no llegan datos nuevos: avísale a tu coach para revisarlo.' : '') + '</p>' : '') + '</section>';
+}
 function viewDatos() {
   const a = meA(), fi = formaInfo(ST.myHist);
   let out = '<div class="inner"><div class="stack">' + head('Tu historial', 'Mis datos') + msgBanner();
@@ -931,6 +947,7 @@ function viewDatos() {
       + '<p class="muted" style="font-size:13px;margin-top:10px"><b>Aptitud</b>: la base que has construido entrenando. <b>Fatiga</b>: el cansancio de tus últimos días. <b>Forma</b>: aptitud menos fatiga; positiva significa piernas frescas, negativa significa que estás cargando trabajo.</p></section>';
     out += '<section class="card" aria-label="Salidas por semana"><div class="eyebrow">Salidas por semana · últimas 8</div>' + weekBars(ST.myHist, ST.myPlan) + '<p class="muted" style="font-size:12px;margin-top:8px">Cuenta los días con actividad. La barra naranja es la semana en curso y el contorno punteado, lo que marcaba tu plan. Datos de intervals.icu' + (ST.myHist.updatedAt ? ', cargados ' + relTime(ST.myHist.updatedAt) : '') + '.</p></section>';
   }
+  out += recentCard(ST.myHist, 8);
   const cks = a.checkins.slice().sort((x, y) => (x.date < y.date ? 1 : (x.date > y.date ? -1 : 0))).slice(0, 10), sk = streak(a);
   out += '<section class="card" aria-label="Bienestar"><div class="row between"><div class="eyebrow">Tu bienestar · 7 días</div><div class="muted" style="font-size:13px">Racha: ' + sk.n + (sk.n === 1 ? ' día' : ' días') + '</div></div><div style="margin-top:8px">' + dualChart(a) + '</div>' + dualLegend() + '</section>';
   out += '<section class="card col g10" aria-label="Tus check-ins"><div class="eyebrow">Tus últimos check-ins</div>' + (cks.length ? cks.map((c) => {
@@ -941,7 +958,7 @@ function viewDatos() {
 }
 function histForm(a) {
   if (!UI.histDraft || UI.histDraft.id !== a.id) UI.histDraft = { id: a.id, text: '' };
-  return '<div class="col g12 mform"><div class="info" role="note">' + infoIcon() + '<span>Normalmente no necesitas hacer esto: el historial se sincroniza solo cada hora. Úsalo para cargarlo a mano; reemplaza el anterior.</span></div><label for="histText" class="muted" style="font-size:13px">Historial en JSON (days con d, ctl y atl; acts con fechas)</label><textarea id="histText" spellcheck="false" placeholder="{ &quot;days&quot;: [{ &quot;d&quot;: &quot;2026-10-27&quot;, &quot;ctl&quot;: 29.8, &quot;atl&quot;: 49.7 }], &quot;acts&quot;: [&quot;2026-10-25&quot;] }" style="min-height:200px;font-family:ui-monospace,Menlo,monospace;font-size:12px">' + esc(UI.histDraft.text) + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="saveHist" style="justify-content:center;width:auto;padding:0 20px;min-height:48px"' + (UI.busy ? ' disabled' : '') + '>Guardar historial</button><button type="button" class="chip" data-a="histToggle">Cerrar</button></div></div>';
+  return '<div class="col g12 mform"><div class="info" role="note">' + infoIcon() + '<span>Normalmente no necesitas hacer esto: el historial se sincroniza solo cada 30 minutos. Úsalo para cargarlo a mano; reemplaza el anterior.</span></div><label for="histText" class="muted" style="font-size:13px">Historial en JSON (days con d, ctl y atl; acts con fechas)</label><textarea id="histText" spellcheck="false" placeholder="{ &quot;days&quot;: [{ &quot;d&quot;: &quot;2026-10-27&quot;, &quot;ctl&quot;: 29.8, &quot;atl&quot;: 49.7 }], &quot;acts&quot;: [&quot;2026-10-25&quot;] }" style="min-height:200px;font-family:ui-monospace,Menlo,monospace;font-size:12px">' + esc(UI.histDraft.text) + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="saveHist" style="justify-content:center;width:auto;padding:0 20px;min-height:48px"' + (UI.busy ? ' disabled' : '') + '>Guardar historial</button><button type="button" class="chip" data-a="histToggle">Cerrar</button></div></div>';
 }
 function parseHist(text) {
   let o; try { o = JSON.parse(text); } catch (e) { return { err: 'El texto no es un JSON válido. Revisa comillas y comas.' }; }
@@ -1052,9 +1069,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 51;
+const APP_VER = 52;
 const NEWS = [
   // Más nueva primero. El aviso de actualización muestra solo las primeras NEWS_SHOW para que quepan en pantalla.
+  'Nueva tarjeta de últimas actividades: ves lo que hiciste, con nombre, km y carga, y si estaba en tu plan o fue extra. Tu plan se sincroniza solo desde intervals.icu.',
   'Los coaches de apoyo ahora tienen el interruptor Coach/Atleta: pueden ver su propia forma, aptitud y plan como cualquier atleta.',
   'Mensajes entre coaches: el coach principal y cada coach de apoyo pueden escribirse desde Ajustes, con aviso en la campana.',
   'Las propuestas de los coaches de apoyo ahora avisan en la campana: el coach principal ve las nuevas y quien propuso ve la respuesta.',

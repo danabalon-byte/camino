@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v7';
+const KEY = 'camino-demo-v8';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -28,13 +28,14 @@ const wkOf = (n) => new Date(off(n) + 'T12:00:00').getDay();
 const wkFactor = (w, lvl) => (w <= 0 ? 1 : 1) && lvl * (w >= 12 ? 0.62 : w >= 9 ? 0.78 : w >= 8 ? 0.55 : w >= 5 ? 0.92 : w >= 4 ? 0.6 : w >= 2 ? 1.08 : w >= 1 ? 1.15 : 1.0);
 function loadAt(n, lvl) { const w = Math.floor(-n / 7), base = WK[wkOf(n)] || 0; if (!base || (Math.abs(n) * 5 + w * 3) % 9 === 0) return 0; const noise = 1 + 0.12 * Math.sin(n * 1.7) + 0.05 * Math.cos(n * 0.9); return Math.round(base * wkFactor(w, lvl) * noise); }
 function mkHistory(lvl, nDays, ctl0, atl0, noL) {
-  const days = [], acts = []; let ctl = ctl0, atl = atl0;
+  const days = [], acts = [], recent = []; let ctl = ctl0, atl = atl0;
+  const RN = { 1: 'Rodillo Z2', 2: 'Rodillo suave', 4: 'Sweet spot', 5: 'Z2 corto', 6: 'Rodaje largo', 0: 'Rodaje suave' };
   for (let n = -(nDays - 1); n <= 0; n++) {
     const L = loadAt(n, lvl); ctl += (L - ctl) / 42; atl += (L - atl) / 7;
     days.push(Object.assign({ d: off(n), ctl: Math.round(ctl * 10) / 10, atl: Math.round(atl * 10) / 10 }, noL ? {} : { l: L }));
-    if (L > 0 && n < 0) acts.push(off(n));
+    if (L > 0 && n < 0) { acts.push(off(n)); if (n >= -21) { const extra = Math.abs(n) % 4 === 2; recent.push({ d: off(n), n: extra ? 'Salida por mi cuenta' : (RN[wkOf(n)] || 'Rodaje'), t: 'Ride', km: Math.round(L * 0.42), min: Math.round(L * 0.9), l: L, p: !extra }); } }
   }
-  return { days: days.slice(-120), acts: acts.slice(-200), updatedAt: Date.now() - 50 * 60000 };
+  return { days: days.slice(-120), acts: acts.slice(-200), recent: recent.slice(-25).reverse(), updatedAt: Date.now() - 50 * 60000 };
 }
 const SES = { 1: ['Z2 con cadencia', 1.0, 0.45], 2: ['Sweet spot 3x15', 1.0, 0.55], 4: ['Umbral 4x8', 1.0, 0.7], 5: ['Activación suave', 1.0, 0.3], 6: ['Fondo largo', 1.0, 1.4], 0: ['Rodaje de recuperación', 1.0, 0.65] };
 function mkPlan(lvl, goalName, goalDetail, goalIn) {
