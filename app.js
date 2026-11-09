@@ -1133,8 +1133,10 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 59;
+const APP_VER = 61;
 const NEWS = [
+  'La nutrición de Planificar se ajusta a ti: usa tu peso y nivel del perfil para sugerir carbohidratos, líquido y sodio por hora, la carga previa por kg y la cafeína.',
+  'Planificar suma nutrición e hidratación: elige si planificas los carbohidratos por hora, por tramo o por producto, y el modo en vivo te recuerda lo que toca en cada tramo.',
   'Terminar un evento en vivo ahora pide doble confirmación, con textos claros: el botón seguro siempre va primero y dice "Seguir en el evento".',
   'Planificar y el modo en vivo se habilitan atleta por atleta desde la tarjeta Gestionar de cada uno.',
   'Planificar ahora tiene modo en vivo: inicia tu evento, di dónde estás con el GPS o el km del ciclocomputador, y ve si vas adelantado o atrasado y cuánto falta para el próximo control.',
@@ -2418,8 +2420,82 @@ function plResHtml(d) {
   const msg = brv ? (r.ok ? '<p class="soft" style="font-size:13px;margin-top:8px">Con ese ritmo llegas dentro de todas las ventanas. Las ventanas siguen las reglas de Audax (ACP).</p>' : '<p style="font-size:13px;margin-top:8px;font-weight:600">Con ese ritmo llegarías después del cierre de al menos un control. Prueba con más velocidad o paradas más cortas.</p>') : '';
   return rows + sum + msg;
 }
-function plNew() { return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, ctl: [] } }; }
-function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop })) } }; }
+/* ---------- Nutrición e hidratación del evento (v60) ---------- */
+
+/* ---------- v61: nutrición cruzada con el perfil del atleta ---------- */
+function plProf() {
+  const ms = bioMeas(), m = bioMain() || {}, kg = Number(ms.weightKg), ok = isFinite(kg) && kg >= 30 && kg <= 200;
+  return { kg: ok ? kg : null, upd: ok ? ms.updatedAt || null : null, level: (m.hist && m.hist.level) || '', years: (m.hist && m.hist.years) || '', age: ageOf(m.birthDate), sex: m.sex || '' };
+}
+function plSug(h) {
+  const P = plProf(); if (!P.kg) return null;
+  const cap = P.level === 'Competitivo' ? 90 : P.level === 'Recreativo' ? 70 : 80, capY = P.years === 'Menos de 1 año' ? 60 : cap;
+  let g = Math.max(60, Math.min(capY, plR5(P.kg * 1.0)));
+  if (h > 0 && h < 2) g = Math.min(g, 60);
+  const ml = Math.max(450, Math.min(800, Math.round(P.kg * 8 / 50) * 50)), na = Math.max(300, Math.min(700, Math.round(P.kg * 7 / 50) * 50));
+  const load = h >= 6 ? [8, 10, 'carga completa, 3 días antes'] : h >= 3 ? [6, 7, 'carga moderada, 1 a 2 días antes'] : [5, 6, 'sin carga especial'];
+  return { g, ml, na, kg: P.kg, load, loadG: [Math.round(P.kg * load[0] / 10) * 10, Math.round(P.kg * load[1] / 10) * 10], caf: [Math.round(P.kg * 1.5 / 5) * 5, Math.round(P.kg * 3 / 5) * 5], capNote: capY < 80 ? (P.years === 'Menos de 1 año' ? 'tope de 60 g/h por tu poca experiencia' : 'tope de ' + capY + ' g/h por tu nivel') : '', P };
+}
+function plMovH(d) { const k = Number(d.km), v = Number(d.speed); return k > 0 && v > 0 ? k / v : 0; }
+function plProfBox(d) {
+  const h = plMovH(d), S = plSug(h), n = plNutFix(d.nut);
+  if (!S) return '<div class="info" role="note">' + infoIcon() + '<span>Con tu peso en el perfil, Camino ajusta estos números a ti. Agrégalo en Perfil, medidas, y tu coach lo aprueba.</span></div>';
+  const same = n.gph === S.g && n.mlph === S.ml && n.naph === S.na;
+  return '<div class="card col g8" style="background:var(--surface2)" aria-label="Sugerido según tu perfil"><div class="eyebrow">Sugerido para ti</div><p class="soft" style="font-size:14px">Con tu peso de ' + String(S.kg).replace('.', ',') + ' kg' + (S.P.level ? ' y nivel ' + esc(S.P.level.toLowerCase()) : '') + (h ? ' y ' + plDur(h * 60) + ' en movimiento' : '') + ': <b>' + S.g + ' g/h</b> de carbohidratos, <b>' + S.ml + ' ml/h</b> de líquido y <b>' + S.na + ' mg/h</b> de sodio.' + (S.capNote ? ' (' + S.capNote + ')' : '') + '</p>'
+    + '<p class="muted" style="font-size:13px">Antes: ' + S.load[2] + ', ' + S.load[0] + ' a ' + S.load[1] + ' g/kg al día (' + S.loadG[0] + ' a ' + S.loadG[1] + ' g). Cafeína opcional: ' + S.caf[0] + ' a ' + S.caf[1] + ' mg (1,5 a 3 mg/kg), probada antes en entrenamiento.</p>'
+    + '<button type="button" class="btn" data-a="plNutProf" ' + (same ? 'disabled' : '') + ' style="min-height:48px">' + (same ? 'Ya usas estos valores' : 'Usar estos valores') + '</button>'
+    + '<p class="muted" style="font-size:12px">Punto de partida de coaching, no consejo médico. Ajusta según tu tolerancia, el calor y tu tasa de sudor.</p></div>';
+}
+const PL_NUT0 = () => ({ mode: 'hora', gph: 70, mlph: 600, naph: 500, seg: {}, prods: { drink: { on: true, g: 40, ml: 750 }, gel: { on: true, g: 25 }, bar: { on: true, g: 30 } } });
+const plNum = (v, def, mn, mx) => { const x = Number(v); return v !== '' && v != null && isFinite(x) ? Math.max(mn, Math.min(mx, x)) : def; };
+function plNutFix(n) {
+  const b = PL_NUT0(); n = n || {}; const p = n.prods || {};
+  return { mode: ['hora', 'tramo', 'producto'].indexOf(n.mode) >= 0 ? n.mode : 'hora', gph: plNum(n.gph, b.gph, 0, 200), mlph: plNum(n.mlph, b.mlph, 0, 2000), naph: plNum(n.naph, b.naph, 0, 2000), seg: n.seg && typeof n.seg === 'object' ? n.seg : {},
+    prods: { drink: { on: !p.drink || p.drink.on !== false, g: plNum(p.drink && p.drink.g, 40, 1, 200), ml: plNum(p.drink && p.drink.ml, 750, 100, 2000) }, gel: { on: !p.gel || p.gel.on !== false, g: plNum(p.gel && p.gel.g, 25, 1, 100) }, bar: { on: !p.bar || p.bar.on !== false, g: plNum(p.bar && p.bar.g, 30, 1, 100) } } };
+}
+const plR5 = (x) => Math.round(x / 5) * 5;
+const plL = (ml) => (Math.round(ml / 100) / 10).toFixed(1).replace('.', ',') + ' L';
+function plTramos(d) {
+  const c = plCalc(d); if (!c) return []; let prev = 0, pn = 'Salida', k = 0;
+  return c.rows.map((r) => { const nm = r.meta ? 'Meta' : (r.n || 'Control ' + (++k)), t = { name: pn + ' → ' + nm, to: r.km, km: r.km - prev, h: (r.km - prev) / Number(d.speed) }; prev = r.km; pn = nm; return t; });
+}
+function plNutCalc(d) {
+  const n = plNutFix(d.nut), T = plTramos(d); if (!T.length) return null; const P = n.prods; let sh = { drink: 0, gel: 0, bar: 0 };
+  const rows = T.map((t) => {
+    const ml = Math.round(n.mlph * t.h), na = Math.round(n.naph * t.h); let g, cnt = null;
+    if (n.mode === 'hora') g = Math.round(n.gph * t.h);
+    else if (n.mode === 'tramo') g = n.seg[String(t.to)] != null ? Number(n.seg[String(t.to)]) : plR5(n.gph * t.h);
+    else {
+      const Tg = n.gph * t.h; let bid = P.drink.on ? Math.round(ml / P.drink.ml) : 0; if (bid * P.drink.g > Tg * 1.15) bid = Math.floor(Tg / P.drink.g);
+      const R = Math.max(0, Tg - bid * (P.drink.on ? P.drink.g : 0)), bars = P.bar.on ? Math.round(R * (P.gel.on ? 0.35 : 1) / P.bar.g) : 0, gels = P.gel.on ? Math.max(0, Math.round((R - bars * P.bar.g) / P.gel.g)) : 0;
+      g = bid * (P.drink.on ? P.drink.g : 0) + bars * P.bar.g + gels * P.gel.g; cnt = { drink: bid, gel: gels, bar: bars }; sh.drink += bid; sh.gel += gels; sh.bar += bars;
+    }
+    return Object.assign({}, t, { g, ml, na, gph: t.h > 0 ? g / t.h : 0, cnt });
+  });
+  const tot = rows.reduce((s, r) => ({ g: s.g + r.g, ml: s.ml + r.ml, na: s.na + r.na, h: s.h + r.h }), { g: 0, ml: 0, na: 0, h: 0 });
+  return { n, rows, tot, shop: sh, target: Math.round(n.gph * tot.h) };
+}
+function plNutResHtml(d) {
+  const r = plNutCalc(d); if (!r) return '<p class="soft" style="font-size:14px">Indica la distancia y tu velocidad media para calcular la nutrición.</p>';
+  const n = r.n, hh = (h) => plDur(h * 60);
+  let out = r.rows.map((x) => '<div class="col g4" style="border-top:1px solid var(--line);padding:8px 0"><div class="row between"><span style="font-weight:600;font-size:15px">' + esc(x.name) + '</span><span class="muted" style="font-size:13px">' + hh(x.h) + '</span></div><span class="soft" style="font-size:14px">' + x.g + ' g carbohidratos · ' + plL(x.ml) + ' · ' + x.na.toLocaleString('es-CL') + ' mg sodio' + (n.mode === 'tramo' ? ' · ' + Math.round(x.gph) + ' g por hora' : '') + '</span>' + (x.cnt ? '<span class="muted" style="font-size:13px">' + [x.cnt.drink ? x.cnt.drink + (x.cnt.drink === 1 ? ' bidón' : ' bidones') : '', x.cnt.gel ? x.cnt.gel + (x.cnt.gel === 1 ? ' gel' : ' geles') : '', x.cnt.bar ? x.cnt.bar + (x.cnt.bar === 1 ? ' barra' : ' barras') : ''].filter(Boolean).join(' · ') + '</span>' : '') + '</div>').join('');
+  out += '<div class="row g12 wrap" style="border-top:1px solid var(--line);padding-top:10px"><div class="col g4"><span class="num" style="font-size:22px">' + r.tot.g + ' g</span><span class="muted" style="font-size:12px">Carbohidratos</span></div><div class="col g4"><span class="num" style="font-size:22px">' + plL(r.tot.ml) + '</span><span class="muted" style="font-size:12px">Líquido</span></div><div class="col g4"><span class="num" style="font-size:22px">' + (Math.round(r.tot.na / 100) / 10).toFixed(1).replace('.', ',') + ' g</span><span class="muted" style="font-size:12px">Sodio</span></div></div>';
+  out += '<p class="soft" style="font-size:13px">Promedio en movimiento: ' + (r.tot.h > 0 ? Math.round(r.tot.g / r.tot.h) : 0) + ' g/h durante ' + hh(r.tot.h) + '.</p>';
+  if (n.mode === 'producto') out += '<div class="col g4" style="border-top:1px solid var(--line);padding-top:8px"><span class="eyebrow">Lista de compras y carga</span><div class="row g12 wrap">' + [['drink', 'Bidones de ' + n.prods.drink.g + ' g'], ['gel', 'Geles'], ['bar', 'Barras']].map((k) => '<div class="col g4"><span class="num" style="font-size:22px">' + r.shop[k[0]] + '</span><span class="muted" style="font-size:12px">' + k[1] + '</span></div>').join('') + '</div><p class="soft" style="font-size:13px">Total planificado ' + r.tot.g + ' g, frente a ' + r.target + ' g de meta.</p></div>';
+  return out;
+}
+function plNutBox(d) {
+  const n = plNutFix(d.nut), rr = (id, t, v, k, mx) => '<div class="col g8 grow">' + '<label for="' + id + '" class="muted" style="font-size:13px">' + t + '</label><input class="field" id="' + id + '" data-pl="' + k + '" type="number" inputmode="numeric" min="0" max="' + mx + '" value="' + esc(v) + '"></div>', T = plTramos(d);
+  let out = '<div id="pl-prof">' + plProfBox(d) + '</div><div class="seggroup" role="group" aria-label="Tipo de planificación de carbohidratos">' + [['hora', 'Por hora'], ['tramo', 'Por tramo'], ['producto', 'Por producto']].map((m) => '<button type="button" data-a="plNutMode" data-v="' + m[0] + '" aria-pressed="' + (n.mode === m[0]) + '">' + m[1] + '</button>').join('') + '</div>';
+  out += '<p class="soft" style="font-size:13px">' + ({ hora: 'Fijas los gramos por hora y la app reparte el total entre los tramos.', tramo: 'Defines los gramos de cada tramo entre controles y la app calcula cuánto equivale por hora.', producto: 'Eliges qué productos llevas y la app arma cuántos consumir en cada tramo para llegar a la meta.' }[n.mode]) + '</p>';
+  if (n.mode !== 'tramo') out += '<div class="row g8">' + rr('pl-ng', 'Carbohidratos (g/h)', n.gph, 'ng', 200) + rr('pl-nm', 'Líquido (ml/h)', n.mlph, 'nm', 2000) + rr('pl-nn', 'Sodio (mg/h)', n.naph, 'nn', 2000) + '</div>';
+  else out += '<div class="row g8">' + rr('pl-nm', 'Líquido (ml/h)', n.mlph, 'nm', 2000) + rr('pl-nn', 'Sodio (mg/h)', n.naph, 'nn', 2000) + '</div>' + T.map((t) => { const g = n.seg[String(t.to)] != null ? Number(n.seg[String(t.to)]) : plR5(n.gph * t.h); return '<div class="row g8" style="align-items:center;border-top:1px solid var(--line);padding-top:8px"><div class="col grow g4" style="min-width:0"><span style="font-weight:600;font-size:15px">' + esc(t.name) + '</span><span class="muted" style="font-size:13px">' + plDur(t.h * 60) + ' · ' + Math.round(g / t.h) + ' g por hora</span></div><button type="button" class="chip" data-a="plNutSeg" data-v="' + t.to + '|-5" aria-label="Bajar 5 gramos en ' + esc(t.name) + '" style="min-width:44px;justify-content:center">−</button><span class="num" style="min-width:56px;text-align:center;font-size:18px">' + g + ' g</span><button type="button" class="chip" data-a="plNutSeg" data-v="' + t.to + '|5" aria-label="Subir 5 gramos en ' + esc(t.name) + '" style="min-width:44px;justify-content:center">+</button></div>'; }).join('');
+  if (n.mode === 'producto') out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:8px"><span class="eyebrow">Tus productos</span>' + [['drink', 'Bebida con carbohidratos', 'g por bidón'], ['gel', 'Gel', 'g por unidad'], ['bar', 'Barra', 'g por unidad']].map((p) => '<div class="row g8" style="align-items:center"><div class="col grow g4"><span style="font-weight:600;font-size:15px">' + p[1] + '</span><div class="row g8" style="align-items:center"><input class="field" style="width:84px;min-height:44px" id="pl-p-' + p[0] + '" data-pl="np" data-k="' + p[0] + '" type="number" inputmode="numeric" min="1" max="200" value="' + n.prods[p[0]].g + '" aria-label="' + p[2] + ' de ' + p[1] + '"><span class="muted" style="font-size:13px">' + p[2] + '</span></div></div><button type="button" class="chip" data-a="plProd" data-v="' + p[0] + '" aria-pressed="' + n.prods[p[0]].on + '">Incluido</button></div>').join('') + '</div>';
+  return out + '<div id="pl-nutres">' + plNutResHtml(d) + '</div>';
+}
+function plNutSave(d) { const n = plNutFix(d.nut), ks = plTramos(d).map((t) => String(t.to)), seg = {}; ks.forEach((k) => { if (n.seg[k] != null) seg[k] = Number(n.seg[k]); }); n.seg = seg; return n; }
+function plNew() { const nut = PL_NUT0(), S = plSug(200 / 24); if (S) { nut.gph = S.g; nut.mlph = S.ml; nut.naph = S.na; } return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, ctl: [], nut } }; }
+function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop })), nut: plNutFix(e.nut) } }; }
 function plEvName(e) { return e.name || 'Evento'; }
 function viewPlanificar() {
   if (!plannerOn()) return '<div class="inner"><div class="stack">' + head('Función no disponible', 'Planificar') + '<section class="card"><p class="soft">Esta función no está habilitada en tu cuenta. Si te interesa, pídesela a tu coach.</p></section></div></div>';
@@ -2461,6 +2537,7 @@ function plEditHtml(P) {
   (d.ctl || []).forEach((c, i) => { out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4 grow">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '"></div></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '"><button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button></div></div>'; });
   out += '<button type="button" class="chip" data-a="plCtlAdd" style="align-self:flex-start;border-color:var(--accent);color:var(--accent);font-weight:600">Agregar ' + (brv ? 'control' : 'parada') + '</button></section>';
   out += '<section class="card col g12" aria-label="Tu ritmo"><div class="eyebrow">Tu ritmo</div><div class="row g8"><div class="col g8 grow">' + lab('pl-speed', 'Velocidad media (km/h)') + '<input class="field" id="pl-speed" data-pl="speed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.speed) + '"></div><div class="col g8 grow">' + lab('pl-stop', 'Parada típica (min)') + '<input class="field" id="pl-stop" data-pl="stop" type="number" inputmode="numeric" min="0" max="600" value="' + esc(d.stop) + '"></div></div><p class="muted" style="font-size:12px">La velocidad es en movimiento, sin contar las paradas.</p></section>';
+  out += '<section class="card col g12" aria-label="Nutrición e hidratación"><div class="eyebrow">Nutrición e hidratación</div><div id="pl-nut" class="col g12">' + plNutBox(d) + '</div><p class="muted" style="font-size:12px">Son valores de partida: ajústalos a lo que te funciona y a lo que acuerdes con tu nutricionista. Se calculan sobre el tiempo en movimiento.</p></section>';
   out += '<section class="card col g8" aria-label="Horarios"><div class="eyebrow">' + (brv ? 'Horarios y ventanas de control' : 'Horarios estimados') + '</div><div id="pl-res">' + plResHtml(d) + '</div></section>';
   out += '<button type="button" class="btn primary" data-a="plSave"' + (UI.busy ? ' disabled' : '') + '><span>Guardar evento</span>' + ph('check', 22) + '</button>';
   if (P.id) out += '<button type="button" class="btn" data-a="lvStart" data-v="' + esc(P.id) + '"><span>Iniciar evento<small style="display:block;font-size:13px;font-weight:500;color:var(--muted)">Sigue tu avance en vivo. Usa la versión guardada.</small></span>' + ph('arrow-right', 22) + '</button>';
@@ -2472,9 +2549,11 @@ function plInput(t) {
   const P = UI.pl, k = t.dataset && t.dataset.pl; if (!P || !k) return false; const d = P.d, v = t.value;
   if (k === 'file') return true;
   if (k === 'name') { d.name = v; const h = document.querySelector('h1.title'); if (h) h.textContent = v || 'Evento'; return true; }
-  if (k === 'date' || k === 'start' || k === 'km' || k === 'speed' || k === 'stop') d[k] = v;
+  if (k === 'ng' || k === 'nm' || k === 'nn' || k === 'np') { d.nut = plNutFix(d.nut); if (k === 'np') d.nut.prods[t.dataset.k].g = plNum(v, d.nut.prods[t.dataset.k].g, 1, 200); else { const f = { ng: 'gph', nm: 'mlph', nn: 'naph' }[k]; d.nut[f] = plNum(v, d.nut[f], 0, f === 'gph' ? 200 : 2000); } }
+  else if (k === 'date' || k === 'start' || k === 'km' || k === 'speed' || k === 'stop') d[k] = v;
   else { const c = d.ctl[+t.dataset.i]; if (!c) return true; if (k === 'ck') c.km = v; else if (k === 'cs') c.stop = v; else if (k === 'cn') c.name = v; }
   const r = document.getElementById('pl-res'); if (r) r.innerHTML = plResHtml(d);
+  const nb = document.getElementById('pl-nut'); if (nb) { if (nb.contains(t)) { const nr = document.getElementById('pl-nutres'); if (nr) nr.innerHTML = plNutResHtml(d); const pp = document.getElementById('pl-prof'); if (pp) pp.innerHTML = plProfBox(d); } else nb.innerHTML = plNutBox(d); }
   return true;
 }
 function plValid(d) {
@@ -2487,6 +2566,10 @@ function plValid(d) {
   return '';
 }
 Object.assign(ACT, {
+  plNutProf() { const d = UI.pl.d, S = plSug(plMovH(d)); if (!S) return; d.nut = plNutFix(d.nut); d.nut.gph = S.g; d.nut.mlph = S.ml; d.nut.naph = S.na; document.getElementById('pl-nut').innerHTML = plNutBox(d); say('Valores de tu perfil aplicados: ' + S.g + ' g/h, ' + S.ml + ' ml/h, ' + S.na + ' mg/h.', 'ok'); },
+  plNutMode(v) { const d = UI.pl.d; d.nut = plNutFix(d.nut); d.nut.mode = v; document.getElementById('pl-nut').innerHTML = plNutBox(d); },
+  plNutSeg(v) { const d = UI.pl.d, q = String(v).split('|'), to = q[0], dl = Number(q[1]); d.nut = plNutFix(d.nut); const t = plTramos(d).find((x) => String(x.to) === to); if (!t) return; const cur = d.nut.seg[to] != null ? Number(d.nut.seg[to]) : plR5(d.nut.gph * t.h); d.nut.seg[to] = Math.max(0, Math.min(1000, cur + dl)); document.getElementById('pl-nut').innerHTML = plNutBox(d); },
+  plProd(v) { const d = UI.pl.d; d.nut = plNutFix(d.nut); d.nut.prods[v].on = !d.nut.prods[v].on; document.getElementById('pl-nut').innerHTML = plNutBox(d); },
   plNew() { UI.pl = plNew(); render(); window.scrollTo(0, 0); },
   plOpen(v) { const e = (ST.myEvents || []).find((x) => x.id === v); if (!e) return; UI.pl = plFromEv(e); render(); window.scrollTo(0, 0); },
   plClose() { UI.pl = null; render(); },
@@ -2501,7 +2584,8 @@ Object.assign(ACT, {
   async plSave() {
     const P = UI.pl; if (!P || !ST.user || UI.busy) return; const d = P.d, er = plValid(d); if (er) { say(er); return; }
     const ctl = (d.ctl || []).filter((c) => Number(c.km) > 0).map((c) => ({ km: Number(c.km), name: String(c.name || '').slice(0, 40), stop: c.stop === '' || c.stop == null ? null : Number(c.stop) })).sort((a, b) => a.km - b.km);
-    const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), stop: Number(d.stop) || 0, track: d.track || null, ctl, updatedAt: Date.now() };
+    const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), stop: Number(d.stop) || 0, track: d.track || null, ctl, nut: plNutSave(d), updatedAt: Date.now() };
+    const old = (ST.myEvents || []).find((x) => x.id === P.id); if (old && old.result) data.result = old.result;
     UI.busy = true; render();
     try { await be.saveEvent(ST.user.uid, P.id || ('e' + Date.now().toString(36)), data); UI.pl = null; say('Evento guardado.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
@@ -2590,6 +2674,7 @@ function liveHtml() {
       + lvStatCard('Detenido en este control', '<span id="lv-stop">' + lvHMS(Date.now() - LV.arrMs) + '</span>', 'Parada planificada: ' + (lg.stopPlan || 0) + ' min', '', false)
       + '<div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + lvTile('Tiempo del tramo', plDur(lg.moveMs / 60000)) + lvTile('Ritmo del tramo', lvKm1(lg.speed || 0) + ' km/h') + (a.brv ? lvTile('Margen al cierre', (lg.margClose < 0 ? '-' : '') + plDur(Math.abs(lg.margClose))) : '') + lvTile('Tiempo total', '<span id="lv-tot">' + lvHMS(tot) + '</span>') + '</div>'
       + '<section class="card col g4"><div class="eyebrow">Tramo que viene</div><p class="soft">' + esc(nx.meta ? 'Meta' : (nx.n || 'Control')) + ' · km ' + String(nx.km).replace('.', ',') + ' · ' + lvKm1(nx.km - lg.km) + ' km</p>' + (a.brv ? '<p class="muted" style="font-size:13px">Abre ' + lvClock(LV.start + nx.w.open * 60000) + ' · cierra ' + lvClock(LV.start + nx.w.close * 60000) + '</p>' : '') + '</section>'
+      + (() => { const nu2 = plNutCalc(plFromEv(ev).d), nt2 = nu2 && nu2.rows[LV.idx + 1]; return nt2 ? '<section class="card col g4"><div class="eyebrow">Nutrición del tramo que viene</div><p style="font-size:16px;font-weight:600">' + nt2.g + ' g carbohidratos · ' + plL(nt2.ml) + ' · ' + nt2.na.toLocaleString('es-CL') + ' mg sodio</p><p class="muted" style="font-size:12px">Aprovecha esta parada para reabastecer agua y comer algo sólido.</p></section>' : ''; })()
       + '<button type="button" class="btn primary" data-a="lvDepart"><span>Marcar salida de este control</span>' + ph('arrow-right', 22) + '</button><p class="muted" style="font-size:13px">Toca esto cuando retomes la bicicleta: desde ahí se mide el tramo siguiente.</p><button type="button" class="btn ghost" data-a="lvUndo">Deshacer esta llegada</button>';
     return out + '</div></div>';
   }
@@ -2602,6 +2687,8 @@ function liveHtml() {
   out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + lvTile('Km recorridos', lvKm1(a.km)) + lvTile('Faltan al control', lvKm1(a.rem) + ' km') + lvTile('Ritmo del tramo', a.avg ? lvKm1(a.avg) + ' km/h' : '—') + lvTile('Ritmo total', a.avgAll ? lvKm1(a.avgAll) + ' km/h' : '—')
     + lvTile('Llegada estimada', lvClock(a.etaMs) + (a.wait ? '*' : '')) + lvTile('Programa', lvClock(LV.start + r.rec * 60000)) + (a.brv ? lvTile('Cierra', lvClock(LV.start + r.w.close * 60000)) + lvTile('Margen al cierre', (a.marg < 0 ? '-' : '') + plDur(Math.abs(a.marg))) : '') + lvTile('Tiempo total', '<span id="lv-tot">' + lvHMS(tot) + '</span>') + '</div>';
   if (a.wait) out += '<p class="muted" style="font-size:12px">* Llegarías antes de que abra el control: esperas hasta la apertura.</p>';
+  const nu = plNutCalc(plFromEv(ev).d), nt = nu && nu.rows[LV.idx];
+  if (nt) out += '<section class="card col g4"><div class="eyebrow">Nutrición de este tramo</div><p style="font-size:16px;font-weight:600">' + nt.g + ' g carbohidratos · ' + plL(nt.ml) + ' · ' + nt.na.toLocaleString('es-CL') + ' mg sodio</p>' + (nt.cnt ? '<p class="soft" style="font-size:14px">' + [nt.cnt.drink ? nt.cnt.drink + (nt.cnt.drink === 1 ? ' bidón' : ' bidones') : '', nt.cnt.gel ? nt.cnt.gel + (nt.cnt.gel === 1 ? ' gel' : ' geles') : '', nt.cnt.bar ? nt.cnt.bar + (nt.cnt.bar === 1 ? ' barra' : ' barras') : ''].filter(Boolean).join(' · ') + '</p>' : '') + '<p class="muted" style="font-size:12px">Para todo el tramo hasta ' + esc(nt.name.split(' → ')[1]) + '.</p></section>';
   out += '<section class="card col g8"><div class="eyebrow">Registrar algo</div><select class="field" id="lv-evt" aria-label="Tipo de registro"><option value="detencion">Detención (pinchazo, baño, mecánica)</option><option value="botellas">Botellas / hidratación</option><option value="comida">Comida extra</option><option value="sales">Sales / electrolitos</option><option value="sensacion">Sensación</option><option value="otro">Otro</option></select><input class="field" id="lv-evd" type="text" maxlength="80" placeholder="Detalle (opcional)" aria-label="Detalle"><button type="button" class="btn" data-a="lvEv" style="justify-content:center"><span>Registrar</span></button><p class="muted" style="font-size:12px">La detención pausa el cálculo del ritmo. El resto solo queda anotado con la hora.</p></section>';
   out += '<section class="card col g8"><div class="eyebrow">Compartir avance</div><textarea id="lv-msg" rows="2" maxlength="200" placeholder="Mensaje personal (opcional)" aria-label="Mensaje personal">' + esc(LV.msg || '') + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvWa" style="width:auto;padding:0 20px;min-height:48px;justify-content:center">Compartir por WhatsApp</button><button type="button" class="chip" data-a="lvCopy">Copiar mensaje</button></div><p class="muted" style="font-size:12px">El mensaje dice tu km y tu próximo control, no tu ubicación exacta.</p></section>';
   if ((LV.rec || []).length) out += '<details class="card"><summary style="font-weight:600;min-height:44px;display:flex;align-items:center">Eventos registrados (' + LV.rec.length + ')</summary>' + LV.rec.map((e) => '<div class="mrow"><div class="col grow g4"><span style="font-weight:600">' + ({ detencion: 'Detención', botellas: 'Botellas', comida: 'Comida extra', sales: 'Sales', sensacion: 'Sensación', otro: 'Otro' }[e.type] || 'Otro') + ' · ' + lvClock(e.start) + '</span><span class="muted" style="font-size:13px">' + esc(e.detail || '') + (e.type === 'detencion' && e.end ? ' · ' + lvHMS(e.end - e.start) : '') + '</span></div></div>').join('') + '</details>';
@@ -2622,7 +2709,7 @@ Object.assign(ACT, {
     if (LV && LV.ev.id !== v) { say('Ya tienes un evento en curso. Termínalo o ciérralo antes de iniciar otro.'); return; }
     if (LV) { UI.liveOpen = true; render(); return; }
     const e = (ST.myEvents || []).find((x) => x.id === v); if (!e) return; const d = plFromEv(e).d; if (!plCalc(d)) { say('Completa la distancia y tu velocidad media para iniciar.'); return; }
-    LV = { ev: { id: e.id, name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop, track: e.track || null, ctl: e.ctl || [] }, mode: 'pre', start: null, idx: 0, depMs: null, depKm: 0, lastKm: 0, lastKmAt: null, log: [], rec: [], msg: '', posMsg: '' };
+    LV = { ev: { id: e.id, name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null }, mode: 'pre', start: null, idx: 0, depMs: null, depKm: 0, lastKm: 0, lastKmAt: null, log: [], rec: [], msg: '', posMsg: '' };
     UI.pl = null; UI.liveOpen = true; lvSave(); render(); window.scrollTo(0, 0);
   },
   lvOpen() { UI.liveOpen = true; UI.pl = null; render(); },
@@ -2664,7 +2751,7 @@ Object.assign(ACT, {
   async lvSaveEnd() {
     const e = (ST.myEvents || []).find((x) => x.id === LV.ev.id); if (!e || !ST.user) { LV = null; lvSave(); UI.liveOpen = false; render(); return; }
     const last = LV.log[LV.log.length - 1], res = { start: LV.start, end: LV.end, done: !!(last && last.meta), controls: LV.log.map((x) => ({ n: x.name, km: x.km, arr: Math.round((x.arr - LV.start) / 60000), delay: Math.round(x.delay) })), stops: (LV.rec || []).filter((x) => x.type === 'detencion').length };
-    const data = { name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop || 0, track: e.track || null, ctl: e.ctl || [], result: res, updatedAt: Date.now() };
+    const data = { name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop || 0, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null, result: res, updatedAt: Date.now() };
     UI.busy = true; try { await be.saveEvent(ST.user.uid, e.id, data); LV = null; lvSave(); UI.liveOpen = false; say('Resultado guardado en el evento.', 'ok'); } catch (er) { say(friendly(er)); } UI.busy = false; render();
   }
 });
