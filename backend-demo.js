@@ -1,6 +1,6 @@
 // Modo demostración (?demo=1): mismos métodos que backend-firebase.js, pero con datos
 // ficticios guardados en este navegador. No usa red. Sirve para probar el diseño y los flujos.
-const KEY = 'camino-demo-v10';
+const KEY = 'camino-demo-v11';
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
 const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 const off = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return ymd(d); };
@@ -53,6 +53,26 @@ function mkPlan(lvl, goalName, goalDetail, goalIn) {
     phases: [{ n: 'Base y volumen', s: 'Rodajes aeróbicos y constancia', to: off(-1) }, { n: 'Construcción', s: 'Sweet spot, umbral y fondos largos', to: off(Math.round(goalIn * 0.55)) }, { n: 'Intensidad específica', s: 'Repeticiones largas al ritmo de la meta', to: off(goalIn - 8) }, { n: 'Afinamiento', s: 'Menos volumen y piernas frescas', to: off(goalIn - 1) }],
     sessions, notes: { [off(Math.min(goalIn - 1, 6))]: 'Día de descanso completo: hidrátate y duerme bien.', [off(goalIn - 1)]: 'Revisa la bicicleta, prepara tu nutrición y descansa. ¡Ya estás listo!' }, updatedAt: Date.now() - 3600000 };
 }
+
+/* v67: Panel semanal ficticio (no usa datos de ningún atleta real). Fechas relativas a hoy. */
+const isoWeek = (iso) => { const d = new Date(iso + 'T12:00:00Z'); const wd = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - wd + 3); const y = d.getUTCFullYear(); const j = new Date(Date.UTC(y, 0, 4)); return { y, w: 1 + Math.round(((d - j) / 86400000 - 3 + ((j.getUTCDay() + 6) % 7)) / 7) }; };
+const mondayIso = (iso) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+function mkDemoPanel(status) {
+  const today = off(0), ms = mondayIso(today), cw = isoWeek(today).w, wid = isoWeek(today).y + '-W' + pad(cw);
+  const day = (n) => off(n), dn = (iso) => DIAS[new Date(iso + 'T12:00:00Z').getUTCDay()];
+  const rows = [[-6, 'Rodaje suave en rodillo', 50, 12.8, 62, 34, 41, 112, 142, 28, 78, 340, 'Base', 22, 15, 7, [[0, 600, 104, 62, 1], [1, 1200, 112, 70, 2], [2, 900, 109, 66, 2], [3, 300, 98, 55, 1]]], [-4, 'Ondulaciones en rodillo', 62, 16.4, 66, 38, 49, 116, 148, 31, 81, 410, 'Base', 22, 17, 5, [[0, 480, 106, 64, 1], [1, 1500, 117, 73, 2], [2, 1200, 121, 76, 3], [3, 540, 108, 66, 2]]], [-2, 'Rodaje largo', 86, 24.1, 63, 47, 62, 114, 139, 26, 80, 560, 'Base', 23, 20, 3, [[0, 900, 108, 66, 2], [1, 2400, 113, 71, 2], [2, 1500, 116, 73, 2], [3, 360, 104, 62, 1]]], [-1, 'Soltura con cadencia', 40, 11.2, 58, 24, 30, 109, 131, 31, 74, 270, 'Base', 23, 19, 4, [[0, 700, 104, 63, 1], [1, 1100, 110, 69, 2], [2, 600, 107, 66, 2]]]];
+  const sessions = rows.map((r) => ({ f: day(r[0]), w: isoWeek(day(r[0])).w, dia: dn(day(r[0])), n: r[1], dur: r[2], km: r[3], int: r[4], carga: r[5], trimp: r[6], fc: r[7], fcx: r[8], hrr: r[9], cad: r[10], cal: r[11], peso: 72.4, clase: r[12], apt: r[13], fat: r[14], forma: r[15], fcxp: 82 }));
+  const blocks = {}; rows.forEach((r) => { blocks[day(r[0])] = r[16].map((b) => ({ o: b[0] + 1, s: b[1], fc: b[2], pct: b[3], z: b[4] })); });
+  const plan = []; for (let i = -7; i <= 6; i++) { const f = ms.slice(0, 8) && new Date(Date.parse(ms + 'T12:00:00Z') + i * 86400000).toISOString().slice(0, 10); const dd = new Date(f + 'T12:00:00Z').getUTCDay(); const past = f <= today; const ses = sessions.find((s) => s.f === f); if ([1, 3, 5, 6].indexOf(dd) >= 0) plan.push({ w: isoWeek(f).w, f, dia: DIAS[dd], s: dd === 6 ? 'Rodaje 90 min' : 'Rodaje 60 min', t: 'principal', p: dd === 6 ? 90 : 60, h: past ? (ses ? ses.dur : null) : null, e: !past ? 'pendiente' : ses ? (ses.dur >= (dd === 6 ? 90 : 60) * 0.9 ? 'hecha' : 'parcial') : 'omitida' }); else if (ses) plan.push({ w: isoWeek(f).w, f, dia: DIAS[dd], s: 'Salida libre', t: 'principal', p: 0, h: ses.dur, e: 'sin_plan' }); }
+  const weeks = [{ w: cw - 5, ctl: 19 }, { w: cw - 1, ctl: 21 }, { w: cw, ctl: 23 }];
+  const hist = []; for (let k = 21; k >= 0; k -= 2) { const f = day(-k); const fw = isoWeek(f).w; if (fw >= cw - 3) hist.push({ f, w: fw, fc: 108 + ((k * 7) % 9), m: 45 + ((k * 11) % 40), i: 62 + (k % 9), c: 26 + (k % 12) }); }
+  return { id: wid, status, week: cw, weekStart: ms, asOf: today, partial: true,
+    refs: { zones: [{ lo: 96, hi: 112 }, { lo: 112, hi: 128 }, { lo: 128, hi: 144 }, { lo: 144, hi: 160 }], z2: [96, 112], ceiling: 128, cad: [85, 90], fcmax: 160, hrrcGood: 25, goalSessions: 4, hrLoad: true },
+    sessions, blocks, plan, weeks, hist,
+    texts: { headline: 'Cuatro salidas en siete días, un corazón que recupera rápido y un fitness que sigue subiendo. El siguiente paso es simple: más minutos suaves y más cadencia.', note: 'Buena semana, Tomás: la constancia se nota en los datos. Mantén el ritmo.', missions: [{ ic: 'heart', tone: 'good', t: 'Un rodaje que se sienta fácil', d: 'Mantén el pulso en Z2 (96 a 112 lpm). Si sube, baja la resistencia antes de acortar el tiempo.' }, { ic: 'wheel', tone: 'warn', t: 'Cadencia sin subir el pulso', d: 'Tres bloques de 3 min a 85 a 90 rpm con la marcha más liviana.' }], gaps: [{ ic: 'bulb', t: 'Sensaciones y RPE', d: 'Sin respuestas todavía: el esfuerzo percibido se infiere desde el pulso.' }, { ic: 'bolt', t: 'Potencia y FTP', d: 'Las salidas son solo con pulso: no hay TSS ni FTP medido.' }] },
+    genAt: Date.now() - 3600000, approvedAt: status === 'approved' ? Date.now() - 1800000 : null, src: 'demo' };
+}
 function mkRichCheckins(hist, days) {
   const list = [], tsbOf = {}; hist.days.forEach((r) => { tsbOf[r.d] = r.ctl - r.atl; });
   const comments = { 3: 'Salida con viento en contra pero me sentí fuerte.', 6: 'Buen fondo con el grupo, subí con ganas.', 9: 'Piernas pesadas al comenzar, mejoraron a los 20 minutos.', 13: 'Rodaje tranquilo, escuchando música.', 17: 'Lluvia: lo hice en rodillo.' };
@@ -92,6 +112,7 @@ function seed() {
   ath('matias', 'Matías S.', 'grnt', [3, 3, 4, 4, 3, 4, null], { sleepH: 3, sleepQ: 1, legs: 2, stress: 0, rpe: 5, ts: tsOf(off(-1), 21, 30) }, null, 0.85);
   ath('valentina', 'Valentina T.', 'zn', [4, 4, 3, 4, null, null, null], { sleepH: 2, sleepQ: 2, legs: 1, stress: 1, rpe: 4, ts: tsOf(off(-3), 19, 50) }, null, 0.7);
   users.demoAtleta.bioMain = { birthDate: '1988-04-12', heightCm: 176, sex: null, sport: 'Ruta', health: { conditions: '', meds: '', injuries: 'Tendón rotuliano derecho (2024), ya recuperado', allergies: '' }, emergency: { name: 'Marta (pareja)', phone: '+56 9 1234 5678' }, showWeight: false, city: 'Santiago', hist: { years: '3 a 6 años', level: 'Aficionado', discs: ['Ruta', 'Gimnasio'], volume: '4 a 6 h' }, equip: { bikes: ['Ruta'], pm: ['Ninguno'], trainer: 'Inteligente', sensors: ['Banda de pulso'], computer: 'Garmin', scale: '', icu: '' }, consentTs: tsOf(off(-10), 9, 0), updatedAt: tsOf(off(-10), 9, 0) };
+  { const pa = mkDemoPanel('approved'); users.demoAtleta.panel = { [pa.id]: pa }; const pc = mkDemoPanel('draft'); pc.texts.note = ''; pc.texts.headline = 'Borrador de la semana: revisa las cifras, ajusta el titular y las misiones, y apruébalo para que lo vea Camila.'; users.camila.panel = { [pc.id]: pc }; }
   users.demoAtleta.bioMeas = { weightKg: 72, ftp: 245, fcmax: 188, lthr: 168, updatedAt: tsOf(off(-20), 10, 0), by: 'demoCoach' };
   users.camila.bioMain = { birthDate: '1992-09-03', heightCm: 165, sex: 'f', sport: 'Gravel', health: { conditions: '', meds: '', injuries: '', allergies: '' }, emergency: { name: '', phone: '' }, showWeight: false, city: 'Valparaíso', hist: { years: 'Más de 6 años', level: 'Competitivo', discs: ['Gravel', 'MTB'], volume: '8 a 12 h' }, equip: { bikes: ['Gravel', 'MTB'], pm: ['MTB'], trainer: 'No tengo', sensors: ['Banda de pulso', 'Cadencia'], computer: 'Wahoo', scale: 'Bioimpedancia', icu: '' }, goals: { objA: 'Gran fondo de gravel', objDate: '', why: 'Mejorar mi tiempo', others: '' }, consentTs: tsOf(off(-30), 9, 0), updatedAt: tsOf(off(-30), 9, 0) };
   users.camila.bioMeas = { weightKg: 58, ftp: 205, fcmax: 191, updatedAt: tsOf(off(-30), 9, 0), by: 'demoCoach', prop: { weightKg: { v: 57, note: 'Me pesé esta mañana', ts: tsOf(off(-1), 8, 0) }, ftp: { v: 212, note: 'Test de 20 min del domingo', ts: tsOf(off(-1), 8, 0) }, lthr: { v: 176, note: 'Detectado en intervals.icu (revisión automática)', ts: tsOf(off(0), 7, 0), auto: true } } };
@@ -156,6 +177,10 @@ const be = {
   getRoute(uid, id) { return Promise.resolve(String(id).indexOf('demo-') === 0 ? Object.assign({}, DEMO_ROUTE) : null); },
   listenHistory(uid, cb) { return live(() => cb(store.users[uid] && store.users[uid].history ? JSON.parse(JSON.stringify(store.users[uid].history)) : null)); },
   async saveHistory(uid, data) { store.users[uid].history = data; notify(); },
+  // v67 Panel semanal: el atleta y su lector ven solo los aprobados; el coach ve todos (opts.all).
+  listenPanels(uid, cb, opts = {}) { return live(() => { const m = (store.users[uid] && store.users[uid].panel) || {}; cb(Object.keys(m).map((k) => Object.assign({ id: k }, JSON.parse(JSON.stringify(m[k])))).filter((x) => opts.all || x.status === 'approved').sort((a, b) => (a.id < b.id ? 1 : -1))); }); },
+  async savePanel(uid, weekId, data) { const u = store.users[uid]; u.panel = u.panel || {}; u.panel[weekId] = JSON.parse(JSON.stringify(data)); notify(); },
+  async deletePanel(uid, weekId) { const u = store.users[uid]; if (u && u.panel) delete u.panel[weekId]; notify(); },
   listenTeamKm(team, cb) { return live(() => cb(Object.entries(store.km[team] || {}).map(([id, v]) => ({ id, ...v })))); },
   async removeKm(team, uid) { if (store.km[team]) delete store.km[team][uid]; notify(); },
   async saveKm(team, uid, data) { (store.km[team] = store.km[team] || {})[uid] = data; notify(); },

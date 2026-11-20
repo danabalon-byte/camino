@@ -133,6 +133,14 @@ const be = {
     return onSnapshot(doc(db, 'users', uid, 'history', 'current'), (s) => cb(s.exists() ? s.data() : null), fail('historial'));
   },
   saveHistory(uid, data) { return setDoc(doc(db, 'users', uid, 'history', 'current'), clean(data)); },
+  // v67 Panel semanal: un documento por semana (users/{uid}/panel/AAAA-Www). El atleta y su lector solo leen los aprobados; su coach lee y escribe todos.
+  listenPanels(uid, cb, opts = {}) {
+    const ref = collection(db, 'users', uid, 'panel');
+    const q = opts.all ? ref : query(ref, where('status', '==', 'approved'));
+    return onSnapshot(q, (s) => cb(rows(s).sort((a, b) => (a.id < b.id ? 1 : -1))), fail('panel', !!opts.quiet));
+  },
+  savePanel(uid, weekId, data) { return setDoc(doc(db, 'users', uid, 'panel', String(weekId)), clean(data)); },
+  deletePanel(uid, weekId) { return deleteDoc(doc(db, 'users', uid, 'panel', String(weekId))); },
 
   // Equipo: kilómetros por persona (solo nombre, mes y km) y meta/hito que fija el coach
   listenTeamKm(team, cb) {

@@ -4,6 +4,7 @@
 
 const DEMO_Q = new URLSearchParams(location.search), DEMO = DEMO_Q.has('demo'), DEMO_ROLE = ({ atleta: 'athlete', athlete: 'athlete', coach: 'coach' })[DEMO_Q.get('demo')] || null;
 import { BODY } from './body.js';
+import { mountPanel, loadD3 } from './panel.js';
 const be = DEMO ? (await import('./backend-demo.js')).default : (await import('./backend-firebase.js')).default;
 
 /* ---------- Constantes ---------- */
@@ -67,9 +68,23 @@ const PH = {
   'check': ['<path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/>', '<path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM205.66,85.66l-96,96a8,8,0,0,1-11.32,0l-40-40a8,8,0,0,1,11.32-11.32L104,164.69l90.34-90.35a8,8,0,0,1,11.32,11.32Z"/>'],
   'bicycle': ['<path d="M208,112a47.81,47.81,0,0,0-16.93,3.09L165.93,72H192a8,8,0,0,1,8,8,8,8,0,0,0,16,0,24,24,0,0,0-24-24H152a8,8,0,0,0-6.91,12l11.65,20H99.26L82.91,60A8,8,0,0,0,76,56H48a8,8,0,0,0,0,16H71.41L85.12,95.51,69.41,117.06a48.13,48.13,0,1,0,12.92,9.44l11.59-15.9L125.09,164A8,8,0,1,0,138.91,156l-30.32-52h57.48l11.19,19.17A48,48,0,1,0,208,112ZM80,160a32,32,0,1,1-20.21-29.74l-18.25,25a8,8,0,1,0,12.92,9.42l18.25-25A31.88,31.88,0,0,1,80,160Zm128,32a32,32,0,0,1-22.51-54.72L201.09,164A8,8,0,1,0,214.91,156L199.3,129.21A32,32,0,1,1,208,192Z"/>', '<path d="M54.46,164.71,82.33,126.5a48,48,0,1,1-12.92-9.44L41.54,155.29a8,8,0,1,0,12.92,9.42ZM208,112a47.81,47.81,0,0,0-16.93,3.09L214.91,156A8,8,0,1,1,201.09,164l-23.83-40.86A48,48,0,1,0,208,112ZM165.93,72H192a8,8,0,0,1,8,8,8,8,0,0,0,16,0,24,24,0,0,0-24-24H152a8,8,0,0,0-6.91,12l11.65,20H99.26L82.91,60A8,8,0,0,0,76,56H48a8,8,0,0,0,0,16H71.41L85.12,95.51,69.41,117.06a47.87,47.87,0,0,1,12.92,9.44l11.59-15.9L125.09,164A8,8,0,1,0,138.91,156l-30.32-52h57.48l11.19,19.17a48.11,48.11,0,0,1,13.81-8.08Z"/>'],
   'barbell': ['<path d="M248,120h-8V88a16,16,0,0,0-16-16H208V64a16,16,0,0,0-16-16H168a16,16,0,0,0-16,16v56H104V64A16,16,0,0,0,88,48H64A16,16,0,0,0,48,64v8H32A16,16,0,0,0,16,88v32H8a8,8,0,0,0,0,16h8v32a16,16,0,0,0,16,16H48v8a16,16,0,0,0,16,16H88a16,16,0,0,0,16-16V136h48v56a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16v-8h16a16,16,0,0,0,16-16V136h8a8,8,0,0,0,0-16ZM32,168V88H48v80Zm56,24H64V64H88V192Zm104,0H168V64h24V175.82c0,.06,0,.12,0,.18s0,.12,0,.18V192Zm32-24H208V88h16Z"/>', '<path d="M200,64V192a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V136H104v56a16,16,0,0,1-16,16H72a16,16,0,0,1-16-16V64A16,16,0,0,1,72,48H88a16,16,0,0,1,16,16v56h48V64a16,16,0,0,1,16-16h16A16,16,0,0,1,200,64ZM36,72H32A16,16,0,0,0,16,88v32H8.27A8.18,8.18,0,0,0,0,127.47,8,8,0,0,0,8,136h8v32a16,16,0,0,0,16,16h4a4,4,0,0,0,4-4V76A4,4,0,0,0,36,72Zm220,55.47a8.18,8.18,0,0,0-8.25-7.47H240V88a16,16,0,0,0-16-16h-4a4,4,0,0,0-4,4V180a4,4,0,0,0,4,4h4a16,16,0,0,0,16-16V136h8A8,8,0,0,0,256,127.47Z"/>'],
-  'person-simple-run': ['<path d="M152,88a32,32,0,1,0-32-32A32,32,0,0,0,152,88Zm0-48a16,16,0,1,1-16,16A16,16,0,0,1,152,40Zm67.31,100.68c-.61.28-7.49,3.28-19.67,3.28-13.85,0-34.55-3.88-60.69-20a169.31,169.31,0,0,1-15.41,32.34,104.29,104.29,0,0,1,31.31,15.81C173.92,186.65,184,207.35,184,232a8,8,0,0,1-16,0c0-41.7-34.69-56.71-54.14-61.85-.55.7-1.12,1.41-1.69,2.1-19.64,23.8-44.25,36.18-71.63,36.18A92.29,92.29,0,0,1,31.2,208,8,8,0,0,1,32.8,192c25.92,2.58,48.47-7.49,67-30,12.49-15.14,21-33.61,25.25-47C86.13,92.35,61.27,111.63,61,111.84A8,8,0,1,1,51,99.36c1.5-1.2,37.22-29,89.51,6.57,45.47,30.91,71.93,20.31,72.18,20.19a8,8,0,1,1,6.63,14.56Z"/>', '<path d="M120,56a32,32,0,1,1,32,32A32,32,0,0,1,120,56Zm103.28,74.08a8,8,0,0,0-10.6-4c-.25.12-26.71,10.72-72.18-20.19-52.29-35.54-88-7.77-89.51-6.57a8,8,0,1,0,10,12.48c.26-.21,25.12-19.5,64.07,3.27-4.25,13.35-12.76,31.82-25.25,47-18.56,22.48-41.11,32.56-67,30A8,8,0,0,0,31.2,208a92.29,92.29,0,0,0,9.34.47c27.38,0,52-12.38,71.63-36.18.57-.69,1.14-1.4,1.69-2.1C133.31,175.29,168,190.3,168,232a8,8,0,0,0,16,0c0-24.65-10.08-45.35-29.15-59.86a104.29,104.29,0,0,0-31.31-15.81A169.31,169.31,0,0,0,139,124c26.14,16.09,46.84,20,60.69,20,12.18,0,19.06-3,19.67-3.28A8,8,0,0,0,223.28,130.08Z"/>']
+  'person-simple-run': ['<path d="M152,88a32,32,0,1,0-32-32A32,32,0,0,0,152,88Zm0-48a16,16,0,1,1-16,16A16,16,0,0,1,152,40Zm67.31,100.68c-.61.28-7.49,3.28-19.67,3.28-13.85,0-34.55-3.88-60.69-20a169.31,169.31,0,0,1-15.41,32.34,104.29,104.29,0,0,1,31.31,15.81C173.92,186.65,184,207.35,184,232a8,8,0,0,1-16,0c0-41.7-34.69-56.71-54.14-61.85-.55.7-1.12,1.41-1.69,2.1-19.64,23.8-44.25,36.18-71.63,36.18A92.29,92.29,0,0,1,31.2,208,8,8,0,0,1,32.8,192c25.92,2.58,48.47-7.49,67-30,12.49-15.14,21-33.61,25.25-47C86.13,92.35,61.27,111.63,61,111.84A8,8,0,1,1,51,99.36c1.5-1.2,37.22-29,89.51,6.57,45.47,30.91,71.93,20.31,72.18,20.19a8,8,0,1,1,6.63,14.56Z"/>', '<path d="M120,56a32,32,0,1,1,32,32A32,32,0,0,1,120,56Zm103.28,74.08a8,8,0,0,0-10.6-4c-.25.12-26.71,10.72-72.18-20.19-52.29-35.54-88-7.77-89.51-6.57a8,8,0,1,0,10,12.48c.26-.21,25.12-19.5,64.07,3.27-4.25,13.35-12.76,31.82-25.25,47-18.56,22.48-41.11,32.56-67,30A8,8,0,0,0,31.2,208a92.29,92.29,0,0,0,9.34.47c27.38,0,52-12.38,71.63-36.18.57-.69,1.14-1.4,1.69-2.1C133.31,175.29,168,190.3,168,232a8,8,0,0,0,16,0c0-24.65-10.08-45.35-29.15-59.86a104.29,104.29,0,0,0-31.31-15.81A169.31,169.31,0,0,0,139,124c26.14,16.09,46.84,20,60.69,20,12.18,0,19.06-3,19.67-3.28A8,8,0,0,0,223.28,130.08Z"/>'],
+  'heart': ['<path d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40ZM128,214.8C109.74,204.16,32,155.69,32,102A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46C224,155.61,146.24,204.15,128,214.8Z"/>'],
+  'heartbeat': ['<path d="M72,144H32a8,8,0,0,1,0-16H67.72l13.62-20.44a8,8,0,0,1,13.32,0l25.34,38,9.34-14A8,8,0,0,1,136,128h24a8,8,0,0,1,0,16H140.28l-13.62,20.44a8,8,0,0,1-13.32,0L88,126.42l-9.34,14A8,8,0,0,1,72,144ZM178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,.75,0,1.5,0,2.25a8,8,0,1,0,16-.5c0-.58,0-1.17,0-1.75A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46c0,53.61-77.76,102.15-96,112.8-10.83-6.31-42.63-26-66.68-52.21a8,8,0,1,0-11.8,10.82c31.17,34,72.93,56.68,74.69,57.63a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40Z"/>', '<path d="M240,102c0,70-103.79,126.66-108.21,129a8,8,0,0,1-7.58,0c-3.35-1.8-63.55-34.69-92.68-80.89A4,4,0,0,1,34.92,144H72a8,8,0,0,0,6.66-3.56l9.34-14,25.34,38a8,8,0,0,0,9.16,3.16,8.23,8.23,0,0,0,4.28-3.34L140.28,144H160a8,8,0,0,0,8-8.53,8.18,8.18,0,0,0-8.25-7.47H136a8,8,0,0,0-6.66,3.56l-9.34,14-25.34-38a8,8,0,0,0-9.17-3.16,8.25,8.25,0,0,0-4.27,3.34L67.72,128H23.53a4,4,0,0,1-3.83-2.81A76.93,76.93,0,0,1,16,102,62.07,62.07,0,0,1,78,40c20.65,0,38.73,8.88,50,23.89C139.27,48.88,157.35,40,178,40A62.07,62.07,0,0,1,240,102Z"/>'],
+  'battery-medium': ['<path d="M200,56H32A24,24,0,0,0,8,80v96a24,24,0,0,0,24,24H200a24,24,0,0,0,24-24V80A24,24,0,0,0,200,56Zm8,120a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H200a8,8,0,0,1,8,8ZM104,96v64a8,8,0,0,1-16,0V96a8,8,0,0,1,16,0ZM64,96v64a8,8,0,0,1-16,0V96a8,8,0,0,1,16,0Zm192,0v64a8,8,0,0,1-16,0V96a8,8,0,0,1,16,0Z"/>'],
+  'clock': ['<path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/>'],
+  'trophy': ['<path d="M232,64H208V48a8,8,0,0,0-8-8H56a8,8,0,0,0-8,8V64H24A16,16,0,0,0,8,80V96a40,40,0,0,0,40,40h3.65A80.13,80.13,0,0,0,120,191.61V216H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16H136V191.58c31.94-3.23,58.44-25.64,68.08-55.58H208a40,40,0,0,0,40-40V80A16,16,0,0,0,232,64ZM48,120A24,24,0,0,1,24,96V80H48v32q0,4,.39,8Zm144-8.9c0,35.52-29,64.64-64,64.9a64,64,0,0,1-64-64V56H192ZM232,96a24,24,0,0,1-24,24h-.5a81.81,81.81,0,0,0,.5-8.9V80h24Z"/>'],
+  'target': ['<path d="M221.87,83.16A104.1,104.1,0,1,1,195.67,49l22.67-22.68a8,8,0,0,1,11.32,11.32l-96,96a8,8,0,0,1-11.32-11.32l27.72-27.72a40,40,0,1,0,17.87,31.09,8,8,0,1,1,16-.9,56,56,0,1,1-22.38-41.65L184.3,60.39a87.88,87.88,0,1,0,23.13,29.67,8,8,0,0,1,14.44-6.9Z"/>'],
+  'lock': ['<path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Zm-68-56a12,12,0,1,1-12-12A12,12,0,0,1,140,152Z"/>'],
+  'lightbulb': ['<path d="M176,232a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,232Zm40-128a87.55,87.55,0,0,1-33.64,69.21A16.24,16.24,0,0,0,176,186v6a16,16,0,0,1-16,16H96a16,16,0,0,1-16-16v-6a16,16,0,0,0-6.23-12.66A87.59,87.59,0,0,1,40,104.49C39.74,56.83,78.26,17.14,125.88,16A88,88,0,0,1,216,104Zm-16,0a72,72,0,0,0-73.74-72c-39,.92-70.47,33.39-70.26,72.39a71.65,71.65,0,0,0,27.64,56.3A32,32,0,0,1,96,186v6h64v-6a32.15,32.15,0,0,1,12.47-25.35A71.65,71.65,0,0,0,200,104Zm-16.11-9.34a57.6,57.6,0,0,0-46.56-46.55,8,8,0,0,0-2.66,15.78c16.57,2.79,30.63,16.85,33.44,33.45A8,8,0,0,0,176,104a9,9,0,0,0,1.35-.11A8,8,0,0,0,183.89,94.66Z"/>'],
+  'trend-up': ['<path d="M240,56v64a8,8,0,0,1-16,0V75.31l-82.34,82.35a8,8,0,0,1-11.32,0L96,123.31,29.66,189.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0L136,140.69,212.69,64H168a8,8,0,0,1,0-16h64A8,8,0,0,1,240,56Z"/>'],
+  'x': ['<path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/>'],
+  'plus': ['<path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/>'],
+  'dot-outline': ['<path d="M128,96a32,32,0,1,0,32,32A32,32,0,0,0,128,96Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,128,144Z"/>'],
+  'scales': ['<path d="M239.43,133l-32-80h0a8,8,0,0,0-9.16-4.84L136,62V40a8,8,0,0,0-16,0V65.58L54.26,80.19A8,8,0,0,0,48.57,85h0v.06L16.57,165a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32a7.92,7.92,0,0,0-.57-3L66.92,93.77,120,82V208H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16H136V78.42L187,67.1,160.57,133a7.92,7.92,0,0,0-.57,3c0,23.31,24.54,32,40,32s40-8.69,40-32A7.92,7.92,0,0,0,239.43,133ZM56,184c-7.53,0-22.76-3.61-23.93-14.64L56,109.54l23.93,59.82C78.76,180.39,63.53,184,56,184Zm144-32c-7.53,0-22.76-3.61-23.93-14.64L200,77.54l23.93,59.82C222.76,148.39,207.53,152,200,152Z"/>'],
+  'star': ['<path d="M239.18,97.26A16.38,16.38,0,0,0,224.92,86l-59-4.76L143.14,26.15a16.36,16.36,0,0,0-30.27,0L90.11,81.23,31.08,86a16.46,16.46,0,0,0-9.37,28.86l45,38.83L53,211.75a16.38,16.38,0,0,0,24.5,17.82L128,198.49l50.53,31.08A16.4,16.4,0,0,0,203,211.75l-13.76-58.07,45-38.83A16.43,16.43,0,0,0,239.18,97.26Zm-15.34,5.47-48.7,42a8,8,0,0,0-2.56,7.91l14.88,62.8a.37.37,0,0,1-.17.48c-.18.14-.23.11-.38,0l-54.72-33.65a8,8,0,0,0-8.38,0L69.09,215.94c-.15.09-.19.12-.38,0a.37.37,0,0,1-.17-.48l14.88-62.8a8,8,0,0,0-2.56-7.91l-48.7-42c-.12-.1-.23-.19-.13-.5s.18-.27.33-.29l63.92-5.16A8,8,0,0,0,103,91.86l24.62-59.61c.08-.17.11-.25.35-.25s.27.08.35.25L153,91.86a8,8,0,0,0,6.75,4.92l63.92,5.16c.15,0,.24,0,.33.29S224,102.63,223.84,102.73Z"/>'],
 };
-const ph = (n, size, color, on) => '<svg width="' + size + '" height="' + size + '" viewBox="0 0 256 256" fill="' + (color || 'currentColor') + '" aria-hidden="true" focusable="false">' + PH[n][on ? 1 : 0] + '</svg>';
+const ph = (n, size, color, on) => '<svg width="' + size + '" height="' + size + '" viewBox="0 0 256 256" fill="' + (color || 'currentColor') + '" aria-hidden="true" focusable="false">' + (PH[n][on ? 1 : 0] || PH[n][0]) + '</svg>';
 const ICONS = { racha: 'flame', sueno: 'moon', semana: 'calendar-blank', cinco: 'lightning' };
 
 /* ---------- Fechas y textos ---------- */
@@ -97,7 +112,7 @@ if (!['auto', 'noche', 'tierra', 'dia'].includes(PREF.tone)) PREF.tone = 'auto';
 const savePref = () => { try { localStorage.setItem(PREFKEY, JSON.stringify(PREF)); } catch (e) {} };
 
 /* ---------- Estado ---------- */
-const ST = { props: [], ready: false, user: null, myBio: null, athBio: {}, profile: null, myPlan: null, myHist: null, myEvents: [], athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
+const ST = { props: [], ready: false, user: null, myBio: null, athBio: {}, myPanel: [], athPanel: {}, profile: null, myPlan: null, myHist: null, myEvents: [], athPlan: {}, athHist: {}, myCk: [], myNotes: [], teamKm: {}, teamMeta: {}, fbk: [], athletes: [], athCk: {}, athNotes: {}, pending: [], error: '' };
 const UI = { view: 'hoy', lastView: null, flow: null, feedback: null, story: null, sel: null, reply: { id: null, text: '' }, draft: { comment: '', prevText: '' }, justSaved: null, busy: false, metaTeam: 'zn', metaDraft: null, planOpen: false, planDraft: null, histOpen: false, histDraft: null, asId: null, msg: '', msgKind: 'err' };
 let ownUnsubs = [], dataUnsubs = [], dataKey = '', athSubs = {}, chatSubs = {};
 
@@ -305,17 +320,18 @@ function plainOpts(g, arr, sel, label, cols, valFn, neu, act, isOn) {
 }
 const chips = (g, arr, sel, label, valFn) => plainOpts(g, arr, sel, label, autoCols(arr), valFn, GREENG.indexOf(g) < 0);
 const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCols(arr), (i, l) => l, true, 'multi', (l, v) => (sel || []).indexOf(l) >= 0);
-const NAVIC = { biblioteca: 'library', planificar: 'flag', perfil: 'user', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
+const NAVIC = { biblioteca: 'library', planificar: 'flag', perfil: 'user', panel: 'heartbeat', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
 const TABLBL = { biblioteca: 'Biblioteca', guia: 'Guía', planificar: 'Planificar' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
 const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
 const ATABS = ['hoy', 'datos', 'ruta', 'perfil', 'ajustes', 'guia'], ATABS_P = ['hoy', 'datos', 'ruta', 'planificar', 'perfil', 'ajustes', 'guia'];
 /* Planificar y modo en vivo: solo el coach principal y los atletas a quienes él lo habilita (users/{id}.features.planificar). */
 const plannerOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.profile.features && ST.profile.features.planificar === true)));
-const atabs = () => (plannerOn() ? ATABS_P : ATABS);
-const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'datos', 'ruta', 'ajustes', 'guia'] : (isOwner() ? ['cabina', 'biblioteca', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia'])) : atabs()) : atabs());
+const hasPanel = () => !!(ST.myPanel && ST.myPanel.length);
+const atabs = () => { const b = plannerOn() ? ATABS_P : ATABS; return hasPanel() ? b.reduce((o, t) => o.concat(t === 'hoy' ? ['hoy', 'panel'] : [t]), []) : b; };
+const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'panel', 'datos', 'ruta', 'ajustes', 'guia'] : (isOwner() ? ['cabina', 'biblioteca', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia'])) : atabs()) : atabs());
 /* La Guía de los atletas vive dentro de Ajustes (hide): sigue siendo una ruta válida, pero no ocupa lugar en la barra. */
-const tabs = () => { const ids = tabsIds(), ath = ids === ATABS || ids === ATABS_P; return ids.map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id], hide: ath && id === 'guia' })); };
+const tabs = () => { const ids = tabsIds(), ath = ids.indexOf('perfil') >= 0; return ids.map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id], hide: ath && id === 'guia' })); };
 const navHtml = () => '<div class="inner">' + tabs().filter((t) => !t.hide).map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id || (t.id === 'ajustes' && UI.view === 'guia' && tabs().some((x) => x.hide)) ? ' aria-current="page"' : '') + '>' + ph(t.ic, 26, 'currentColor', UI.view === t.id) + '<span>' + t.label + '</span></a>').join('') + '</div>';
 /* Logo segun el fondo: ciclista blanco sobre fondos oscuros, negro sobre fondos claros. */
 function logoSrc() {
@@ -565,6 +581,7 @@ function viewCabina() {
     out += '<section class="card col g12" aria-label="Solicitudes nuevas" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Solicitudes nuevas</div>' + ST.pending.filter((p) => p.id !== ST.user.uid).map((p) => '<div class="col g10"><div style="font-weight:600">' + esc(p.name) + '</div>' + propBadge(p) + '<div class="row g8 wrap"><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="grnt">Aceptar en GRNT</button><button type="button" class="chip" data-a="accept" data-v="' + esc(p.id) + '" data-t="zn">Aceptar en ZN</button></div></div>').join('') + '</section>';
   }
   const rev = list.map((a) => ({ a, n: Object.values((((ST.athBio[a.id] || {}).meas || {}).prop) || {}).filter((x) => x && x.auto).length })).filter((x) => x.n);
+  { const pdr = list.map((a) => ({ a, n: (ST.athPanel[a.id] || []).filter((x) => x.status === 'draft').length })).filter((x) => x.n); if (pdr.length) out += '<section class="card col g10" aria-label="Panel para revisar" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Panel semanal para revisar · ' + pdr.reduce((t, x) => t + x.n, 0) + '</div><p class="soft" style="font-size:14px">Hay borradores del Panel esperando tu aprobación. El atleta no los ve hasta que los apruebes.</p><div class="row g8 wrap">' + pdr.map((x) => '<button type="button" class="chip" data-a="panelGo" data-v="' + esc(x.a.id) + '">' + esc(x.a.first) + ' · ' + x.n + '</button>').join('') + '</div></section>'; }
   if (rev.length) out += '<section class="card col g10" aria-label="Datos para revisar" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Datos para revisar · ' + rev.reduce((t, x) => t + x.n, 0) + '</div><p class="soft" style="font-size:14px">La revisión automática encontró medidas distintas en intervals.icu. Aprueba o rechaza cada una en el perfil del atleta.</p><div class="row g8 wrap">' + rev.map((x) => '<button type="button" class="chip" data-a="sel" data-v="' + esc(x.a.id) + '">' + esc(x.a.first) + ' · ' + x.n + '</button>').join('') + '</div></section>';
   out += '<section class="row g10" aria-label="Resumen del equipo">' + [['Al día', cnt.ok, 'var(--good)'], ['Atención', cnt.warn, 'var(--warn)'], ['Sin check-in', cnt.none, 'var(--muted)']].map((x) => '<div class="card tight grow"><div class="num" style="font-size:40px;color:' + x[2] + '">' + x[1] + '</div><div class="soft" style="font-size:13px;margin-top:4px">' + x[0] + '</div></div>').join('') + '</section>';
   out += '<button type="button" class="row between g12" data-a="nextReply" ' + (queue === 0 ? 'disabled' : '') + ' style="width:100%;min-height:52px;text-align:left;background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:16px;padding:12px 16px"><span style="font-weight:600">' + (queue === 0 ? 'Todo respondido por hoy' : queue + ' por responder') + '</span><span class="muted" style="font-size:13px">' + (queue === 0 ? 'Cola de respuestas' : 'Ir a responder ›') + '</span></button>';
@@ -1066,6 +1083,8 @@ function manageCard(a) {
   dot = !h ? 'var(--muted)' : (age != null && age > 3 ? 'var(--warn)' : 'var(--good)');
   lines = h ? [nd + ' días de forma · ' + na + ' salidas', (h.updatedAt ? 'Sincronizado ' + relTime(h.updatedAt) : 'Cargado a mano') + (age != null && age > 3 ? ' · desactualizado' : '')] : ['Sin historial aún', 'Se sincroniza solo cada hora'];
   out += mrow(dot, 'Historial de forma', lines, '<button type="button" class="chip" data-a="histToggle">' + (UI.histOpen ? 'Cerrar' : 'Cargar a mano') + '</button>') + (UI.histOpen ? histForm(a) : '');
+  // panel semanal
+  if (isOwner()) out += panelRows(a);
   // perfil y medidas
   if (canProfile()) { const b = ST.athBio[a.id] || {}, np = Object.keys((b.meas && b.meas.prop) || {}).length, lines2 = b.main ? [[ageOf(b.main.birthDate) != null ? ageOf(b.main.birthDate) + ' años' : '', b.main.heightCm ? b.main.heightCm + ' cm' : '', b.main.sport || ''].filter(Boolean).join(' · ') || 'Perfil iniciado'] : ['Aún no completa su perfil'];
     if (np) lines2.push(np + (np === 1 ? ' propuesta' : ' propuestas') + ' por revisar');
@@ -1136,8 +1155,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 66;
+const APP_VER = 67;
 const NEWS = [
+  'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
   'Tu Perfil ahora muestra tus medidas (edad, estatura, peso, FTP con W/kg, FC máx y LTHR), te deja actualizarlas cuando cambien y guarda el historial de cada cambio.',
   'Hoja de seguridad en cada evento: enlace de seguimiento, contacto responsable, hora límite sin noticias, tramos sin señal y un mensaje listo para WhatsApp.',
   'Nueva pestaña Biblioteca (solo para el coach principal): activa herramientas por atleta, por equipo o por coach de apoyo, con vista por herramienta y por atleta.',
@@ -1888,19 +1908,83 @@ function storyHtml() {
 /* ---------- Render ---------- */
 function applyPrefs() { const r = document.documentElement; if (PREF.calm) r.setAttribute('data-calm', ''); else r.removeAttribute('data-calm'); }
 function applyTone() { const r = document.documentElement; if (PREF.tone === 'auto') r.removeAttribute('data-tone'); else r.setAttribute('data-tone', PREF.tone); }
-const VIEWS = { hoy: viewHoy, datos: viewDatos, ruta: viewRuta, planificar: viewPlanificar, biblioteca: viewBiblioteca, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
+const VIEWS = { hoy: viewHoy, panel: viewPanel, datos: viewDatos, ruta: viewRuta, planificar: viewPlanificar, biblioteca: viewBiblioteca, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
 /* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
 function asRun(fn) {
   const id = UI.asId, who = ST.athletes.find((x) => x.id === id);
   if (!who) return null;
-  const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myHist: ST.myHist, myCk: ST.myCk, myNotes: ST.myNotes, js: UI.justSaved };
+  const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myHist: ST.myHist, myCk: ST.myCk, myNotes: ST.myNotes, myPanel: ST.myPanel, js: UI.justSaved };
   try {
     ST.user = { uid: id, name: who.name }; ST.profile = { name: who.name, role: 'athlete', team: who.team || null, pending: false };
-    ST.myPlan = ST.athPlan[id] || null; ST.myHist = ST.athHist[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; UI.justSaved = null;
+    ST.myPlan = ST.athPlan[id] || null; ST.myHist = ST.athHist[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; ST.myPanel = ST.athPanel[id] || []; UI.justSaved = null;
     return fn();
-  } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; UI.justSaved = sv.js; }
+  } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; ST.myPanel = sv.myPanel; UI.justSaved = sv.js; }
+}
+/* ---------- Panel semanal ("Tu semana", v67) ---------- */
+let PANEL_CACHE = null, PANEL_CUR = null;
+const PANEL_KEYS = ['status', 'week', 'weekStart', 'asOf', 'partial', 'refs', 'sessions', 'blocks', 'plan', 'weeks', 'hist', 'tramos', 'texts', 'src', 'genAt', 'approvedAt', 'updatedAt'];
+const panelStrip = (d) => { const o = {}; PANEL_KEYS.forEach((k) => { if (d[k] !== undefined) o[k] = d[k]; }); return o; };
+function viewPanel() {
+  const asId = UI.asId || null, who = asId ? ST.athletes.find((x) => x.id === asId) : null, list = asId ? (ST.athPanel[asId] || []) : (ST.myPanel || []);
+  const sel = list.find((x) => x.id === UI.panelSel) || list[0] || null;
+  let out = '<div class="inner"><div class="stack">' + head('Panel', asId && who ? 'Semana de ' + firstName(who.name) : 'Tu semana');
+  if (!sel) { PANEL_CUR = null; return out + '<section class="card col g8"><p class="soft">Aún no hay un informe semanal. Cuando tu entrenador apruebe el primero, aparecerá aquí con tus datos de la semana.</p></section></div></div>'; }
+  if (list.length > 1) out += '<div class="row g8 wrap" role="group" aria-label="Semana">' + list.slice(0, 8).map((x) => '<button type="button" class="chip" data-a="panelPick" data-v="' + esc(x.id) + '" aria-pressed="' + (x.id === sel.id ? 'true' : 'false') + '">Sem. ' + esc(String(x.week)) + (asId && x.status === 'draft' ? ' · borrador' : '') + '</button>').join('') + '</div>';
+  if (asId && sel.status === 'draft') out += '<section class="card col g10" aria-label="Borrador" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Borrador · aún no lo ve ' + esc(who ? firstName(who.name) : 'el atleta') + '</div><p class="soft" style="font-size:14px">Revisa las cifras y los textos. Al aprobarlo, el atleta lo verá en su menú Panel. Los textos se editan desde Cabina, en Gestionar.</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="panelOk" data-v="' + esc(asId + '|' + sel.id) + '" style="justify-content:center;width:auto;padding:0 20px;min-height:48px"' + (UI.busy ? ' disabled' : '') + '>Aprobar</button></div></section>';
+  const title = asId && who ? firstName(who.name) : 'Tu semana';
+  PANEL_CUR = { doc: sel, sig: [asId || '', sel.id, sel.updatedAt || sel.genAt || 0, sel.status, title].join('|'), title, key: asId || (ST.user && ST.user.uid) || 'x' };
+  return out + '<div id="panelHost"></div></div></div>';
+}
+function panelAfter() {
+  const host = document.getElementById('panelHost'); if (!host || !PANEL_CUR) return;
+  const cur = PANEL_CUR;
+  if (PANEL_CACHE && PANEL_CACHE.sig === cur.sig) { host.replaceWith(PANEL_CACHE.root); return; }
+  if (PANEL_CACHE && PANEL_CACHE.inst) { try { PANEL_CACHE.inst.destroy(); } catch (e) { /* ya liberado */ } }
+  const root = document.createElement('div'); root.textContent = 'Cargando tu semana…'; root.className = 'muted';
+  const c = PANEL_CACHE = { sig: cur.sig, root, inst: null }; host.replaceWith(root);
+  loadD3().then(() => {
+    if (PANEL_CACHE !== c) return;
+    root.className = ''; root.textContent = '';
+    c.inst = mountPanel(root, cur.doc, { title: cur.title, key: cur.key, icon: (n, z) => ph(n, z || 18), iconInner: (n) => (PH[n] || PH.info)[0] });
+  }).catch(() => { if (PANEL_CACHE === c) { root.textContent = 'No se pudo cargar los gráficos. Revisa tu conexión e inténtalo de nuevo.'; PANEL_CACHE = null; } });
+}
+function parsePanel(text) {
+  let o; try { o = JSON.parse(text); } catch (e) { return { err: 'El texto no es un JSON válido. Revisa comillas y comas.' }; }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return { err: 'Debe ser un objeto JSON con la semana.' };
+  if (typeof o.week !== 'number' || !isFinite(o.week)) return { err: 'Falta el número de semana (week).' };
+  if (!Array.isArray(o.sessions) || !o.sessions.length) return { err: 'Falta la lista sessions con las salidas.' };
+  if (o.sessions.length > 30 || (o.plan || []).length > 60 || (o.hist || []).length > 80 || (o.weeks || []).length > 16) return { err: 'Hay demasiadas filas en sessions, plan, hist o weeks.' };
+  const D = /^\d{4}-\d{2}-\d{2}$/;
+  if (o.sessions.some((r) => !r || !D.test(r.f || ''))) return { err: 'Cada salida debe traer la fecha f (AAAA-MM-DD).' };
+  if (!o.asOf || !D.test(o.asOf)) return { err: 'Falta asOf (AAAA-MM-DD): la fecha de corte de los datos.' };
+  if (text.length > 400000) return { err: 'El archivo es demasiado grande.' };
+  const id = /^\d{4}-W\d{2}$/.test(o.id || '') ? o.id : o.asOf.slice(0, 4) + '-W' + String(o.week).padStart(2, '0');
+  const d = panelStrip(o); d.status = 'draft'; d.approvedAt = null; d.updatedAt = Date.now(); d.genAt = d.genAt || Date.now();
+  return { id, doc: d };
+}
+function panelForm(a) {
+  if (!UI.panelDraft || UI.panelDraft.id !== a.id) UI.panelDraft = { id: a.id, text: '' };
+  return '<div class="col g12 mform"><div class="info" role="note">' + infoIcon() + '<span>Pega el JSON de la semana. Queda como borrador: el atleta no lo ve hasta que tú lo apruebes. Si ya existe esa semana, la reemplaza.</span></div><label for="panelText" class="muted" style="font-size:13px">Semana en JSON (week, asOf, refs, sessions, blocks, plan, weeks, hist, texts)</label><textarea id="panelText" spellcheck="false" style="min-height:200px;font-family:ui-monospace,Menlo,monospace;font-size:12px">' + esc(UI.panelDraft.text) + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="panelSave" style="justify-content:center;width:auto;padding:0 20px;min-height:48px"' + (UI.busy ? ' disabled' : '') + '>Guardar borrador</button><button type="button" class="chip" data-a="panelToggle">Cancelar</button></div></div>';
+}
+function panelEditor(a, d) {
+  const e = UI.panelEd, T = d.texts || {}, ms = (T.missions || []);
+  if (!e || e.id !== a.id + '|' + d.id) UI.panelEd = { id: a.id + '|' + d.id, headline: T.headline || '', note: T.note || '', m: [0, 1, 2, 3].map((i) => ({ t: (ms[i] || {}).t || '', d: (ms[i] || {}).d || '' })) };
+  const x = UI.panelEd;
+  return '<div class="col g10 mform"><label for="pe-headline" class="muted" style="font-size:13px">Titular de la semana</label><textarea id="pe-headline" maxlength="400" style="min-height:90px">' + esc(x.headline) + '</textarea><label for="pe-note" class="muted" style="font-size:13px">Nota tuya para el atleta (opcional)</label><textarea id="pe-note" maxlength="400" style="min-height:70px">' + esc(x.note) + '</textarea>' + x.m.map((m, i) => '<label for="pe-mt' + i + '" class="muted" style="font-size:13px">Misión ' + (i + 1) + '</label><input id="pe-mt' + i + '" maxlength="80" placeholder="Título" value="' + esc(m.t) + '"><textarea id="pe-md' + i + '" maxlength="300" placeholder="Qué hacer" style="min-height:60px">' + esc(m.d) + '</textarea>').join('') + '<p class="muted" style="font-size:13px">Las cifras salen siempre de los datos y no se editan aquí. No incluyas datos de salud en estos textos.</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="panelEdSave" style="justify-content:center;width:auto;padding:0 20px;min-height:48px"' + (UI.busy ? ' disabled' : '') + '>Guardar textos</button><button type="button" class="chip" data-a="panelEdClose">Cancelar</button></div></div>';
+}
+function panelRows(a) {
+  const pn = ST.athPanel[a.id] || [], dr = pn.filter((x) => x.status === 'draft'), ap = pn.filter((x) => x.status === 'approved');
+  const dot = dr.length ? 'var(--accent)' : ap.length ? 'var(--good)' : 'var(--muted)';
+  const lines = pn.length ? [ap.length + (ap.length === 1 ? ' semana aprobada' : ' semanas aprobadas') + (dr.length ? ' · ' + dr.length + (dr.length === 1 ? ' borrador por revisar' : ' borradores por revisar') : ''), 'Última: semana ' + esc(String(pn[0].week))] : ['Sin Panel aún', 'Carga el JSON de la semana y apruébalo para que lo vea'];
+  let out = mrow(dot, 'Panel semanal', lines, '<button type="button" class="chip" data-a="panelToggle"' + (dr.length ? ' style="border-color:var(--accent);color:var(--accent);font-weight:600"' : '') + '>' + (UI.panelOpen ? 'Cerrar' : (dr.length ? 'Revisar' : 'Cargar semana')) + '</button>');
+  if (!UI.panelOpen) return out;
+  out += '<div class="col g8 mform">' + pn.slice(0, 8).map((x) => {
+    const k = esc(a.id + '|' + x.id);
+    return '<div class="col g6" style="border-top:1px solid var(--line);padding-top:8px"><span style="font-weight:600">Semana ' + esc(String(x.week)) + ' · ' + (x.status === 'approved' ? '<span style="color:var(--good)">Aprobado</span>' : '<span style="color:var(--accent)">Borrador</span>') + '</span><div class="row g8 wrap"><button type="button" class="chip" data-a="panelView" data-v="' + k + '">Ver como atleta</button>' + (x.status === 'draft' ? '<button type="button" class="chip" data-a="panelOk" data-v="' + k + '" style="border-color:var(--good);color:var(--good);font-weight:600">Aprobar</button>' : '<button type="button" class="chip" data-a="panelBack" data-v="' + k + '">Volver a borrador</button>') + '<button type="button" class="chip" data-a="panelEd" data-v="' + k + '">Editar textos</button>' + (UI.panelDel === x.id + a.id ? '<button type="button" class="chip" data-a="panelDel" data-v="' + k + '" style="border-color:var(--bad);color:var(--bad)">Confirmar: eliminar</button>' : '<button type="button" class="chip" data-a="panelDelAsk" data-v="' + k + '">Eliminar</button>') + '</div>' + (UI.panelEdOpen === a.id + '|' + x.id ? panelEditor(a, x) : '') + '</div>';
+  }).join('') + '</div>' + panelForm(a);
+  return out;
 }
 function viewAs() {
   const id = UI.asId, who = ST.athletes.find((x) => x.id === id);
@@ -1917,7 +2001,8 @@ function render() {
   if (!ST.ready) { main.innerHTML = viewLoading(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; story.innerHTML = ''; return; }
   if (!ST.user || !ST.profile) { main.innerHTML = ST.user ? viewLoading() : viewLogin(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; ov.innerHTML = ''; story.innerHTML = ''; return; }
   const ids = tabs().map((t) => t.id); if (ids.indexOf(UI.view) < 0) UI.view = ids[0];
-  main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'datos' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
+  main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'panel' || UI.view === 'datos' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
+  panelAfter();
   main.scrollTop = (UI.lastView === UI.view) ? st : 0; UI.lastView = UI.view;
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
   const h = (UI.wk && UI.asId && isCoach()) ? (asRun(overlayHtml) || '') : overlayHtml(), keep = ov.scrollTop;
@@ -1943,7 +2028,7 @@ function setupData() {
   const p = ST.profile; if (!p || !ST.user) return;
   const key = [ST.user.uid, p.role, p.team || '', p.role === 'viewer' ? JSON.stringify(p.access || {}) : ''].join('|'); if (key === dataKey) return;
   stopData(); // se reinician solo las lecturas de equipo y de coach
-  if (p.role === 'viewer') { ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.athBio = {}; ST.teamKm = {}; ST.teamMeta = {}; }
+  if (p.role === 'viewer') { ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.athPanel = {}; ST.athBio = {}; ST.teamKm = {}; ST.teamMeta = {}; }
   dataKey = key;
   const teams = p.role === 'coach' ? ['grnt', 'zn'] : p.role === 'viewer' ? ((p.access && p.access.teams) || []).filter((t) => TEAMS[t]) : (p.team ? [p.team] : []);
   teams.forEach((t) => {
@@ -1958,7 +2043,7 @@ function setupData() {
       const ids = ST.athletes.map((r) => r.id);
       if (p.role === 'coach') { const vids = ST.athletes.filter((r) => r.role === 'viewer').map((r) => r.id); Object.keys(chatSubs).forEach((k) => { if (vids.indexOf(k) < 0) { try { chatSubs[k](); } catch (e) {} delete chatSubs[k]; } }); vids.forEach((id) => { if (!chatSubs[id]) chatSubs[id] = be.listenChat(id, (rs) => { (ST.chat = ST.chat || {})[id] = rs; soft(); }); }); }
       Object.keys(athSubs).forEach((k) => { if (ids.indexOf(k) < 0) { athSubs[k].forEach((u) => u()); delete athSubs[k]; } });
-      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), ].concat(p.role === 'coach' || (p.role === 'viewer' && (p.access || {}).profile === true) ? [be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); }, p.role === 'coach' ? { priv: true } : { quiet: true })] : []); });
+      ids.forEach((id) => { if (!athSubs[id]) athSubs[id] = [be.listenCheckins(id, (c) => { ST.athCk[id] = c; soft(); }, 14), be.listenNotes(id, (n) => { ST.athNotes[id] = n; soft(); }), be.listenPlan(id, (pl) => { ST.athPlan[id] = pl; soft(); }), be.listenHistory(id, (h) => { ST.athHist[id] = h; soft(); }), be.listenPanels(id, (r) => { ST.athPanel[id] = r; soft(); }, p.role === 'coach' ? { all: true } : { quiet: true }), ].concat(p.role === 'coach' || (p.role === 'viewer' && (p.access || {}).profile === true) ? [be.listenBio(id, (b) => { ST.athBio[id] = b; soft(); }, p.role === 'coach' ? { priv: true } : { quiet: true })] : []); });
       soft();
     };
     if (p.role === 'viewer') dataUnsubs.push(be.listenChat(ST.user.uid, (rs) => { (ST.chat = ST.chat || {})[ST.user.uid] = rs; soft(); }));
@@ -1969,7 +2054,7 @@ function setupData() {
 }
 function startSession(user) {
   stopAll();
-  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPlan = null; ST.myHist = null; ST.myEvents = []; UI.pl = null; LV = lvLoad(); UI.liveOpen = !!(LV && LV.start); if (UI.liveOpen && LV.mode !== 'fin') { try { history.replaceState(null, '', '#planificar'); } catch (e) { /* sin historial */ } } ST.myBio = null; ST.athBio = {}; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; ST.chat = {}; UI.chatOpen = null; UI.chatDraft = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
+  ST.user = user; ST.profile = null; ST.myCk = []; ST.myNotes = []; ST.athletes = []; ST.athCk = {}; ST.athNotes = {}; ST.athPlan = {}; ST.athHist = {}; ST.myPanel = []; ST.athPanel = {}; PANEL_CACHE = null; UI.panelSel = null; UI.panelOpen = false; UI.panelDraft = null; UI.panelEd = null; ST.myPlan = null; ST.myHist = null; ST.myEvents = []; UI.pl = null; LV = lvLoad(); UI.liveOpen = !!(LV && LV.start); if (UI.liveOpen && LV.mode !== 'fin') { try { history.replaceState(null, '', '#planificar'); } catch (e) { /* sin historial */ } } ST.myBio = null; ST.athBio = {}; UI.planDraft = null; UI.planOpen = false; UI.histDraft = null; UI.histOpen = false; UI.asId = null; ST.pending = []; ST.fbk = []; UI.fbDraft = ''; UI.fbOk = false; ST.teamKm = {}; ST.teamMeta = {}; ST.chat = {}; UI.chatOpen = null; UI.chatDraft = {}; UI.justSaved = null; UI.flow = null; UI.feedback = null;
   if (!user) { ST.ready = true; soft(); return; }
   be.ensureProfile(user).catch((e) => say(friendly(e) + ' [' + ((e && e.step) || 'perfil') + ': ' + String((e && e.code) || '').replace('firestore/', '') + ' | ' + (user.email || 'sin correo') + ' | ' + String(user.uid).slice(0, 6) + ']'));
   ownUnsubs.push(be.listenProfile(user.uid, (p) => { ST.profile = p; ST.ready = true; setupData(); route(); }));
@@ -1977,6 +2062,7 @@ function startSession(user) {
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));
   ownUnsubs.push(be.listenPlan(user.uid, (pl) => { ST.myPlan = pl; soft(); }));
   ownUnsubs.push(be.listenHistory(user.uid, (h) => { ST.myHist = h; soft(); }));
+  ownUnsubs.push(be.listenPanels(user.uid, (rows) => { ST.myPanel = rows; if ((!rows.length && UI.view === 'panel') || (rows.length && location.hash === '#panel' && UI.view !== 'panel')) route(); soft(); }, { quiet: true }));
   ownUnsubs.push(be.listenEvents(user.uid, (rows) => { ST.myEvents = rows; soft(); }));
   ownUnsubs.push(be.listenBio(user.uid, (b) => { ST.myBio = b; soft(); }, { priv: true, migrate: true }));
 }
@@ -2298,6 +2384,46 @@ const ACT = {
     const r = parseHist(UI.histDraft ? UI.histDraft.text : ''); if (r.err) { say(r.err); return; }
     UI.busy = true; render();
     try { await be.saveHistory(a.id, Object.assign(r.hist, { updatedAt: Date.now() })); UI.histDraft = null; UI.histOpen = false; say('Historial guardado para ' + a.first + '.', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  panelPick(v) { UI.panelSel = v; render(); },
+  panelToggle() { UI.panelOpen = !UI.panelOpen; UI.panelDraft = null; UI.panelEd = null; UI.panelEdOpen = null; UI.panelDel = null; render(); },
+  panelGo(v) { UI.sel = v; UI.panelOpen = true; UI.panelDraft = null; render(); setTimeout(() => { const el = document.querySelector('[data-a="panelOk"]'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); }, 60); },
+  panelView(v) { const [id, wk] = String(v).split('|'); UI.panelSel = wk; UI.asId = id; if (location.hash === '#panel') render(); else location.hash = '#panel'; },
+  async panelSave() {
+    const a = athleteObjs().find((x) => x.id === UI.sel); if (!a || UI.busy) return;
+    const r = parsePanel(UI.panelDraft ? UI.panelDraft.text : ''); if (r.err) { say(r.err); return; }
+    UI.busy = true; render();
+    try { await be.savePanel(a.id, r.id, r.doc); UI.panelDraft = null; say('Borrador de la semana ' + r.doc.week + ' guardado para ' + a.first + '. Revísalo y apruébalo.', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  async panelOk(v) {
+    const [id, wk] = String(v).split('|'), d = (ST.athPanel[id] || []).find((x) => x.id === wk); if (!d || UI.busy) return;
+    UI.busy = true; render();
+    try { await be.savePanel(id, wk, Object.assign(panelStrip(d), { status: 'approved', approvedAt: Date.now(), updatedAt: Date.now() })); say('Panel aprobado: el atleta ya lo ve.', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  async panelBack(v) {
+    const [id, wk] = String(v).split('|'), d = (ST.athPanel[id] || []).find((x) => x.id === wk); if (!d || UI.busy) return;
+    UI.busy = true; render();
+    try { await be.savePanel(id, wk, Object.assign(panelStrip(d), { status: 'draft', approvedAt: null, updatedAt: Date.now() })); say('El Panel volvió a borrador: el atleta ya no lo ve.', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  panelDelAsk(v) { const [id, wk] = String(v).split('|'); UI.panelDel = wk + id; render(); },
+  async panelDel(v) {
+    const [id, wk] = String(v).split('|'); if (UI.busy) return; UI.busy = true; render();
+    try { await be.deletePanel(id, wk); UI.panelDel = null; say('Semana eliminada.', 'ok'); } catch (e) { say(friendly(e)); }
+    UI.busy = false; render();
+  },
+  panelEd(v) { UI.panelEdOpen = UI.panelEdOpen === v ? null : v; UI.panelEd = null; render(); },
+  panelEdClose() { UI.panelEd = null; UI.panelEdOpen = null; render(); },
+  async panelEdSave() {
+    const x = UI.panelEd; if (!x || UI.busy) return; const [id, wk] = x.id.split('|'), d = (ST.athPanel[id] || []).find((r) => r.id === wk); if (!d) return;
+    const T = Object.assign({}, d.texts || {}), old = T.missions || [], ms = [];
+    x.m.forEach((m, i) => { const t = String(m.t || '').trim().slice(0, 80), dd = String(m.d || '').trim().slice(0, 300); if (t && dd) ms.push(Object.assign({ ic: 'star', tone: 'info' }, old[i] || {}, { t, d: dd })); });
+    T.headline = String(x.headline || '').trim().slice(0, 400); T.note = String(x.note || '').trim().slice(0, 400); T.missions = ms;
+    UI.busy = true; render();
+    try { await be.savePanel(id, wk, Object.assign(panelStrip(d), { texts: T, updatedAt: Date.now() })); UI.panelEd = null; UI.panelEdOpen = null; say('Textos guardados.', 'ok'); } catch (e) { say(friendly(e)); }
     UI.busy = false; render();
   },
   verComo(v) { UI.asId = v; if (location.hash === '#hoy') render(); else location.hash = '#hoy'; },
@@ -2967,6 +3093,8 @@ document.addEventListener('input', (e) => {
   if (id === 'replyText') { UI.reply.text = e.target.value; const b = document.querySelector('[data-a="sendReply"]'); if (b) { const has = !!e.target.value.trim(); b.disabled = !has || UI.busy; const a = athleteObjs().find((x) => x.id === UI.sel); b.textContent = has ? 'Enviar a ' + (a ? a.first : '') : 'Enviar'; } const cn = document.getElementById('replyCount'); if (cn) cn.textContent = e.target.value.length + ' / 600'; }
   if (id === 'planText') UI.planDraft = { id: UI.sel, text: e.target.value };
   if (id === 'histText') UI.histDraft = { id: UI.sel, text: e.target.value };
+  if (id === 'panelText') UI.panelDraft = { id: UI.sel, text: e.target.value };
+  if (id && id.indexOf('pe-') === 0 && UI.panelEd) { const k = id.slice(3); if (k === 'headline' || k === 'note') UI.panelEd[k] = e.target.value; else { const i = +k.slice(2); if (UI.panelEd.m[i]) UI.panelEd.m[i][k.slice(0, 2) === 'mt' ? 't' : 'd'] = e.target.value; } }
   if (id === 'reminder' && ST.user) { be.saveProfile(ST.user.uid, { reminder: e.target.value }).catch(() => {}); }
   if (id === 'metaGoal' || id === 'metaHito') { const cur = UI.metaDraft && UI.metaDraft.team === UI.metaTeam ? UI.metaDraft : { team: UI.metaTeam, goal: (ST.teamMeta[UI.metaTeam] || {}).goal || KM_GOAL_DEFAULT, hito: (ST.teamMeta[UI.metaTeam] || {}).hito || '' }; if (id === 'metaGoal') cur.goal = e.target.value; else cur.hito = e.target.value; UI.metaDraft = cur; }
 });
@@ -2994,7 +3122,7 @@ async function checkUpdate() {
     document.body.appendChild(el);
     document.getElementById('updgo').onclick = async () => {
       try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((x) => x.unregister())); const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } catch (e) { /* igual se recarga */ }
-      try { await Promise.all(['./', './index.html', './app.js', './styles.css', './backend-firebase.js', './backend-demo.js', './sw.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null))); } catch (e) { /* igual se recarga */ }
+      try { await Promise.all(['./', './index.html', './app.js', './panel.js', './d3.min.js', './styles.css', './backend-firebase.js', './backend-demo.js', './sw.js'].map((u) => fetch(u, { cache: 'reload' }).catch(() => null))); } catch (e) { /* igual se recarga */ }
       location.reload();
     };
   } catch (e) { /* sin conexión: se reintenta luego */ }
