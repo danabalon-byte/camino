@@ -1380,6 +1380,7 @@ function fbInbox() {
 
 /* ---------- Detalle de la semana (se abre al tocar "Tu semana") ---------- */
 const WDF = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MOVER_URL = 'https://camino-mover.anabalondiego.workers.dev';
 const shortDate = (ds) => { const d = parse(ds); return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3); };
 const hm = (m) => (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60 ? pad(m % 60) + ' min' : '').trim() : m + ' min');
 function weekSheetHtml() {
@@ -1407,6 +1408,14 @@ function weekSheetHtml() {
       if (isAct) did = (A ? esc(A.name) + (A.min ? ' · ' + minText(A.min) : '') + (A.km ? ' · ' + A.km + ' km' : '') : 'Actividad registrada') + (c.rpe ? ' · esfuerzo ' + c.rpe + '/10' : '');
       else did = c.type === 'descanso' ? 'Día de descanso registrado' : 'Registraste cómo te sientes';
       body += '<div class="col g4"><div class="eyebrow" style="color:' + (isAct ? 'var(--good)' : 'var(--muted)') + '">' + (isAct ? 'Lo que hiciste' : 'Tu check-in') + '</div><div style="font-size:15px">' + did + '</div>' + (c.comment ? '<div class="muted" style="font-size:14px">“' + esc(c.comment) + '”</div>' : '') + '</div>';
+    }
+    if (p && !past && !isAct && !DEMO && !UI.asId && ST.user) {
+      const mv = UI.mv && UI.mv.date === d.date ? UI.mv : null;
+      if (mv && mv.done) body += '<div class="col g4" style="background:var(--good-soft);border-radius:12px;padding:10px 12px"><b style="color:var(--good)">Movido al ' + esc(WDF[parse(mv.done).getDay()]) + ' ' + esc(shortDate(mv.done)) + '</b><span class="muted" style="font-size:13px">Quedó en intervals.icu. Garmin lo recibe en unas horas. Esta pantalla se actualiza en la próxima sincronización.</span></div>';
+      else if (mv && mv.open) {
+        let chips = ''; for (let k = Math.max(0, diffDays(today, d.date) - 3); k <= diffDays(today, d.date) + 7; k++) { const f = off(k); if (f !== d.date) chips += '<button type="button" class="chip" data-a="mvPick" data-v="' + f + '"' + (mv.busy ? ' disabled' : '') + '>' + esc(WDF[parse(f).getDay()].slice(0, 3)) + ' ' + esc(shortDate(f)) + '</button>'; }
+        body += '<div class="col g8"><div class="eyebrow">Mover a otro día (hasta 7 días de diferencia)</div><div class="row g8 wrap">' + chips + '</div>' + (mv.busy ? '<span class="muted" style="font-size:13px">Moviendo…</span>' : '') + (mv.err ? '<span style="color:var(--warn);font-size:13px">' + esc(mv.err) + '</span>' : '') + '<button type="button" class="chip" data-a="mvClose">Cancelar</button></div>';
+      } else body += '<button type="button" class="chip" data-a="mvOpen" data-v="' + d.date + '" style="align-self:flex-start">Cambiar de día</button>';
     }
     if (note) body += '<div class="col g4"><div class="eyebrow">Nota de tu coach</div><div class="soft" style="font-size:15px">' + esc(note) + '</div></div>';
     if (!body) body = '<div class="muted" style="font-size:14px">' + (past ? 'Sin sesión planificada ni registro.' : 'Sin sesión planificada.') + '</div>';
@@ -2321,6 +2330,24 @@ const ACT = {
   closeFb() { UI.feedback = null; render(); },
   wkOpen(v) { const t0 = parse(off(0)); t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)); const sh = v ? Math.floor(diffDays(ymd(t0), v) / 7) : 0; UI.wk = { shift: sh, focus: v || null }; render(); if (v) { const el = document.getElementById('wkd-' + v); if (el) el.scrollIntoView({ block: 'center' }); } },
   wkClose() { UI.wk = null; render(); },
+  mvOpen(v) { UI.mv = { date: v, open: true }; render(); },
+  mvClose() { UI.mv = null; render(); },
+  async mvPick(f) {
+    const m = UI.mv; if (!m || m.busy || !ST.user) return; m.busy = true; m.err = ''; render();
+    try {
+      const tk = await be.token(); if (!tk) throw new Error('Vuelve a iniciar sesión.');
+      const H = { authorization: 'Bearer ' + tk };
+      const r1 = await fetch(MOVER_URL + '/semana?desde=' + m.date + '&hasta=' + m.date, { headers: H });
+      const evs = await r1.json(); if (!r1.ok) throw new Error(evs.error || 'No pude leer tu semana.');
+      const ev = (Array.isArray(evs) ? evs : []).filter((e) => e.category === 'WORKOUT' && String(e.start_date_local || '').slice(0, 10) === m.date);
+      if (!ev.length) throw new Error('No encontré ese entrenamiento en intervals.icu.');
+      if (ev.length > 1) throw new Error('Ese día tiene más de un entrenamiento; avísale a tu coach.');
+      const r2 = await fetch(MOVER_URL + '/mover', { method: 'POST', headers: Object.assign({ 'content-type': 'application/json' }, H), body: JSON.stringify({ eventId: ev[0].id, fecha: f }) });
+      const out = await r2.json(); if (!r2.ok) throw new Error(out.error || 'No se pudo mover.');
+      m.done = f; m.busy = false; m.open = false;
+    } catch (e) { m.busy = false; m.err = String(e && e.message || e); }
+    render();
+  },
   actOpen(v) {
     const coachView = !!(UI.asId && isCoach()), h = coachView ? ST.athHist[UI.asId] : ST.myHist, x = recentActs(h)[Number(v)]; if (!x) return;
     const uid = coachView ? UI.asId : (ST.user && ST.user.uid), cur = UI.act = { x: x, uid: uid, route: (x.r && x.id) ? undefined : null };

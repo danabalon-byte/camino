@@ -134,6 +134,7 @@ const byDateDesc = (a, b) => (a.date < b.date ? 1 : -1);
 
 let authCb = null, current = null;
 const be = {
+  async token() { return null; },
   mode: 'demo',
   setErrorHandler() {},
   onAuth(cb) {

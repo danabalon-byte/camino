@@ -42,6 +42,8 @@ const be = {
       }
     }
   },
+  // v68: token de sesión para el servicio que mueve entrenamientos (no se guarda en ningún lado).
+  async token() { return auth.currentUser ? auth.currentUser.getIdToken() : null; },
   async signOut() {
     // Al cerrar sesión se borra la caché local (bienestar y molestias) para no dejarla en equipos compartidos.
     await signOut(auth);
