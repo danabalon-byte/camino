@@ -1158,7 +1158,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 75;
+const APP_VER = 77;
 const NEWS = [
   'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
@@ -2022,7 +2022,7 @@ function icuStep(st, out, ftp) {
   if (hasH) {
     const hu = String(hrS.units || '').toLowerCase(), hz = (v) => (hu.indexOf('zone') >= 0 ? HRZP[Math.max(1, Math.min(5, Math.round(v)))] : (hu.indexOf('lthr') >= 0 ? HRZP[LTZ(v)] : (hu.indexOf('%') >= 0 ? Number(v) : null)));
     const a1 = hrS.start != null ? hz(hrS.start) : hz(hrS.value), b1 = hrS.end != null ? hz(hrS.end) : a1;
-    out.push({ m: sec / 60, p: a1 != null ? a1 : 55, p2: b1 != null ? b1 : (a1 != null ? a1 : 55), u: a1 != null ? 0 : 1, h: 1, t: String(st.text || '').slice(0, 60) });
+    const cd = st.cadence || {}, cad = cd.value != null ? cd.value : cd.start; out.push({ m: sec / 60, p: a1 != null ? a1 : 55, p2: b1 != null ? b1 : (a1 != null ? a1 : 55), u: a1 != null ? 0 : 1, h: 1, t: String(st.text || '').slice(0, 60), cad: cad > 0 ? Math.round(cad) : 0, rp: st.ramp ? 1 : 0 });
     return;
   }
   const pw = st.power || {}, u = String(pw.units || '').toLowerCase();
@@ -2030,12 +2030,13 @@ function icuStep(st, out, ftp) {
   let a = null, b = null;
   if (pw.start != null && pw.end != null) { a = cv(pw.start); b = cv(pw.end); } else if (pw.value != null) { a = cv(pw.value); b = a; }
   const ok = a != null;
-  out.push({ m: sec / 60, p: ok ? a : 55, p2: ok && b != null ? b : (ok ? a : 55), u: ok ? 0 : 1, t: String(st.text || '').slice(0, 60) });
+  out.push({ m: sec / 60, p: ok ? a : 55, p2: ok && b != null ? b : (ok ? a : 55), u: ok ? 0 : 1, t: String(st.text || '').slice(0, 60), rp: st.ramp ? 1 : 0 });
 }
 function icuText(desc, ftp) {
-  const out = []; let grp = null, reps = 1;
+  const out = []; let grp = null, reps = 1, hd = '';
   const dur = (s) => { let t = 0, m; const re = /(\d+(?:[.,]\d+)?)\s*(h|min|m|s)\b/gi; while ((m = re.exec(s))) { const v = parseFloat(m[1].replace(',', '.')), u = m[2].toLowerCase(); t += u === 'h' ? v * 3600 : (u === 's' ? v : v * 60); } return t; };
-  const one = (s) => {
+  const one = (s) => { const r = one0(s); if (r) { const c = s.match(/(\d{2,3})\s*rpm/i); if (c) r.cad = +c[1]; if (/\bramp/i.test(s)) r.rp = 1; } return r; };
+  const one0 = (s) => {
     const t = dur(s); if (!(t > 0)) return null; let a = null, b = null, m;
     const isHr = /\b(?:HR|FC|LTHR)\b|bpm/i.test(s), isLt = /LTHR/i.test(s), bp = s.match(/(\d{2,3})\s*-\s*(\d{2,3})\s*bpm/i);
     if (isHr && (m = s.match(/(\d{2,3})(?:\s*-\s*(\d{2,3}))?\s*%/))) { const x = +m[1], y2 = m[2] ? +m[2] : x; return { m: t / 60, p: isLt ? HRZP[LTZ(x)] : x, p2: isLt ? HRZP[LTZ(y2)] : y2, u: 0, h: 1, t: '', bpm: bp ? bp[1] + '–' + bp[2] + ' ppm' : '' }; }
@@ -2048,9 +2049,9 @@ function icuText(desc, ftp) {
   const flush = () => { if (grp) { for (let i = 0; i < reps; i++) grp.forEach((x) => out.push(Object.assign({}, x))); grp = null; reps = 1; } };
   String(desc || '').split(/\r?\n/).forEach((ln) => {
     const s = ln.trim(); if (!s) { flush(); return; }
-    const g = s.match(/^(\d{1,2})\s*x\b/i) || (!/^[-*]/.test(s) ? s.match(/^[^-*].{0,40}?\b(\d{1,2})\s*x\s*$/i) : null); if (g && !/^[-*]/.test(s)) { flush(); grp = []; reps = Math.min(30, +g[1]); return; }
-    if (!/^[-*]/.test(s)) { flush(); return; }
-    if (/^[-*]/.test(s)) { const x = one(s.replace(/^[-*]\s*/, '')); if (x) (grp || out).push(x); }
+    const g = s.match(/^(\d{1,2})\s*x\b/i) || (!/^[-*]/.test(s) ? s.match(/^[^-*].{0,40}?\b(\d{1,2})\s*x\s*$/i) : null); if (g && !/^[-*]/.test(s)) { flush(); grp = []; reps = Math.min(30, +g[1]); hd = ''; return; }
+    if (!/^[-*]/.test(s)) { flush(); hd = (s.length <= 30 && !/\d/.test(s) && /^[A-ZÁÉÍÓÚÑ]/.test(s)) ? s.replace(/[:.]$/, '') : ''; return; }
+    if (/^[-*]/.test(s)) { const x = one(s.replace(/^[-*]\s*/, '')); if (x) { if (!grp && hd && !x.t) x.t = hd; (grp || out).push(x); } }
   });
   flush(); return out.length ? out : null;
 }
@@ -2099,16 +2100,22 @@ const sMin = (m) => { m = Math.round(m); return m >= 60 ? Math.floor(m / 60) + '
 const zc = (z) => 'var(--z' + z + ')';
 /* Alto = % de FTP, ancho = tiempo (con un mínimo visible para los intervalos cortos). */
 function blkChart(b, o) {
-  o = o || {}; const W = o.axis ? 360 : 600, H = o.h || 160, pad = o.axis ? 40 : 0, hrC = !!(b && b.some((k) => k.h)), maxP = hrC ? 110 : 170, gap = o.gap != null ? o.gap : 1.5, ftp = hrC ? 0 : ftpNow();
-  const y = (p) => H - 2 - (H - 8) * Math.min(p, maxP) / maxP;
+  o = o || {}; const W = o.axis ? 360 : 600, H = o.h || 160, pad = o.axis ? 40 : 0, hrC = !!(b && b.some((k) => k.h)), gap = o.gap != null ? o.gap : 1.5, ftp = hrC ? 0 : ftpNow();
+  let maxP = hrC ? 110 : 170, lo = 0;
+  if (hrC) { const hs = b.filter((k) => k.h && !k.u); const mn = Math.min.apply(null, hs.map((k) => Math.min(k.p, k.p2)).concat([100])), mx = Math.max.apply(null, hs.map((k) => Math.max(k.p, k.p2)).concat([0])); lo = Math.max(0, Math.floor((mn - 6) / 10) * 10); maxP = Math.max(lo + 30, Math.ceil((mx + 4) / 10) * 10); }
+  const y = (p) => H - 2 - (H - 8) * (Math.max(Math.min(p, maxP), lo) - lo) / (maxP - lo);
   if (!b) return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Sin detalle de intervalos"><rect x="2" y="' + (H * 0.45) + '" width="' + (W - 4) + '" height="' + (H * 0.55 - 2) + '" rx="10" fill="none" stroke="var(--ctl)" stroke-width="2" stroke-dasharray="8 6" vector-effect="non-scaling-stroke"/></svg>';
   const mins = b.reduce((x, k) => x + k.m, 0), minf = o.minf != null ? o.minf : 0.012, raw = b.map((k) => Math.max(k.m / mins, minf)), sum = raw.reduce((x, k) => x + k, 0), fr = raw.map((r) => r / sum);
   const X = (f) => pad + (W - pad) * f; let acc = 0;
   let out = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Bloques del entrenamiento por zona">';
-  if (o.axis) (hrC ? [60, 80, 100] : [50, 100, 150]).forEach((v) => { out += '<line x1="' + pad + '" x2="' + W + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-width="1" ' + (v === 100 ? 'stroke-dasharray="5 4"' : '') + '/><text x="0" y="' + (y(v) + 4) + '" font-size="12" fill="var(--muted)">' + (ftp ? Math.round(ftp * v / 100) + ' W' : v + ' %') + '</text>'; });
+  if (o.axis) (hrC ? [0, 1, 2, 3, 4].map((i) => lo + i * 10).filter((v) => v < maxP) : [50, 100, 150]).forEach((v) => { out += '<line x1="' + pad + '" x2="' + W + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-width="1" ' + (v === 100 && !hrC ? 'stroke-dasharray="5 4"' : '') + '/><text x="0" y="' + (y(v) + 4) + '" font-size="12" fill="var(--muted)">' + (ftp ? Math.round(ftp * v / 100) + ' W' : v + ' %') + '</text>'; });
   else if (o.ftp) out += '<line x1="0" x2="' + W + '" y1="' + y(100) + '" y2="' + y(100) + '" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 4" opacity=".5"/>';
   b.forEach((k, i) => {
     const x1 = X(acc), x2 = X(acc + fr[i]), col = k.u ? 'var(--ctl)' : zc(zOfB(k));
+    if (!k.rp) { const lw = Math.min(k.p, k.p2), hg = Math.max(k.p, k.p2), xa = x1 + gap / 2, xb = x2 - gap / 2, sel = o.sel === i ? ' style="filter:brightness(1.25)"' : '', da = o.pick ? ' data-a="semBlk" data-v="' + i + '"' : '';
+      out += '<rect' + da + ' x="' + xa.toFixed(1) + '" y="' + y(lw).toFixed(1) + '" width="' + Math.max(1, xb - xa).toFixed(1) + '" height="' + (H - 1 - y(lw)).toFixed(1) + '" fill="' + col + '"' + sel + '/>';
+      if (hg > lw) out += '<rect' + da + ' x="' + xa.toFixed(1) + '" y="' + y(hg).toFixed(1) + '" width="' + Math.max(1, xb - xa).toFixed(1) + '" height="' + (y(lw) - y(hg)).toFixed(1) + '" fill="' + col + '" opacity=".4"' + sel + '/>';
+      acc += fr[i]; return; }
     const pts = [[x1 + gap / 2, H - 1], [x1 + gap / 2, y(k.p)], [x2 - gap / 2, y(k.p2)], [x2 - gap / 2, H - 1]].map((q) => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ');
     out += '<polygon' + (o.pick ? ' data-a="semBlk" data-v="' + i + '"' : '') + ' points="' + pts + '" fill="' + col + '" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round"' + (o.sel === i ? ' style="filter:brightness(1.25)"' : '') + '/>';
     acc += fr[i];
@@ -2226,14 +2233,14 @@ function semSheetHtml() {
   const a = meA(), date = UI.sd.date, t0 = parse(off(0)), shw = (t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)), Math.floor(diffDays(ymd(t0), date) / 7)), d = semDays(a, shw).find((x) => x.date === date);
   const p = d && d.p; if (!p) { UI.sd = null; return ''; }
   const b = d.blocks, st = b ? blkStats(b) : null, ft = ftpNow(), sel = UI.sd.blk != null && b ? b[UI.sd.blk] : null;
-  const rng = (k) => k.h ? (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' % FC' : Math.round(k.p) + '–' + Math.round(k.p2) + ' % FC') + (k.bpm ? ' · ' + k.bpm : '') : (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' %' : Math.round(k.p) + ' → ' + Math.round(k.p2) + ' %') + (ft ? ' · ' + (Math.round(k.p * ft / 100) === Math.round(k.p2 * ft / 100) ? Math.round(k.p * ft / 100) + ' W' : Math.round(k.p * ft / 100) + ' → ' + Math.round(k.p2 * ft / 100) + ' W') : '');
+  const rng = (k) => k.h ? (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' % FC' : Math.round(k.p) + '–' + Math.round(k.p2) + ' % FC') + (k.bpm ? ' · ' + k.bpm : '') + (k.cad ? ' · ' + k.cad + ' rpm' : '') : (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' %' : Math.round(k.p) + (k.rp ? ' → ' : '–') + Math.round(k.p2) + ' %') + (ft ? ' · ' + (Math.round(k.p * ft / 100) === Math.round(k.p2 * ft / 100) ? Math.round(k.p * ft / 100) + ' W' : Math.round(k.p * ft / 100) + (k.rp ? ' → ' : '–') + Math.round(k.p2 * ft / 100) + ' W') : '') + (k.cad ? ' · ' + k.cad + ' rpm' : '');
   const row = (k, lbl) => { const z = zOfB(k); return '<div class="sm-step" style="--zc:' + (k.u ? 'var(--ctl)' : zc(z)) + '"><div><div class="t">' + esc(lbl) + '</div><div class="d">' + sMin(k.m) + ' · ' + (k.u ? 'sin objetivo' : rng(k)) + '</div></div><span class="z">' + (k.u ? '—' : 'Z' + z) + '</span></div>'; };
   let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px;text-transform:capitalize">' + esc(WDF[d.wd]) + ' ' + esc(shortDate(date)) + '</div><h1 class="title">' + esc(p.name) + '</h1></div><button type="button" class="x" data-a="semClose" style="color:var(--text);min-height:44px;padding:0 8px">Cerrar</button></div>';
   out += '<div class="sm-big">' + blkChart(b, { axis: true, h: 190, pick: true, sel: UI.sd.blk }) + '</div>';
   out += '<div class="sm-tip">' + (sel ? '<b>' + esc(sel.t || 'Bloque') + '</b> · ' + sMin(sel.m) + ' · ' + (sel.u ? 'sin objetivo' : rng(sel) + ' · ' + zNameB(sel)) : (b ? 'Toca un bloque del gráfico para ver su detalle.' : 'No se encontró el detalle de intervalos de esta sesión; se muestra la duración del plan.')) + '</div>';
   if (b && b[0].e) out += '<p class="soft" style="font-size:13px">Dibujado a partir del texto del entrenamiento. Los tramos en azul no indican intensidad.</p>';
   out += '<div class="sm-kpis"><div class="sm-kpi"><b>' + sMin(st ? st.mins : (p.min || 0)) + '</b><span>duración</span></div>' + (p.km ? '<div class="sm-kpi"><b>' + p.km + ' km</b><span>distancia</span></div>' : '') + (st ? (st.hr ? '<div class="sm-kpi"><b>' + Math.round(st.max) + ' %</b><span>máx. de tu FC máx.</span></div>' : '<div class="sm-kpi"><b>≈ ' + st.tss + '</b><span>TSS (estimado)</span></div><div class="sm-kpi"><b>' + st.IF.toFixed(2).replace('.', ',') + '</b><span>intensidad (IF)</span></div><div class="sm-kpi"><b>' + Math.round(st.max) + ' %</b><span>máx. de tu FTP</span></div>') : '') + '</div>';
-  if (b) out += '<h3 class="sm-h3">Bloques</h3><div class="col g8">' + semGroups(b).map((g) => g.n >= 2 ? '<div class="sm-grp"><div class="sm-gt">' + g.n + ' ×</div><div class="col g8" style="flex:1">' + row(g.a, g.a.t || 'Esfuerzo') + row(g.b, g.b.t || 'Recuperación') + '</div></div>' : row(g.a, g.a.t || 'Bloque ' + (g.i + 1))).join('') + '</div>';
+  if (b) out += '<h3 class="sm-h3">Bloques</h3><div class="col g8">' + semGroups(b).map((g) => g.n >= 2 ? '<div class="sm-grp"><div class="sm-gt">' + g.n + ' ×</div><div class="col g8" style="flex:1">' + row(g.a, g.a.t || 'Esfuerzo') + row(g.b, g.b.t || 'Recuperación') + '</div></div>' : row(g.a, g.a.t || (b.length > 2 && g.i === 0 && zOfB(g.a) <= 2 ? 'Calentamiento' : (b.length > 2 && g.i === b.length - 1 && zOfB(g.a) <= 2 ? 'Vuelta a la calma' : 'Bloque ' + (g.i + 1))))).join('') + '</div>';
   const note = dayNoteFor(date); if (note) out += '<h3 class="sm-h3">Nota de tu coach</h3><div class="card soft" style="font-size:15px">' + esc(note) + '</div>';
   const mvh = semMvHtml(date, p); if (mvh) out += '<h3 class="sm-h3">Cambiar de día</h3>' + mvh;
   return out + '</div></div>';
