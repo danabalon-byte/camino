@@ -1158,7 +1158,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 72;
+const APP_VER = 74;
 const NEWS = [
   'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
@@ -2005,6 +2005,12 @@ function asRun(fn) {
 /* ---------- Semana (v70): "Mi semana" con gráficos de intervalos + Panel ---------- */
 const ZNAME = ['', 'Z1 recuperación', 'Z2 resistencia', 'Z3 tempo', 'Z4 umbral', 'Z5 VO₂máx', 'Z6 anaeróbico', 'Z7 neuromuscular'];
 const zOfP = (p) => (p < 55 ? 1 : p < 76 ? 2 : p < 91 ? 3 : p < 106 ? 4 : p < 121 ? 5 : p < 151 ? 6 : 7);
+const HRNAME = ['', 'Z1 suave', 'Z2 aeróbica', 'Z3 tempo', 'Z4 umbral', 'Z5 máxima'];
+const HRZ = (p) => (p < 60 ? 1 : p < 70 ? 2 : p < 80 ? 3 : p < 90 ? 4 : 5); /* % de FC máx, misma tabla de zonas del coach */
+const HRZP = [0, 55, 65, 75, 85, 95];
+const LTZ = (p) => (p < 81 ? 1 : p < 90 ? 2 : p < 94 ? 3 : p < 100 ? 4 : 5); /* % de LTHR → zona */
+const zOfB = (k) => (k.h ? HRZ((k.p + k.p2) / 2) : zOfP((k.p + k.p2) / 2));
+const zNameB = (k) => (k.h ? HRNAME : ZNAME)[zOfB(k)];
 const ZPCT = [0, 45, 65, 83, 98, 113, 135, 170]; /* % de FTP representativo de cada zona (Coggan) */
 const ftpNow = () => { const x = bioMeas().ftp, v = x && typeof x === 'object' ? (x.v != null ? x.v : (x.value != null ? x.value : x.val)) : x; return Number(v) > 0 ? Number(v) : 0; };
 /* Bloques desde intervals.icu. FORMATO POR VERIFICAR: se lee workout_doc.steps y, si no hay, las líneas "- 10m 55%" de la descripción. */
@@ -2012,6 +2018,13 @@ function icuStep(st, out, ftp) {
   if (!st || typeof st !== 'object') return;
   if (Array.isArray(st.steps) && st.steps.length) { const n = Math.max(1, Math.min(50, Number(st.reps) || 1)); for (let i = 0; i < n; i++) st.steps.forEach((x) => icuStep(x, out, ftp)); return; }
   const sec = Number(st.duration); if (!(sec > 0)) return;
+  const hrS = st.hr || {}, hasP = st.power && (st.power.value != null || st.power.start != null), hasH = !hasP && (hrS.value != null || hrS.start != null);
+  if (hasH) {
+    const hu = String(hrS.units || '').toLowerCase(), hz = (v) => (hu.indexOf('zone') >= 0 ? HRZP[Math.max(1, Math.min(5, Math.round(v)))] : (hu.indexOf('lthr') >= 0 ? HRZP[LTZ(v)] : (hu.indexOf('%') >= 0 ? Number(v) : null)));
+    const a1 = hrS.start != null ? hz(hrS.start) : hz(hrS.value), b1 = hrS.end != null ? hz(hrS.end) : a1;
+    out.push({ m: sec / 60, p: a1 != null ? a1 : 55, p2: b1 != null ? b1 : (a1 != null ? a1 : 55), u: a1 != null ? 0 : 1, h: 1, t: String(st.text || '').slice(0, 60) });
+    return;
+  }
   const pw = st.power || {}, u = String(pw.units || '').toLowerCase();
   const cv = (v) => { if (v == null || !isFinite(v)) return null; if (u.indexOf('ftp') >= 0) return Number(v); if (u === 'w' && ftp) return Number(v) / ftp * 100; if (u.indexOf('zone') >= 0) return ZPCT[Math.max(1, Math.min(7, Math.round(v)))]; return null; };
   let a = null, b = null;
@@ -2024,6 +2037,9 @@ function icuText(desc, ftp) {
   const dur = (s) => { let t = 0, m; const re = /(\d+(?:[.,]\d+)?)\s*(h|min|m|s)\b/gi; while ((m = re.exec(s))) { const v = parseFloat(m[1].replace(',', '.')), u = m[2].toLowerCase(); t += u === 'h' ? v * 3600 : (u === 's' ? v : v * 60); } return t; };
   const one = (s) => {
     const t = dur(s); if (!(t > 0)) return null; let a = null, b = null, m;
+    const isHr = /\b(?:HR|FC|LTHR)\b|bpm/i.test(s), isLt = /LTHR/i.test(s), bp = s.match(/(\d{2,3})\s*-\s*(\d{2,3})\s*bpm/i);
+    if (isHr && (m = s.match(/(\d{2,3})(?:\s*-\s*(\d{2,3}))?\s*%/))) { const x = +m[1], y2 = m[2] ? +m[2] : x; return { m: t / 60, p: isLt ? HRZP[LTZ(x)] : x, p2: isLt ? HRZP[LTZ(y2)] : y2, u: 0, h: 1, t: '', bpm: bp ? bp[1] + '–' + bp[2] + ' ppm' : '' }; }
+    if (isHr && (m = s.match(/\bZ([1-5])\b/i))) return { m: t / 60, p: HRZP[+m[1]], p2: HRZP[+m[1]], u: 0, h: 1, t: '', bpm: bp ? bp[1] + '–' + bp[2] + ' ppm' : '' };
     if ((m = s.match(/(\d{2,3})(?:\s*-\s*(\d{2,3}))?\s*%/))) { a = +m[1]; b = m[2] ? +m[2] : a; }
     else if ((m = s.match(/\bZ([1-7])\b/i))) { a = b = ZPCT[+m[1]]; }
     else if (ftp && (m = s.match(/(\d{2,3})(?:\s*-\s*(\d{2,3}))?\s*w\b/i))) { a = +m[1] / ftp * 100; b = m[2] ? +m[2] / ftp * 100 : a; }
@@ -2032,7 +2048,8 @@ function icuText(desc, ftp) {
   const flush = () => { if (grp) { for (let i = 0; i < reps; i++) grp.forEach((x) => out.push(Object.assign({}, x))); grp = null; reps = 1; } };
   String(desc || '').split(/\r?\n/).forEach((ln) => {
     const s = ln.trim(); if (!s) { flush(); return; }
-    const g = s.match(/^(\d{1,2})\s*x\b/i); if (g && !/^[-*]/.test(s)) { flush(); grp = []; reps = Math.min(30, +g[1]); return; }
+    const g = s.match(/^(\d{1,2})\s*x\b/i) || (!/^[-*]/.test(s) ? s.match(/^[^-*].{0,40}?\b(\d{1,2})\s*x\s*$/i) : null); if (g && !/^[-*]/.test(s)) { flush(); grp = []; reps = Math.min(30, +g[1]); return; }
+    if (!/^[-*]/.test(s)) { flush(); return; }
     if (/^[-*]/.test(s)) { const x = one(s.replace(/^[-*]\s*/, '')); if (x) (grp || out).push(x); }
   });
   flush(); return out.length ? out : null;
@@ -2075,23 +2092,23 @@ function demoBlocks(p) {
 const blkAvg = (k) => (k.p + k.p2) / 2;
 function blkStats(b) {
   const mins = b.reduce((x, k) => x + k.m, 0), tss = b.reduce((x, k) => x + k.m / 60 * Math.pow(blkAvg(k) / 100, 2) * 100, 0), zt = {};
-  b.forEach((k) => { const z = zOfP(blkAvg(k)); zt[z] = (zt[z] || 0) + k.m; });
-  return { mins, tss: Math.round(tss), IF: mins ? Math.sqrt(tss / 100 / (mins / 60)) : 0, zt, max: Math.max.apply(null, b.map((k) => Math.max(k.p, k.p2))) };
+  b.forEach((k) => { const z = zOfB(k); zt[z] = (zt[z] || 0) + k.m; });
+  return { hr: b.every((k) => k.h), mins, tss: Math.round(tss), IF: mins ? Math.sqrt(tss / 100 / (mins / 60)) : 0, zt, max: Math.max.apply(null, b.map((k) => Math.max(k.p, k.p2))) };
 }
 const sMin = (m) => { m = Math.round(m); return m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + m % 60 + ' min' : '') : m + ' min'; };
 const zc = (z) => 'var(--z' + z + ')';
 /* Alto = % de FTP, ancho = tiempo (con un mínimo visible para los intervalos cortos). */
 function blkChart(b, o) {
-  o = o || {}; const W = o.axis ? 360 : 600, H = o.h || 160, pad = o.axis ? 40 : 0, maxP = 170, gap = o.gap != null ? o.gap : 1.5, ftp = ftpNow();
+  o = o || {}; const W = o.axis ? 360 : 600, H = o.h || 160, pad = o.axis ? 40 : 0, hrC = !!(b && b.some((k) => k.h)), maxP = hrC ? 110 : 170, gap = o.gap != null ? o.gap : 1.5, ftp = hrC ? 0 : ftpNow();
   const y = (p) => H - 2 - (H - 8) * Math.min(p, maxP) / maxP;
   if (!b) return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Sin detalle de intervalos"><rect x="2" y="' + (H * 0.45) + '" width="' + (W - 4) + '" height="' + (H * 0.55 - 2) + '" rx="10" fill="none" stroke="var(--ctl)" stroke-width="2" stroke-dasharray="8 6" vector-effect="non-scaling-stroke"/></svg>';
   const mins = b.reduce((x, k) => x + k.m, 0), minf = o.minf != null ? o.minf : 0.012, raw = b.map((k) => Math.max(k.m / mins, minf)), sum = raw.reduce((x, k) => x + k, 0), fr = raw.map((r) => r / sum);
   const X = (f) => pad + (W - pad) * f; let acc = 0;
-  let out = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Bloques del entrenamiento por zona de potencia">';
-  if (o.axis) [50, 100, 150].forEach((v) => { out += '<line x1="' + pad + '" x2="' + W + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-width="1" ' + (v === 100 ? 'stroke-dasharray="5 4"' : '') + '/><text x="0" y="' + (y(v) + 4) + '" font-size="12" fill="var(--muted)">' + (ftp ? Math.round(ftp * v / 100) + ' W' : v + ' %') + '</text>'; });
+  let out = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Bloques del entrenamiento por zona">';
+  if (o.axis) (hrC ? [60, 80, 100] : [50, 100, 150]).forEach((v) => { out += '<line x1="' + pad + '" x2="' + W + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-width="1" ' + (v === 100 ? 'stroke-dasharray="5 4"' : '') + '/><text x="0" y="' + (y(v) + 4) + '" font-size="12" fill="var(--muted)">' + (ftp ? Math.round(ftp * v / 100) + ' W' : v + ' %') + '</text>'; });
   else if (o.ftp) out += '<line x1="0" x2="' + W + '" y1="' + y(100) + '" y2="' + y(100) + '" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 4" opacity=".5"/>';
   b.forEach((k, i) => {
-    const x1 = X(acc), x2 = X(acc + fr[i]), col = k.u ? 'var(--ctl)' : zc(zOfP(blkAvg(k)));
+    const x1 = X(acc), x2 = X(acc + fr[i]), col = k.u ? 'var(--ctl)' : zc(zOfB(k));
     const pts = [[x1 + gap / 2, H - 1], [x1 + gap / 2, y(k.p)], [x2 - gap / 2, y(k.p2)], [x2 - gap / 2, H - 1]].map((q) => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ');
     out += '<polygon' + (o.pick ? ' data-a="semBlk" data-v="' + i + '"' : '') + ' points="' + pts + '" fill="' + col + '" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round"' + (o.sel === i ? ' style="filter:brightness(1.25)"' : '') + '/>';
     acc += fr[i];
@@ -2127,10 +2144,11 @@ async function semFetch(ws, we) {
     if (!r.ok) throw new Error(String(r.status));
     const ev = await r.json(); if (!Array.isArray(ev)) throw new Error('formato');
     ST.blk = ST.blk || {}; const ft = ftpNow(), seen = {};
-    ev.forEach((e) => { if (e.category !== 'WORKOUT' || !e.start_date_local) return; const d = String(e.start_date_local).slice(0, 10); if (!seen[d]) { seen[d] = 1; ST.blk[d] = []; } ST.blk[d].push({ id: e.id, name: e.name || '', blocks: icuBlocks(e, ft) }); });
+    let nW = 0, nB = 0;
+    ev.forEach((e) => { if (e.category !== 'WORKOUT' || !e.start_date_local) return; const d = String(e.start_date_local).slice(0, 10); if (!seen[d]) { seen[d] = 1; ST.blk[d] = []; } const bl = icuBlocks(e, ft); nW++; if (bl) nB++; ST.blk[d].push({ id: e.id, name: e.name || '', blocks: bl }); });
     for (let k = 0; k < 7; k++) { const t = parse(ws); t.setDate(t.getDate() + k); const d = ymd(t); if (!seen[d]) delete ST.blk[d]; }
-    S[ws] = { at: Date.now(), ok: true };
-  } catch (e) { S[ws] = { at: Date.now(), err: true }; }
+    S[ws] = { at: Date.now(), ok: true, nW, nB };
+  } catch (e) { S[ws] = { at: Date.now(), err: true, code: String((e && e.message) || e).slice(0, 40) }; }
   soft();
 }
 function semAfter() {
@@ -2147,7 +2165,7 @@ function semTile(d, big, sel) {
   const b = d.blocks, st = b ? blkStats(b) : null, mins = st ? st.mins : (d.p.min || 0);
   return '<button type="button" class="sm-tile' + (d.today ? ' today' : '') + (SEM_RACE.test(d.p.name || '') ? ' race' : '') + (sel ? ' sel' : '') + (d.done ? ' done' : '') + '" data-a="' + (big ? 'semOpen' : 'semSel') + '" data-v="' + d.date + '" aria-label="' + SEM_DN[d.wd] + ' ' + parse(d.date).getDate() + ': ' + esc(d.p.name) + ', ' + sMin(mins) + (d.done ? ', hecho' : '') + '">'
     + hd + '<div class="sm-tg">' + blkChart(b, { h: 100, minf: big ? 0.02 : 0.035, gap: big ? 2 : 1.5, ftp: big }) + '</div>'
-    + (big ? '<div class="sm-tb">' + esc(d.p.name) + '</div><div class="sm-tm"><span>' + sMin(mins) + '</span><span>' + (st ? (b[0].e ? 'según el texto' : 'TSS ≈ ' + st.tss) : 'sin detalle') + '</span></div>' : '<div class="sm-tb">' + sMin(mins) + '</div>') + (d.done ? '<span class="sm-ok" aria-hidden="true">✓</span>' : '') + '</button>';
+    + (big ? '<div class="sm-tb">' + esc(d.p.name) + '</div><div class="sm-tm"><span>' + sMin(mins) + '</span><span>' + (st ? (st.hr ? 'por FC' : (b[0].e ? 'según el texto' : 'TSS ≈ ' + st.tss)) : 'sin detalle') + '</span></div>' : '<div class="sm-tb">' + sMin(mins) + '</div>') + (d.done ? '<span class="sm-ok" aria-hidden="true">✓</span>' : '') + '</button>';
 }
 function semMi() {
   const a = meA(), sh = UI.semSh || 0, ds = semDays(a, sh), w = weekInfo(a, sh), vw = semView(), first = ds[0].date, last = ds[6].date;
@@ -2163,12 +2181,13 @@ function semMi() {
     const d = ds.find((x) => x.date === sel), st = d && d.blocks ? blkStats(d.blocks) : null, mins = st ? st.mins : (d && d.p ? d.p.min || 0 : 0);
     out += '<div class="sm-rail" id="semRail">' + ds.map((x) => semTile(x, false, x.date === sel)).join('') + '</div>';
     if (d && d.p) out += '<section class="sm-focus" aria-label="Entrenamiento seleccionado"><div class="sm-nm">' + esc(d.p.name) + '</div><div class="sm-sb">' + esc(WDF[d.wd]) + ' ' + parse(d.date).getDate() + ' · ' + sMin(mins) + (d.p.km ? ' · ' + d.p.km + ' km' : '') + (d.done ? ' · hecho' : '') + '</div><div class="sm-fg">' + blkChart(d.blocks, { h: 150, minf: 0.012, ftp: true }) + '</div>'
-      + (st ? '<div class="sm-meta"><span><b>' + sMin(st.mins) + '</b></span><span>TSS ≈ <b>' + st.tss + '</b></span><span>IF <b>' + st.IF.toFixed(2).replace('.', ',') + '</b></span></div>' + zbarHtml(st) : '<p class="muted" style="font-size:13px;margin:8px 0 0">' + (loading ? 'Buscando el detalle de intervalos…' : 'No se encontró el detalle de intervalos de esta sesión. Se muestra solo la duración del plan.') + '</p>')
+      + (st ? '<div class="sm-meta"><span><b>' + sMin(st.mins) + '</b></span>' + (st.hr ? '<span>máx. <b>' + Math.round(st.max) + ' %</b> de tu FC</span>' : '<span>TSS ≈ <b>' + st.tss + '</b></span><span>IF <b>' + st.IF.toFixed(2).replace('.', ',') + '</b></span>') + '</div>' + zbarHtml(st) : '<p class="muted" style="font-size:13px;margin:8px 0 0">' + (loading ? 'Buscando el detalle de intervalos…' : 'No se encontró el detalle de intervalos de esta sesión. Se muestra solo la duración del plan.') + '</p>')
       + '<button type="button" class="btn" data-a="semOpen" data-v="' + d.date + '" style="margin-top:12px;justify-content:center">Ver detalle' + (DEMO || d.done || d.date < off(0) ? '' : ' y cambiar de día') + '</button></section>';
     else out += '<section class="sm-focus"><div class="sm-nm">Descanso</div><div class="sm-sb">Sin entrenamiento este día. Recupera para lo que viene.</div></section>';
   }
-  out += '<div class="sm-legend" aria-label="Zonas de potencia">' + [1, 2, 3, 4, 5, 6].map((z) => '<span><i style="background:' + zc(z) + '"></i>' + ZNAME[z] + '</span>').join('') + '</div>';
-  out += '<p class="muted" style="font-size:12.5px;margin:4px 2px 0">Alto de cada barra = % de tu FTP (línea punteada = 100 %). Ancho = tiempo. TSS e IF son estimados a partir de los bloques.' + (DEMO ? ' Bloques SIMULADOS.' : '') + (noDet ? ' No se pudo leer el detalle desde intervals.icu ahora; se muestran las duraciones del plan.' : '') + (sh === 0 ? '' : '') + '</p>';
+  const hrW = ds.some((x) => x.blocks && x.blocks.some((k) => k.h)), pwW = ds.some((x) => x.blocks && x.blocks.some((k) => !k.h));
+  out += '<div class="sm-legend" aria-label="Zonas">' + (hrW && !pwW ? [1, 2, 3, 4, 5].map((z) => '<span><i style="background:' + zc(z) + '"></i>' + HRNAME[z] + '</span>').join('') : [1, 2, 3, 4, 5, 6].map((z) => '<span><i style="background:' + zc(z) + '"></i>' + ZNAME[z] + '</span>').join('')) + '</div>';
+  out += '<p class="muted" style="font-size:12.5px;margin:4px 2px 0">'+ (hrW && !pwW ? 'Alto de cada barra = % de tu frecuencia cardíaca máxima (línea punteada = 100 %). Ancho = tiempo. Zonas por % de FC máx: Z1 menos de 60, Z2 60–70, Z3 70–80, Z4 80–90, Z5 más de 90.' : 'Alto de cada barra = % de tu FTP (línea punteada = 100 %). Ancho = tiempo. TSS e IF son estimados a partir de los bloques.') + (DEMO ? ' Bloques SIMULADOS.' : '') + (noDet ? ' No se pudo leer el detalle desde intervals.icu ahora; se muestran las duraciones del plan (código: ' + esc(stt.code || '?') + ').' : (stt && stt.ok ? ' intervals.icu: ' + stt.nW + (stt.nW === 1 ? ' entrenamiento leído' : ' entrenamientos leídos') + ', ' + stt.nB + ' con detalle dibujable.' : '')) + (sh === 0 ? '' : '') + '</p>';
   out += '<div class="muted" style="font-size:12.5px;margin:2px 2px 0">' + nPlan + (nPlan === 1 ? ' sesión' : ' sesiones') + ' · ' + sMin(tot) + ' en total</div>';
   return out;
 }
@@ -2201,13 +2220,13 @@ function semSheetHtml() {
   const a = meA(), date = UI.sd.date, t0 = parse(off(0)), shw = (t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)), Math.floor(diffDays(ymd(t0), date) / 7)), d = semDays(a, shw).find((x) => x.date === date);
   const p = d && d.p; if (!p) { UI.sd = null; return ''; }
   const b = d.blocks, st = b ? blkStats(b) : null, ft = ftpNow(), sel = UI.sd.blk != null && b ? b[UI.sd.blk] : null;
-  const rng = (k) => (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' %' : Math.round(k.p) + ' → ' + Math.round(k.p2) + ' %') + (ft ? ' · ' + (Math.round(k.p * ft / 100) === Math.round(k.p2 * ft / 100) ? Math.round(k.p * ft / 100) + ' W' : Math.round(k.p * ft / 100) + ' → ' + Math.round(k.p2 * ft / 100) + ' W') : '');
-  const row = (k, lbl) => { const z = zOfP(blkAvg(k)); return '<div class="sm-step" style="--zc:' + (k.u ? 'var(--ctl)' : zc(z)) + '"><div><div class="t">' + esc(lbl) + '</div><div class="d">' + sMin(k.m) + ' · ' + (k.u ? 'sin objetivo de potencia' : rng(k)) + '</div></div><span class="z">' + (k.u ? '—' : 'Z' + z) + '</span></div>'; };
+  const rng = (k) => k.h ? (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' % FC' : Math.round(k.p) + '–' + Math.round(k.p2) + ' % FC') + (k.bpm ? ' · ' + k.bpm : '') : (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' %' : Math.round(k.p) + ' → ' + Math.round(k.p2) + ' %') + (ft ? ' · ' + (Math.round(k.p * ft / 100) === Math.round(k.p2 * ft / 100) ? Math.round(k.p * ft / 100) + ' W' : Math.round(k.p * ft / 100) + ' → ' + Math.round(k.p2 * ft / 100) + ' W') : '');
+  const row = (k, lbl) => { const z = zOfB(k); return '<div class="sm-step" style="--zc:' + (k.u ? 'var(--ctl)' : zc(z)) + '"><div><div class="t">' + esc(lbl) + '</div><div class="d">' + sMin(k.m) + ' · ' + (k.u ? 'sin objetivo' : rng(k)) + '</div></div><span class="z">' + (k.u ? '—' : 'Z' + z) + '</span></div>'; };
   let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px;text-transform:capitalize">' + esc(WDF[d.wd]) + ' ' + esc(shortDate(date)) + '</div><h1 class="title">' + esc(p.name) + '</h1></div><button type="button" class="x" data-a="semClose" style="color:var(--text);min-height:44px;padding:0 8px">Cerrar</button></div>';
   out += '<div class="sm-big">' + blkChart(b, { axis: true, h: 190, pick: true, sel: UI.sd.blk }) + '</div>';
-  out += '<div class="sm-tip">' + (sel ? '<b>' + esc(sel.t || 'Bloque') + '</b> · ' + sMin(sel.m) + ' · ' + (sel.u ? 'sin objetivo de potencia' : rng(sel) + ' · ' + ZNAME[zOfP(blkAvg(sel))]) : (b ? 'Toca un bloque del gráfico para ver su detalle.' : 'No se encontró el detalle de intervalos de esta sesión; se muestra la duración del plan.')) + '</div>';
+  out += '<div class="sm-tip">' + (sel ? '<b>' + esc(sel.t || 'Bloque') + '</b> · ' + sMin(sel.m) + ' · ' + (sel.u ? 'sin objetivo' : rng(sel) + ' · ' + zNameB(sel)) : (b ? 'Toca un bloque del gráfico para ver su detalle.' : 'No se encontró el detalle de intervalos de esta sesión; se muestra la duración del plan.')) + '</div>';
   if (b && b[0].e) out += '<p class="soft" style="font-size:13px">Dibujado a partir del texto del entrenamiento. Los tramos en azul no indican intensidad.</p>';
-  out += '<div class="sm-kpis"><div class="sm-kpi"><b>' + sMin(st ? st.mins : (p.min || 0)) + '</b><span>duración</span></div>' + (p.km ? '<div class="sm-kpi"><b>' + p.km + ' km</b><span>distancia</span></div>' : '') + (st ? '<div class="sm-kpi"><b>≈ ' + st.tss + '</b><span>TSS (estimado)</span></div><div class="sm-kpi"><b>' + st.IF.toFixed(2).replace('.', ',') + '</b><span>intensidad (IF)</span></div><div class="sm-kpi"><b>' + Math.round(st.max) + ' %</b><span>máx. de tu FTP</span></div>' : '') + '</div>';
+  out += '<div class="sm-kpis"><div class="sm-kpi"><b>' + sMin(st ? st.mins : (p.min || 0)) + '</b><span>duración</span></div>' + (p.km ? '<div class="sm-kpi"><b>' + p.km + ' km</b><span>distancia</span></div>' : '') + (st ? (st.hr ? '<div class="sm-kpi"><b>' + Math.round(st.max) + ' %</b><span>máx. de tu FC máx.</span></div>' : '<div class="sm-kpi"><b>≈ ' + st.tss + '</b><span>TSS (estimado)</span></div><div class="sm-kpi"><b>' + st.IF.toFixed(2).replace('.', ',') + '</b><span>intensidad (IF)</span></div><div class="sm-kpi"><b>' + Math.round(st.max) + ' %</b><span>máx. de tu FTP</span></div>') : '') + '</div>';
   if (b) out += '<h3 class="sm-h3">Bloques</h3><div class="col g8">' + semGroups(b).map((g) => g.n >= 2 ? '<div class="sm-grp"><div class="sm-gt">' + g.n + ' ×</div><div class="col g8" style="flex:1">' + row(g.a, g.a.t || 'Esfuerzo') + row(g.b, g.b.t || 'Recuperación') + '</div></div>' : row(g.a, g.a.t || 'Bloque ' + (g.i + 1))).join('') + '</div>';
   const note = dayNoteFor(date); if (note) out += '<h3 class="sm-h3">Nota de tu coach</h3><div class="card soft" style="font-size:15px">' + esc(note) + '</div>';
   const mvh = semMvHtml(date, p); if (mvh) out += '<h3 class="sm-h3">Cambiar de día</h3>' + mvh;
