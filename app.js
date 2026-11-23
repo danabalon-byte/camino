@@ -1155,8 +1155,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 67;
+const APP_VER = 68;
 const NEWS = [
+  'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
   'Tu Perfil ahora muestra tus medidas (edad, estatura, peso, FTP con W/kg, FC máx y LTHR), te deja actualizarlas cuando cambien y guarda el historial de cada cambio.',
   'Hoja de seguridad en cada evento: enlace de seguimiento, contacto responsable, hora límite sin noticias, tramos sin señal y un mensaje listo para WhatsApp.',
