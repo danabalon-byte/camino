@@ -329,7 +329,8 @@ const ATABS = ['hoy', 'datos', 'ruta', 'perfil', 'ajustes', 'guia'], ATABS_P = [
 /* Planificar y modo en vivo: solo el coach principal y los atletas a quienes él lo habilita (users/{id}.features.planificar). */
 const plannerOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.profile.features && ST.profile.features.planificar === true)));
 const semanaOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.profile.features && ST.profile.features.semana === true)));
-const hasPanel = () => !!(ST.myPanel && ST.myPanel.length);
+const panelFeat = () => !(ST.profile && ST.profile.role !== 'coach' && ST.profile.features && ST.profile.features.panel === false);
+const hasPanel = () => !!(ST.myPanel && ST.myPanel.length) && panelFeat();
 const atabs = () => { const b = plannerOn() ? ATABS_P : ATABS; return b.reduce((o, t) => o.concat(t === 'hoy' ? (semanaOn() ? ['hoy', 'semana'] : (hasPanel() ? ['hoy', 'panel'] : ['hoy'])) : [t]), []); };
 const asSemOn = () => { const w = UI.asId && ST.athletes.find((x) => x.id === UI.asId); return !!(w && w.features && w.features.semana === true); };
 const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', asSemOn() ? 'semana' : 'panel', 'datos', 'ruta', 'ajustes', 'guia'] : (isOwner() ? ['cabina', 'biblioteca', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia'])) : atabs()) : atabs());
@@ -1158,7 +1159,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 77;
+const APP_VER = 78;
 const NEWS = [
   'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
@@ -3312,8 +3313,8 @@ document.addEventListener('input', (e) => { if (LV && e.target && e.target.id ==
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && LV && UI.liveOpen && LV.mode !== 'pre' && LV.mode !== 'fin') { lvWake(); render(); } });
 
 /* ---------- v63: Biblioteca (solo coach principal): qué herramientas ve cada atleta, equipo o coach de apoyo ---------- */
-const LIB_TOOLS = [{ id: 'semana', name: 'Semana (nueva)', sub: 'Pestaña Semana: gráficos de intervalos a color, Carrusel/Mosaico y el Panel dentro de ella' }, { id: 'planificar', name: 'Planificar y modo en vivo', sub: 'Planificar eventos, horarios de controles, nutrición y seguimiento en vivo' }];
-const libOn = (r, t) => !!(r && r.features && r.features[t] === true);
+const LIB_TOOLS = [{ id: 'semana', name: 'Semana (nueva)', sub: 'Pestaña Semana: gráficos de intervalos a color, Carrusel/Mosaico y el Panel dentro de ella' }, { id: 'panel', on: true, name: 'Panel semanal', sub: 'Informe de la semana con gráficos (dentro de Semana). Viene activado; apágalo para que el atleta no lo vea' }, { id: 'planificar', name: 'Planificar y modo en vivo', sub: 'Planificar eventos, horarios de controles, nutrición y seguimiento en vivo' }];
+const libOn = (r, t) => { const f = r && r.features, T = LIB_TOOLS.find((x) => x.id === t); return T && T.on ? !(f && f[t] === false) : !!(f && f[t] === true); };
 const libRecips = () => ST.athletes.filter((r) => (r.role === 'athlete' && r.pending !== true) || r.role === 'viewer').sort((a, b) => String(a.name).localeCompare(String(b.name), 'es'));
 function libGroups() {
   const R = libRecips(), g = [];
