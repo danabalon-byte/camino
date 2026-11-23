@@ -1158,7 +1158,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 74;
+const APP_VER = 75;
 const NEWS = [
   'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
@@ -1997,7 +1997,7 @@ function asRun(fn) {
   const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myHist: ST.myHist, myCk: ST.myCk, myNotes: ST.myNotes, myPanel: ST.myPanel, blk: ST.blk, blkSt: ST.blkSt, moved: ST.moved, js: UI.justSaved };
   try {
     ST.user = { uid: id, name: who.name }; ST.profile = { name: who.name, role: 'athlete', team: who.team || null, pending: false, features: who.features || {} };
-    ST.blk = {}; ST.blkSt = {}; ST.moved = {}; /* los bloques de intervals son del usuario con sesión: no mezclarlos con los del atleta */
+    const rb = (ST.blkAs || {})[id] || { blk: {}, st: {} }; ST.blk = rb.blk; ST.blkSt = rb.st; ST.moved = {}; /* los bloques de intervals son del atleta visto, no los del usuario con sesión */
     ST.myPlan = ST.athPlan[id] || null; ST.myHist = ST.athHist[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; ST.myPanel = ST.athPanel[id] || []; UI.justSaved = null;
     return fn();
   } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; ST.myPanel = sv.myPanel; ST.blk = sv.blk; ST.blkSt = sv.blkSt; ST.moved = sv.moved; UI.justSaved = sv.js; }
@@ -2133,27 +2133,33 @@ function semDays(a, sh) {
     return { date: d.date, today: d.today, done: d.done, p, ghost, from, wd: d.wd, blocks: p ? (semBlocks(d.date, p) || (from ? semBlocks(from, p) : null)) : null };
   });
 }
-async function semFetch(ws, we) {
-  if (DEMO || !ST.user || UI.asId) return;
-  const S = (ST.blkSt = ST.blkSt || {}), cur = S[ws];
+async function semFetch(ws, we, as) {
+  if (DEMO || !ST.user) return;
+  const R = as ? ((ST.blkAs = ST.blkAs || {})[as.id] = (ST.blkAs || {})[as.id] || { blk: {}, st: {} }) : null;
+  const B = R ? R.blk : (ST.blk = ST.blk || {});
+  const S = R ? R.st : (ST.blkSt = ST.blkSt || {}), cur = S[ws];
   if (cur && (cur.busy || Date.now() - cur.at < (cur.err ? 60000 : 300000))) return;
   S[ws] = { busy: true, at: Date.now() };
   try {
     const tk = await be.token(); if (!tk) throw new Error('sin sesión');
-    const r = await fetch(MOVER_URL + '/semana?desde=' + ws + '&hasta=' + we, { headers: { authorization: 'Bearer ' + tk } });
+    const r = await fetch(MOVER_URL + '/semana?desde=' + ws + '&hasta=' + we + (as ? '&de=' + encodeURIComponent(as.email) : ''), { headers: { authorization: 'Bearer ' + tk } });
     if (!r.ok) throw new Error(String(r.status));
     const ev = await r.json(); if (!Array.isArray(ev)) throw new Error('formato');
-    ST.blk = ST.blk || {}; const ft = ftpNow(), seen = {};
+    const ft = as ? 0 : ftpNow(), seen = {};
     let nW = 0, nB = 0;
-    ev.forEach((e) => { if (e.category !== 'WORKOUT' || !e.start_date_local) return; const d = String(e.start_date_local).slice(0, 10); if (!seen[d]) { seen[d] = 1; ST.blk[d] = []; } const bl = icuBlocks(e, ft); nW++; if (bl) nB++; ST.blk[d].push({ id: e.id, name: e.name || '', blocks: bl }); });
-    for (let k = 0; k < 7; k++) { const t = parse(ws); t.setDate(t.getDate() + k); const d = ymd(t); if (!seen[d]) delete ST.blk[d]; }
+    ev.forEach((e) => { if (e.category !== 'WORKOUT' || !e.start_date_local) return; const d = String(e.start_date_local).slice(0, 10); if (!seen[d]) { seen[d] = 1; B[d] = []; } const bl = icuBlocks(e, ft); nW++; if (bl) nB++; B[d].push({ id: e.id, name: e.name || '', blocks: bl }); });
+    for (let k = 0; k < 7; k++) { const t = parse(ws); t.setDate(t.getDate() + k); const d = ymd(t); if (!seen[d]) delete B[d]; }
     S[ws] = { at: Date.now(), ok: true, nW, nB };
   } catch (e) { S[ws] = { at: Date.now(), err: true, code: String((e && e.message) || e).slice(0, 40) }; }
   soft();
 }
 function semAfter() {
-  if (UI.view !== 'semana' || UI.asId || semTab() !== 'mi') return;
-  const a = meA(), sh = UI.semSh || 0, w = weekInfo(a, sh); semFetch(w.days[0].date, w.days[6].date);
+  if (UI.view !== 'semana') return;
+  if (UI.asId && isCoach()) { /* vista de coach: lee los eventos del atleta (el Worker solo lo permite al coach) */
+    const who = ST.athletes.find((x) => x.id === UI.asId);
+    const dd = who && who.email ? asRun(() => { if (semTab() !== 'mi') return null; const w = weekInfo(meA(), UI.semSh || 0); return [w.days[0].date, w.days[6].date]; }) : null;
+    if (dd) semFetch(dd[0], dd[1], { id: who.id, email: who.email });
+  } else if (!UI.asId && semTab() === 'mi') { const a = meA(), sh = UI.semSh || 0, w = weekInfo(a, sh); semFetch(w.days[0].date, w.days[6].date); }
   const r = document.getElementById('semRail'); if (r) { if (UI.railX != null) { r.scrollLeft = UI.railX; UI.railX = null; } else { const s = r.querySelector('.sm-tile.sel'); if (s && !UI.railInit) { r.scrollLeft = Math.max(0, s.offsetLeft - 14); UI.railInit = true; } } }
 }
 const semTab = () => (hasPanel() && PREF.semTab === 'panel' ? 'panel' : 'mi');
@@ -2304,7 +2310,7 @@ function viewAs() {
   if (!who) { UI.asId = null; return VIEWS[UI.view](); }
   let html = asRun(() => VIEWS[UI.view]());
   html = html.replace(/data-a="(start|feedback|editCk|delAsk|delCk)"/g, 'disabled data-x="$1"');
-  const bar = '<section class="card col g10" aria-label="Vista de coach" style="border:1.5px dashed var(--accent)"><div class="eyebrow" style="color:var(--accent)">Vista de ' + esc(firstName(who.name)) + ' · solo lectura</div><p class="soft" style="font-size:14px">Así ve la app tu atleta. Los check-ins de esta vista llegan de sus últimos 14 días, así que las insignias pueden verse más bajas que las suyas.</p>' + (UI.view === 'semana' ? '<p class="soft" style="font-size:14px">Semana: aquí ves su plan de Camino y su Panel. Los gráficos de intervalos vienen de su intervals.icu y solo se cargan en su teléfono, por eso aquí los días con entrenamiento aparecen sin detalle.</p>' : '') + '<button type="button" class="chip" data-a="verComoSalir" style="align-self:flex-start">Volver a Cabina</button></section>';
+  const bar = '<section class="card col g10" aria-label="Vista de coach" style="border:1.5px dashed var(--accent)"><div class="eyebrow" style="color:var(--accent)">Vista de ' + esc(firstName(who.name)) + ' · solo lectura</div><p class="soft" style="font-size:14px">Así ve la app tu atleta. Los check-ins de esta vista llegan de sus últimos 14 días, así que las insignias pueden verse más bajas que las suyas.</p>' + (UI.view === 'semana' ? '<p class="soft" style="font-size:14px">Semana: aquí ves su plan de Camino y su Panel. Los gráficos de intervalos se leen de su intervals.icu (solo lectura). Si aparecen sin detalle, mira el aviso al pie de la semana.</p>' : '') + '<button type="button" class="chip" data-a="verComoSalir" style="align-self:flex-start">Volver a Cabina</button></section>';
   return html.replace('<div class="stack">', '<div class="stack">' + bar);
 }
 function render() {
