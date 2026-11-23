@@ -331,7 +331,8 @@ const plannerOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.pro
 const semanaOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.profile.features && ST.profile.features.semana === true)));
 const hasPanel = () => !!(ST.myPanel && ST.myPanel.length);
 const atabs = () => { const b = plannerOn() ? ATABS_P : ATABS; return b.reduce((o, t) => o.concat(t === 'hoy' ? (semanaOn() ? ['hoy', 'semana'] : (hasPanel() ? ['hoy', 'panel'] : ['hoy'])) : [t]), []); };
-const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'panel', 'datos', 'ruta', 'ajustes', 'guia'] : (isOwner() ? ['cabina', 'biblioteca', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia'])) : atabs()) : atabs());
+const asSemOn = () => { const w = UI.asId && ST.athletes.find((x) => x.id === UI.asId); return !!(w && w.features && w.features.semana === true); };
+const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', asSemOn() ? 'semana' : 'panel', 'datos', 'ruta', 'ajustes', 'guia'] : (isOwner() ? ['cabina', 'biblioteca', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia'])) : atabs()) : atabs());
 /* La Guía de los atletas vive dentro de Ajustes (hide): sigue siendo una ruta válida, pero no ocupa lugar en la barra. */
 const tabs = () => { const ids = tabsIds(), ath = ids.indexOf('perfil') >= 0; return ids.map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id], hide: ath && id === 'guia' })); };
 const navHtml = () => '<div class="inner">' + tabs().filter((t) => !t.hide).map((t) => '<a href="#' + t.id + '"' + (UI.view === t.id || (t.id === 'ajustes' && UI.view === 'guia' && tabs().some((x) => x.hide)) ? ' aria-current="page"' : '') + '>' + ph(t.ic, 26, 'currentColor', UI.view === t.id) + '<span>' + t.label + '</span></a>').join('') + '</div>';
@@ -1157,7 +1158,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 70;
+const APP_VER = 71;
 const NEWS = [
   'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
@@ -1993,12 +1994,13 @@ function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$
 function asRun(fn) {
   const id = UI.asId, who = ST.athletes.find((x) => x.id === id);
   if (!who) return null;
-  const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myHist: ST.myHist, myCk: ST.myCk, myNotes: ST.myNotes, myPanel: ST.myPanel, js: UI.justSaved };
+  const sv = { user: ST.user, profile: ST.profile, myPlan: ST.myPlan, myHist: ST.myHist, myCk: ST.myCk, myNotes: ST.myNotes, myPanel: ST.myPanel, blk: ST.blk, blkSt: ST.blkSt, moved: ST.moved, js: UI.justSaved };
   try {
-    ST.user = { uid: id, name: who.name }; ST.profile = { name: who.name, role: 'athlete', team: who.team || null, pending: false };
+    ST.user = { uid: id, name: who.name }; ST.profile = { name: who.name, role: 'athlete', team: who.team || null, pending: false, features: who.features || {} };
+    ST.blk = {}; ST.blkSt = {}; ST.moved = {}; /* los bloques de intervals son del usuario con sesión: no mezclarlos con los del atleta */
     ST.myPlan = ST.athPlan[id] || null; ST.myHist = ST.athHist[id] || null; ST.myCk = ST.athCk[id] || []; ST.myNotes = ST.athNotes[id] || []; ST.myPanel = ST.athPanel[id] || []; UI.justSaved = null;
     return fn();
-  } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; ST.myPanel = sv.myPanel; UI.justSaved = sv.js; }
+  } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; ST.myPanel = sv.myPanel; ST.blk = sv.blk; ST.blkSt = sv.blkSt; ST.moved = sv.moved; UI.justSaved = sv.js; }
 }
 /* ---------- Semana (v70): "Mi semana" con gráficos de intervalos + Panel ---------- */
 const ZNAME = ['', 'Z1 recuperación', 'Z2 resistencia', 'Z3 tempo', 'Z4 umbral', 'Z5 VO₂máx', 'Z6 anaeróbico', 'Z7 neuromuscular'];
@@ -2093,7 +2095,7 @@ function semDays(a, sh) {
   });
 }
 async function semFetch(ws, we) {
-  if (DEMO || !ST.user) return;
+  if (DEMO || !ST.user || UI.asId) return;
   const S = (ST.blkSt = ST.blkSt || {}), cur = S[ws];
   if (cur && (cur.busy || Date.now() - cur.at < (cur.err ? 60000 : 300000))) return;
   S[ws] = { busy: true, at: Date.now() };
@@ -2110,7 +2112,7 @@ async function semFetch(ws, we) {
   soft();
 }
 function semAfter() {
-  if (UI.view !== 'semana' || semTab() !== 'mi') return;
+  if (UI.view !== 'semana' || UI.asId || semTab() !== 'mi') return;
   const a = meA(), sh = UI.semSh || 0, w = weekInfo(a, sh); semFetch(w.days[0].date, w.days[6].date);
   const r = document.getElementById('semRail'); if (r) { if (UI.railX != null) { r.scrollLeft = UI.railX; UI.railX = null; } else { const s = r.querySelector('.sm-tile.sel'); if (s && !UI.railInit) { r.scrollLeft = Math.max(0, s.offsetLeft - 14); UI.railInit = true; } } }
 }
@@ -2260,7 +2262,7 @@ function viewAs() {
   if (!who) { UI.asId = null; return VIEWS[UI.view](); }
   let html = asRun(() => VIEWS[UI.view]());
   html = html.replace(/data-a="(start|feedback|editCk|delAsk|delCk)"/g, 'disabled data-x="$1"');
-  const bar = '<section class="card col g10" aria-label="Vista de coach" style="border:1.5px dashed var(--accent)"><div class="eyebrow" style="color:var(--accent)">Vista de ' + esc(firstName(who.name)) + ' · solo lectura</div><p class="soft" style="font-size:14px">Así ve la app tu atleta. Los check-ins de esta vista llegan de sus últimos 14 días, así que las insignias pueden verse más bajas que las suyas.</p><button type="button" class="chip" data-a="verComoSalir" style="align-self:flex-start">Volver a Cabina</button></section>';
+  const bar = '<section class="card col g10" aria-label="Vista de coach" style="border:1.5px dashed var(--accent)"><div class="eyebrow" style="color:var(--accent)">Vista de ' + esc(firstName(who.name)) + ' · solo lectura</div><p class="soft" style="font-size:14px">Así ve la app tu atleta. Los check-ins de esta vista llegan de sus últimos 14 días, así que las insignias pueden verse más bajas que las suyas.</p>' + (UI.view === 'semana' ? '<p class="soft" style="font-size:14px">Semana: aquí ves su plan de Camino y su Panel. Los gráficos de intervalos vienen de su intervals.icu y solo se cargan en su teléfono, por eso aquí los días con entrenamiento aparecen sin detalle.</p>' : '') + '<button type="button" class="chip" data-a="verComoSalir" style="align-self:flex-start">Volver a Cabina</button></section>';
   return html.replace('<div class="stack">', '<div class="stack">' + bar);
 }
 function render() {
@@ -2270,11 +2272,11 @@ function render() {
   if (!ST.ready) { main.innerHTML = viewLoading(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; story.innerHTML = ''; return; }
   if (!ST.user || !ST.profile) { main.innerHTML = ST.user ? viewLoading() : viewLogin(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; ov.innerHTML = ''; story.innerHTML = ''; return; }
   const ids = tabs().map((t) => t.id); if (ids.indexOf(UI.view) < 0) UI.view = ids[0];
-  main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'panel' || UI.view === 'datos' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
+  main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'semana' || UI.view === 'panel' || UI.view === 'datos' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
   panelAfter(); semAfter();
   main.scrollTop = (UI.lastView === UI.view) ? st : 0; UI.lastView = UI.view;
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
-  const h = (UI.wk && UI.asId && isCoach()) ? (asRun(overlayHtml) || '') : overlayHtml(), keep = ov.scrollTop;
+  const h = ((UI.wk || UI.sd) && UI.asId && isCoach()) ? (asRun(overlayHtml) || '') : overlayHtml(), keep = ov.scrollTop;
   ov.innerHTML = h; ov.hidden = !h; if (h) ov.scrollTop = keep;
   tourMaybeOpen();
   story.innerHTML = UI.tour != null ? tourHtml() : ((UI.asId && isCoach() && UI.story != null) ? (asRun(storyHtml) || '') : storyHtml());
