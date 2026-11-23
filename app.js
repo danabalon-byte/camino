@@ -47,6 +47,7 @@ const PH = {
   'user': ['<path d="M230.92,212c-15.23-26.33-38.7-45.21-66.09-54.16a72,72,0,1,0-73.66,0C63.78,166.78,40.31,185.66,25.08,212a8,8,0,1,0,13.85,8c18.84-32.56,52.14-52,89.07-52s70.23,19.44,89.07,52a8,8,0,1,0,13.85-8ZM72,96a56,56,0,1,1,56,56A56.06,56.06,0,0,1,72,96Z"/>', '<path d="M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z"/>'],
   'shield': ['<path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,104.62-80,109.18-13.53-4.51-80-30.69-80-109.18V56H208Z"/>', '<path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a15.53,15.53,0,0,0,10,0c15.2-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Z"/>'],
   'calendar-check': ['<path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-38.34-85.66a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L116,164.69l42.34-42.35A8,8,0,0,1,169.66,122.34Z"/>', '<path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM169.66,133.66l-48,48a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L116,164.69l42.34-42.35a8,8,0,0,1,11.32,11.32ZM48,80V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80Z"/>'],
+  'calendar-dots': ["<path d=\"M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-68-76a12,12,0,1,1-12-12A12,12,0,0,1,140,132Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,132ZM96,172a12,12,0,1,1-12-12A12,12,0,0,1,96,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,140,172Zm44,0a12,12,0,1,1-12-12A12,12,0,0,1,184,172Z\"/>", "<path d=\"M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM84,184a12,12,0,1,1,12-12A12,12,0,0,1,84,184Zm44,0a12,12,0,1,1,12-12A12,12,0,0,1,128,184Zm0-40a12,12,0,1,1,12-12A12,12,0,0,1,128,144Zm44,40a12,12,0,1,1,12-12A12,12,0,0,1,172,184Zm0-40a12,12,0,1,1,12-12A12,12,0,0,1,172,144Zm36-64H48V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24Z\"/>"],
   'path': ['<path d="M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z"/>', '<path d="M228,200a28,28,0,0,1-54.83,8H72a48,48,0,0,1,0-96h96a24,24,0,0,0,0-48H72a8,8,0,0,1,0-16h96a40,40,0,0,1,0,80H72a32,32,0,0,0,0,64H173.17A28,28,0,0,1,228,200Z"/>'],
   'gauge': ['<path d="M207.06,72.67A111.24,111.24,0,0,0,128,40h-.4C66.07,40.21,16,91,16,153.13V176a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V152A111.25,111.25,0,0,0,207.06,72.67ZM224,176H119.71l54.76-75.3a8,8,0,0,0-12.94-9.42L99.92,176H32V153.13c0-3.08.15-6.12.43-9.13H56a8,8,0,0,0,0-16H35.27c10.32-38.86,44-68.24,84.73-71.66V80a8,8,0,0,0,16,0V56.33A96.14,96.14,0,0,1,221,128H200a8,8,0,0,0,0,16h23.67c.21,2.65.33,5.31.33,8Z"/>', '<path d="M240,152v24a16,16,0,0,1-16,16H115.93a4,4,0,0,1-3.24-6.35L174.27,101a8.21,8.21,0,0,0-1.37-11.3,8,8,0,0,0-11.37,1.61l-72,99.06A4,4,0,0,1,86.25,192H32a16,16,0,0,1-16-16V153.13c0-1.79,0-3.57.13-5.33a4,4,0,0,1,4-3.8H48a8,8,0,0,0,8-8.53A8.17,8.17,0,0,0,47.73,128H23.92a4,4,0,0,1-3.87-5c12-43.84,49.66-77.13,95.52-82.28a4,4,0,0,1,4.43,4V72a8,8,0,0,0,8.53,8A8.17,8.17,0,0,0,136,71.73V44.67a4,4,0,0,1,4.43-4A112.18,112.18,0,0,1,236.23,123a4,4,0,0,1-3.88,5H208.27a8.17,8.17,0,0,0-8.25,7.47,8,8,0,0,0,8,8.53h27.92a4,4,0,0,1,4,3.86C240,149.23,240,150.61,240,152Z"/>'],
   'chart-line-up': ['<path d="M232,208a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V48a8,8,0,0,1,16,0V156.69l50.34-50.35a8,8,0,0,1,11.32,0L128,132.69,180.69,80H160a8,8,0,0,1,0-16h40a8,8,0,0,1,8,8v40a8,8,0,0,1-16,0V91.31l-58.34,58.35a8,8,0,0,1-11.32,0L96,123.31l-56,56V200H224A8,8,0,0,1,232,208Z"/>', '<path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM200,192H56a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v76.69l34.34-34.35a8,8,0,0,1,11.32,0L128,132.69,172.69,88H144a8,8,0,0,1,0-16h48a8,8,0,0,1,8,8v48a8,8,0,0,1-16,0V99.31l-50.34,50.35a8,8,0,0,1-11.32,0L104,131.31l-40,40V176H200a8,8,0,0,1,0,16Z"/>'],
@@ -320,15 +321,16 @@ function plainOpts(g, arr, sel, label, cols, valFn, neu, act, isOn) {
 }
 const chips = (g, arr, sel, label, valFn) => plainOpts(g, arr, sel, label, autoCols(arr), valFn, GREENG.indexOf(g) < 0);
 const multiChips = (g, arr, sel, label) => plainOpts(g, arr, null, label, autoCols(arr), (i, l) => l, true, 'multi', (l, v) => (sel || []).indexOf(l) >= 0);
-const NAVIC = { biblioteca: 'library', planificar: 'flag', perfil: 'user', panel: 'heartbeat', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
-const TABLBL = { biblioteca: 'Biblioteca', guia: 'Guía', planificar: 'Planificar' };
+const NAVIC = { semana: 'calendar-dots', biblioteca: 'library', planificar: 'flag', perfil: 'user', panel: 'heartbeat', hoy: 'calendar-check', ruta: 'path', cabina: 'gauge', datos: 'chart-line-up', guia: 'book-open', ajustes: 'gear-six' };
+const TABLBL = { semana: 'Semana', biblioteca: 'Biblioteca', guia: 'Guía', planificar: 'Planificar' };
 const sharesKm = () => !(ST.profile && ST.profile.shareKm === false);
 const coachMode = () => { if (!isCoach()) return false; if (UI.mode == null) { let v = null; try { v = localStorage.getItem('camino.mode'); } catch (e) { /* sin almacenamiento */ } UI.mode = v === 'atleta' ? 'atleta' : 'coach'; } return UI.mode === 'coach'; };
 const ATABS = ['hoy', 'datos', 'ruta', 'perfil', 'ajustes', 'guia'], ATABS_P = ['hoy', 'datos', 'ruta', 'planificar', 'perfil', 'ajustes', 'guia'];
 /* Planificar y modo en vivo: solo el coach principal y los atletas a quienes él lo habilita (users/{id}.features.planificar). */
 const plannerOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.profile.features && ST.profile.features.planificar === true)));
+const semanaOn = () => !!(ST.profile && (ST.profile.role === 'coach' || (ST.profile.features && ST.profile.features.semana === true)));
 const hasPanel = () => !!(ST.myPanel && ST.myPanel.length);
-const atabs = () => { const b = plannerOn() ? ATABS_P : ATABS; return hasPanel() ? b.reduce((o, t) => o.concat(t === 'hoy' ? ['hoy', 'panel'] : [t]), []) : b; };
+const atabs = () => { const b = plannerOn() ? ATABS_P : ATABS; return b.reduce((o, t) => o.concat(t === 'hoy' ? (semanaOn() ? ['hoy', 'semana'] : (hasPanel() ? ['hoy', 'panel'] : ['hoy'])) : [t]), []); };
 const tabsIds = () => (isCoach() ? (coachMode() ? (UI.asId ? ['cabina', 'hoy', 'panel', 'datos', 'ruta', 'ajustes', 'guia'] : (isOwner() ? ['cabina', 'biblioteca', 'ajustes', 'guia'] : ['cabina', 'ajustes', 'guia'])) : atabs()) : atabs());
 /* La Guía de los atletas vive dentro de Ajustes (hide): sigue siendo una ruta válida, pero no ocupa lugar en la barra. */
 const tabs = () => { const ids = tabsIds(), ath = ids.indexOf('perfil') >= 0; return ids.map((id) => ({ id, label: TABLBL[id] || cap(id), ic: NAVIC[id], hide: ath && id === 'guia' })); };
@@ -1155,9 +1157,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 68;
+const APP_VER = 70;
 const NEWS = [
-  'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin.',
+  'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
   'Tu Perfil ahora muestra tus medidas (edad, estatura, peso, FTP con W/kg, FC máx y LTHR), te deja actualizarlas cuando cambien y guarda el historial de cada cambio.',
   'Hoja de seguridad en cada evento: enlace de seguimiento, contacto responsable, hora límite sin noticias, tramos sin señal y un mensaje listo para WhatsApp.',
@@ -1196,6 +1198,7 @@ const NEWS = [
   'Los avisos aparecen abajo, junto a donde tocas, y el gráfico de bienestar explica cada línea.'
 ];
 const NEWS_SHOW = 4;
+const SEM_NEWS = 'Nueva pestaña Semana: cada entrenamiento con su gráfico de intervalos a color por zona. Elige Carrusel o Mosaico, toca un día para ver el detalle y cambiarlo de día. El Panel ahora vive dentro de Semana (botón Panel).';
 const newsKey = () => 'camino.news.' + (ST.user ? ST.user.uid : '');
 /* ---------- Recorrido de bienvenida (primera vez y desde Guía/Ajustes) ---------- */
 function tourSlides() {
@@ -1207,7 +1210,7 @@ function tourSlides() {
     { c: 's1', ic: 'ajustes', k: 'Ajustes', t: 'Hazla tuya', p: 'Cambia el tono visual, activa el recordatorio diario y decide con un interruptor si compartes tus km con el equipo.' },
     { c: 's2', ic: 'guia', k: 'Guía', t: 'Si te queda una duda', p: 'En la pestaña Guía desliza las tarjetas para ver cómo se llena cada dato. Puedes volver a este recorrido cuando quieras desde ahí.', btn: 'Empezar' }
   ];
-  if (UI.tourNews) sl.unshift({ c: 's1', ic: 'hoy', k: 'Novedades', t: 'Camino se actualizó', p: '', list: NEWS.slice(0, NEWS_SHOW), btn: 'Ver el recorrido' });
+  if (UI.tourNews) sl.unshift({ c: 's1', ic: 'hoy', k: 'Novedades', t: 'Camino se actualizó', p: '', list: (semanaOn() ? [SEM_NEWS] : []).concat(NEWS).slice(0, NEWS_SHOW), btn: 'Ver el recorrido' });
   if (isCoach()) sl.splice(UI.tourNews ? 5 : 4, 0, { c: 's0', ic: 'cabina', k: 'Cabina', t: 'Tu panel de coach', p: 'En Cabina ves a los atletas ordenados por urgencia, con el motivo de cada uno, abres a cada atleta, cargas su plan e historial y usas "Ver la app como" para ver lo que ve cada uno. El interruptor de arriba cambia entre tu vista de coach y la tuya.' });
   return sl;
 }
@@ -1247,6 +1250,24 @@ const TUT = {
       { at: 'm-week', say: '<b>Tu semana</b>: el contorno es lo que dice tu plan y el relleno lo que ya hiciste. <b>Tócala</b> para ver el detalle de cada día y la próxima semana.' },
       { at: 'm-streak', say: 'La <b>racha</b> cuenta tus días seguidos con check-in. Si saltas un día, vuelve a 0.' },
       { at: 'm-edit', say: '¿Te equivocaste? Toca <b>Corregir check-in</b> para cambiarlo, o bórralo desde ahí.' }
+    ]
+  },
+  mover: {
+    t: 'Cambiar de día', ic: 'hoy', sub: 'Mueve un entrenamiento a otro día',
+    mock: () => tmTop() + '<div class="tmc col g6" id="m-mv-card"><div class="row between"><b style="font-size:13px">Miércoles 25 nov</b><span class="tmopt">Por hacer</span></div><div style="font-size:12px;font-weight:600">Spin liviano · 30 min</div><div class="tml" style="width:30%"></div></div>'
+      + '<div class="tmbtn" id="m-mv-btn" style="background:var(--surface2);color:var(--text);border:1.5px solid var(--line)">Cambiar de día</div>'
+      + '<div class="tmc col g6" id="m-mv-days"><div class="tml" style="width:55%"></div><div class="tmpo"><span>Mar 24</span><span data-on="3">Jue 26</span><span>Vie 27</span><span>Sáb 28</span></div></div>'
+      + '<div class="tmc col g6" id="m-mv-ok" style="background:var(--good-soft)"><b style="font-size:12px;color:var(--good)">Movido al jueves 26 nov</b><div class="tml" style="width:70%"></div></div>'
+      + '<div class="row g8" id="m-mv-sync"><div class="tmc" style="flex:1;font-size:11px;font-weight:600;text-align:center">intervals.icu · al instante</div><div class="tmc" style="flex:1;font-size:11px;font-weight:600;text-align:center">Garmin · en unas horas</div></div>'
+      + '<div class="tmc col g6" id="m-mv-lim"><div class="tml" style="width:80%"></div><div class="tml" style="width:50%"></div></div>',
+    steps: [
+      { at: 'm-mv-card', say: 'En <b>Hoy</b> toca la tarjeta <b>Tu semana</b> y abre el detalle. Cada día futuro con una sesión por hacer muestra el botón de cambio.' },
+      { at: 'm-mv-btn', say: 'Toca <b>Cambiar de día</b> en la sesión que no podrás hacer ese día.' },
+      { at: 'm-mv-days', say: 'Aparecen los días disponibles: hasta <b>7 días</b> antes o después, siempre desde hoy en adelante.' },
+      { at: 'm-mv-days', say: 'Toca el <b>día nuevo</b>. La sesión se mueve al instante, sin pedir nada más.' },
+      { at: 'm-mv-ok', say: 'Verás un aviso verde: <b>Movido al…</b>. Si sale un mensaje en rojo, la sesión no se movió y puedes intentarlo de nuevo.' },
+      { at: 'm-mv-sync', say: 'El cambio queda en <b>intervals.icu</b> al instante. Tu <b>Garmin</b> lo recibe en unas horas. Esta pantalla de Camino se actualiza en la próxima sincronización.' },
+      { at: 'm-mv-lim', say: 'Solo se mueven sesiones <b>futuras</b>, de a una por día. Si tu día tiene más de una, o algo falla, avísale a tu coach.' }
     ]
   },
   registro: {
@@ -1318,7 +1339,52 @@ const TUT = {
   }
 };
 const tutIc = (id) => ph(NAVIC[id] || 'calendar-check', 24, 'var(--accent)');
-const tutIds = () => ['hoy', 'registro', 'datos', 'ruta', 'ajustes'].filter((k) => !isCoach() || k !== 'hoy' || true).concat(isCoach() ? ['cabina'] : []).concat(['guia']);
+const tutIds = () => ['hoy', 'mover', 'registro', 'datos', 'ruta', 'ajustes'].filter((k) => !isCoach() || k !== 'hoy' || true).concat(isCoach() ? ['cabina'] : []).concat(['guia']);
+
+/* ---------- Guía en pantalla: Cambiar de día (sobre las pantallas reales, en modo práctica: no mueve nada) ---------- */
+let TM = null;
+function tmFindDay() {
+  if (DEMO || UI.asId || !ST.user) return null;
+  const a = meA(), today = off(0);
+  for (let sh = 0; sh <= 2; sh++) { const w = weekInfo(a, sh); for (const d of w.days) { const c = on(a, d.date); if (d.p && d.date >= today && !(c && c.type === 'actividad')) return { sh, date: d.date }; } }
+  return null;
+}
+function tmSteps(F) {
+  const nx = off(diffDays(off(0), F.date) + 1), dn = WDF[parse(F.date).getDay()] + ' ' + shortDate(F.date), nn = WDF[parse(nx).getDay()] + ' ' + shortDate(nx);
+  return [
+    { pre: () => { UI.wk = { shift: F.sh, focus: F.date }; UI.mv = null; }, at: '#wkd-' + F.date, say: 'Esta es <b>Tu semana</b> en detalle (en Hoy, toca la tarjeta Tu semana). Cada día futuro con una sesión por hacer tiene un botón para cambiarla de día. Usaremos el <b>' + esc(dn) + '</b> como ejemplo.' },
+    { pre: () => { UI.mv = null; }, at: '#wkd-' + F.date + ' [data-a=mvOpen]', say: 'Toca <b>Cambiar de día</b> en la sesión que no podrás hacer ese día.' },
+    { pre: () => { UI.mv = { date: F.date, open: true }; }, at: '#mv-days', say: 'Se muestran los días disponibles: hasta <b>7 días</b> antes o después, siempre desde hoy en adelante.' },
+    { pre: () => { UI.mv = { date: F.date, open: true }; }, at: '[data-a=mvPick][data-v="' + nx + '"]', say: 'Toca el <b>día nuevo</b>, por ejemplo el <b>' + esc(nn) + '</b>. La sesión se mueve al instante, sin confirmar nada más. <i>En esta guía no se mueve nada de verdad.</i>' },
+    { pre: () => { UI.mv = { date: F.date, done: nx }; }, at: '#wkd-' + F.date, say: 'Así se ve el aviso verde <b>Movido al…</b>. Si en cambio sale un mensaje en rojo, la sesión no se movió y puedes intentarlo de nuevo. <i>(Ejemplo: tu sesión sigue en su día.)</i>' },
+    { pre: () => { UI.mv = null; }, at: '#wkd-' + F.date, say: 'El cambio queda en <b>intervals.icu</b> al instante y tu <b>Garmin</b> lo recibe en unas horas. Esta pantalla se actualiza en la próxima sincronización. Solo se mueven sesiones futuras, una por día; si algo falla, avísale a tu coach.' }
+  ];
+}
+function tmStart(F) {
+  tmEnd(true); TM = { F, i: 0, S: tmSteps(F), timer: null };
+  const el = document.createElement('div'); el.id = 'tmx'; el.className = 'tmx'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Guía: cambiar de día');
+  el.innerHTML = '<div class="tmspot" id="tmspot"></div><div class="tmcap2" id="tmcap2"></div>'; document.body.appendChild(el);
+  TM.timer = setInterval(tmPlace, 350); tmGo(0);
+}
+function tmEnd(silent) {
+  if (!TM) return; clearInterval(TM.timer); TM = null; const el = document.getElementById('tmx'); if (el) el.remove();
+  if (!silent) { UI.mv = null; render(); }
+}
+function tmPlace() {
+  if (!TM) return; const st = TM.S[TM.i], t = document.querySelector(st.at), sp = document.getElementById('tmspot'), cap = document.getElementById('tmcap2'); if (!sp || !cap) return;
+  if (!t) { sp.style.display = 'none'; return; }
+  const r = t.getBoundingClientRect(), vh = window.innerHeight, pad = 6;
+  sp.style.display = 'block'; sp.style.left = (r.left - pad) + 'px'; sp.style.top = (r.top - pad) + 'px'; sp.style.width = (r.width + pad * 2) + 'px'; sp.style.height = (r.height + pad * 2) + 'px';
+  const mid = r.top + r.height / 2; cap.style.top = mid > vh * 0.5 ? '12px' : 'auto'; cap.style.bottom = mid > vh * 0.5 ? 'auto' : '12px';
+}
+function tmGo(i) {
+  if (!TM) return; const n = TM.S.length; i = Math.max(0, Math.min(n - 1, i)); TM.i = i; const st = TM.S[i];
+  st.pre(); render();
+  const cap = document.getElementById('tmcap2');
+  if (cap) cap.innerHTML = '<div class="eyebrow">Guía · Cambiar de día · ' + (i + 1) + ' de ' + n + '</div><div class="tmsay">' + st.say + '</div><div class="row g8" style="justify-content:space-between"><button type="button" class="chip" data-a="tmEnd">Salir</button><span class="row g8">' + (i > 0 ? '<button type="button" class="chip" data-a="tmPrev">Anterior</button>' : '') + (i < n - 1 ? '<button type="button" class="chip tmmain" data-a="tmNext">Siguiente</button>' : '<button type="button" class="chip tmmain" data-a="tmEnd">Terminar</button>') + '</span></div>';
+  setTimeout(() => { const t = document.querySelector(st.at); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'center', behavior: 'auto' }); tmPlace(); }, 80);
+}
+
 let TS = null;
 const tutReduced = () => !!(PREF.calm || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches));
 function tutDraw() {
@@ -1352,6 +1418,7 @@ function tutGo(i) {
 }
 function tutOpen(id) {
   if (!TUT[id]) return; tutClose();
+  if (id === 'mover') { const F = tmFindDay(); if (F) { tmStart(F); return; } }
   const el = document.createElement('div'); el.id = 'tut'; el.className = 'tut'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Tutorial de ' + TUT[id].t);
   document.body.appendChild(el); TS = { id, i: 0, play: !tutReduced(), timer: null }; tutDraw(); tutGo(0);
   const x = el.querySelector('.x'); if (x) x.focus();
@@ -1415,8 +1482,8 @@ function weekSheetHtml() {
       if (mv && mv.done) body += '<div class="col g4" style="background:var(--good-soft);border-radius:12px;padding:10px 12px"><b style="color:var(--good)">Movido al ' + esc(WDF[parse(mv.done).getDay()]) + ' ' + esc(shortDate(mv.done)) + '</b><span class="muted" style="font-size:13px">Quedó en intervals.icu. Garmin lo recibe en unas horas. Esta pantalla se actualiza en la próxima sincronización.</span></div>';
       else if (mv && mv.open) {
         let chips = ''; for (let k = Math.max(0, diffDays(today, d.date) - 3); k <= diffDays(today, d.date) + 7; k++) { const f = off(k); if (f !== d.date) chips += '<button type="button" class="chip" data-a="mvPick" data-v="' + f + '"' + (mv.busy ? ' disabled' : '') + '>' + esc(WDF[parse(f).getDay()].slice(0, 3)) + ' ' + esc(shortDate(f)) + '</button>'; }
-        body += '<div class="col g8"><div class="eyebrow">Mover a otro día (hasta 7 días de diferencia)</div><div class="row g8 wrap">' + chips + '</div>' + (mv.busy ? '<span class="muted" style="font-size:13px">Moviendo…</span>' : '') + (mv.err ? '<span style="color:var(--warn);font-size:13px">' + esc(mv.err) + '</span>' : '') + '<button type="button" class="chip" data-a="mvClose">Cancelar</button></div>';
-      } else body += '<button type="button" class="chip" data-a="mvOpen" data-v="' + d.date + '" style="align-self:flex-start">Cambiar de día</button>';
+        body += '<div class="col g8"><div class="eyebrow">Mover a otro día (hasta 7 días de diferencia)</div><div class="row g8 wrap" id="mv-days">' + chips + '</div>' + (mv.busy ? '<span class="muted" style="font-size:13px">Moviendo…</span>' : '') + (mv.err ? '<span style="color:var(--warn);font-size:13px">' + esc(mv.err) + '</span>' : '') + '<button type="button" class="chip" data-a="mvClose">Cancelar</button></div>';
+      } else body += '<div class="row g8 wrap"><button type="button" class="chip" data-a="mvOpen" data-v="' + d.date + '">Cambiar de día</button><button type="button" class="chip" data-a="tutOpen" data-v="mover">¿Cómo funciona?</button></div>';
     }
     if (note) body += '<div class="col g4"><div class="eyebrow">Nota de tu coach</div><div class="soft" style="font-size:15px">' + esc(note) + '</div></div>';
     if (!body) body = '<div class="muted" style="font-size:14px">' + (past ? 'Sin sesión planificada ni registro.' : 'Sin sesión planificada.') + '</div>';
@@ -1425,6 +1492,7 @@ function weekSheetHtml() {
   out += '</section>';
   if (sh === 0) { const nx = weekInfo(a, 1); if (nx.planned) out += '<button type="button" class="card row between g12" data-a="wkShift" data-v="1" style="text-align:left;min-height:64px"><span class="col"><b>Lo que viene: próxima semana</b><span class="muted" style="font-size:13px">' + nx.planned + (nx.planned === 1 ? ' sesión' : ' sesiones') + ' planificadas</span></span><span class="muted" aria-hidden="true">' + crt() + '</span></button>'; }
   out += '<div class="row g10" style="justify-content:space-between"><button type="button" class="chip" data-a="wkShift" data-v="' + (sh - 1) + '"' + (sh <= -8 ? ' disabled' : '') + '>‹ Semana anterior</button>' + (sh !== 0 ? '<button type="button" class="chip" data-a="wkShift" data-v="0">Esta semana</button>' : '') + '<button type="button" class="chip" data-a="wkShift" data-v="' + (sh + 1) + '"' + (sh >= 12 ? ' disabled' : '') + '>Semana siguiente ›</button></div>';
+  if (semanaOn()) out += '<button type="button" class="chip" data-a="semGo" style="align-self:flex-start">Ver en Semana (gráficos de intervalos)</button>';
   return out + '</div></div>';
 }
 const dayNoteFor = (date) => dayNote(date);
@@ -1871,7 +1939,7 @@ function feedbackHtml() {
   out += ckActions();
   return out + '<div class="col g8"><a href="#ruta" data-a="closeFb" class="btn primary"><span>Ver mi ruta</span>' + arrow() + '</a><button type="button" class="btn ghost" data-a="closeFb">Volver a Hoy</button></div></div></div>';
 }
-const overlayHtml = () => (UI.act ? actSheetHtml() : UI.prof ? profHtml() : (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : (UI.wk ? weekSheetHtml() : ''))))));
+const overlayHtml = () => (UI.sd ? semSheetHtml() : UI.act ? actSheetHtml() : UI.prof ? profHtml() : (UI.flow ? flowHtml() : (UI.feedback ? feedbackHtml() : (UI.inbox ? inboxHtml() : (UI.fz ? fzHtml() : (UI.wk ? weekSheetHtml() : ''))))));
 
 /* ---------- Historia: tu camino recorrido ---------- */
 function bestWeekMin(a) {
@@ -1918,7 +1986,7 @@ function storyHtml() {
 /* ---------- Render ---------- */
 function applyPrefs() { const r = document.documentElement; if (PREF.calm) r.setAttribute('data-calm', ''); else r.removeAttribute('data-calm'); }
 function applyTone() { const r = document.documentElement; if (PREF.tone === 'auto') r.removeAttribute('data-tone'); else r.setAttribute('data-tone', PREF.tone); }
-const VIEWS = { hoy: viewHoy, panel: viewPanel, datos: viewDatos, ruta: viewRuta, planificar: viewPlanificar, biblioteca: viewBiblioteca, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
+const VIEWS = { hoy: viewHoy, semana: viewSemana, panel: () => viewPanel(), datos: viewDatos, ruta: viewRuta, planificar: viewPlanificar, biblioteca: viewBiblioteca, cabina: viewCabina, guia: viewGuia, ajustes: viewAjustes, perfil: viewPerfil };
 let softPending = false;
 function soft() { const t = document.activeElement; if (t && /^(TEXTAREA|INPUT)$/.test(t.tagName)) { softPending = true; return; } render(); }
 /* Vista del coach "como atleta": solo lectura. Muestra Hoy o Ruta con el plan, los check-ins y las notas del atleta elegido (lo que su coach ya puede leer por las reglas). */
@@ -1932,20 +2000,211 @@ function asRun(fn) {
     return fn();
   } finally { ST.user = sv.user; ST.profile = sv.profile; ST.myPlan = sv.myPlan; ST.myHist = sv.myHist; ST.myCk = sv.myCk; ST.myNotes = sv.myNotes; ST.myPanel = sv.myPanel; UI.justSaved = sv.js; }
 }
+/* ---------- Semana (v70): "Mi semana" con gráficos de intervalos + Panel ---------- */
+const ZNAME = ['', 'Z1 recuperación', 'Z2 resistencia', 'Z3 tempo', 'Z4 umbral', 'Z5 VO₂máx', 'Z6 anaeróbico', 'Z7 neuromuscular'];
+const zOfP = (p) => (p < 55 ? 1 : p < 76 ? 2 : p < 91 ? 3 : p < 106 ? 4 : p < 121 ? 5 : p < 151 ? 6 : 7);
+const ZPCT = [0, 45, 65, 83, 98, 113, 135, 170]; /* % de FTP representativo de cada zona (Coggan) */
+const ftpNow = () => { const x = bioMeas().ftp, v = x && typeof x === 'object' ? (x.v != null ? x.v : (x.value != null ? x.value : x.val)) : x; return Number(v) > 0 ? Number(v) : 0; };
+/* Bloques desde intervals.icu. FORMATO POR VERIFICAR: se lee workout_doc.steps y, si no hay, las líneas "- 10m 55%" de la descripción. */
+function icuStep(st, out, ftp) {
+  if (!st || typeof st !== 'object') return;
+  if (Array.isArray(st.steps) && st.steps.length) { const n = Math.max(1, Math.min(50, Number(st.reps) || 1)); for (let i = 0; i < n; i++) st.steps.forEach((x) => icuStep(x, out, ftp)); return; }
+  const sec = Number(st.duration); if (!(sec > 0)) return;
+  const pw = st.power || {}, u = String(pw.units || '').toLowerCase();
+  const cv = (v) => { if (v == null || !isFinite(v)) return null; if (u.indexOf('ftp') >= 0) return Number(v); if (u === 'w' && ftp) return Number(v) / ftp * 100; if (u.indexOf('zone') >= 0) return ZPCT[Math.max(1, Math.min(7, Math.round(v)))]; return null; };
+  let a = null, b = null;
+  if (pw.start != null && pw.end != null) { a = cv(pw.start); b = cv(pw.end); } else if (pw.value != null) { a = cv(pw.value); b = a; }
+  const ok = a != null;
+  out.push({ m: sec / 60, p: ok ? a : 55, p2: ok && b != null ? b : (ok ? a : 55), u: ok ? 0 : 1, t: String(st.text || '').slice(0, 60) });
+}
+function icuText(desc, ftp) {
+  const out = []; let grp = null, reps = 1;
+  const dur = (s) => { let t = 0, m; const re = /(\d+(?:[.,]\d+)?)\s*(h|min|m|s)\b/gi; while ((m = re.exec(s))) { const v = parseFloat(m[1].replace(',', '.')), u = m[2].toLowerCase(); t += u === 'h' ? v * 3600 : (u === 's' ? v : v * 60); } return t; };
+  const one = (s) => {
+    const t = dur(s); if (!(t > 0)) return null; let a = null, b = null, m;
+    if ((m = s.match(/(\d{2,3})(?:\s*-\s*(\d{2,3}))?\s*%/))) { a = +m[1]; b = m[2] ? +m[2] : a; }
+    else if ((m = s.match(/\bZ([1-7])\b/i))) { a = b = ZPCT[+m[1]]; }
+    else if (ftp && (m = s.match(/(\d{2,3})(?:\s*-\s*(\d{2,3}))?\s*w\b/i))) { a = +m[1] / ftp * 100; b = m[2] ? +m[2] / ftp * 100 : a; }
+    return { m: t / 60, p: a == null ? 55 : a, p2: b == null ? 55 : b, u: a == null ? 1 : 0, t: '' };
+  };
+  const flush = () => { if (grp) { for (let i = 0; i < reps; i++) grp.forEach((x) => out.push(Object.assign({}, x))); grp = null; reps = 1; } };
+  String(desc || '').split(/\r?\n/).forEach((ln) => {
+    const s = ln.trim(); if (!s) { flush(); return; }
+    const g = s.match(/^(\d{1,2})\s*x\b/i); if (g && !/^[-*]/.test(s)) { flush(); grp = []; reps = Math.min(30, +g[1]); return; }
+    if (/^[-*]/.test(s)) { const x = one(s.replace(/^[-*]\s*/, '')); if (x) (grp || out).push(x); }
+  });
+  flush(); return out.length ? out : null;
+}
+function icuBlocks(ev, ftp) {
+  const doc = ev && ev.workout_doc, out = [], f = Number(doc && doc.ftp) || ftp || 0;
+  if (doc && Array.isArray(doc.steps)) doc.steps.forEach((s) => icuStep(s, out, f));
+  const b = out.length ? out : icuText(ev && ev.description, f);
+  if (!b || !b.length || !(b.reduce((x, k) => x + k.m, 0) > 0)) return null;
+  return b.slice(0, 160);
+}
+function demoBlocks(p) {
+  const tot = Math.max(20, p.min || 45), hard = /interv|serie|vo2|umbral|tempo|sweet|activaci/i.test(p.name || ''), b = [{ m: 10, p: 50, p2: 75, u: 0, t: 'Calentamiento' }];
+  if (hard && tot >= 35) { const n = tot >= 60 ? 4 : 3; for (let i = 0; i < n; i++) { b.push({ m: 4, p: 105, p2: 105, u: 0, t: 'Intervalo' }); b.push({ m: 3, p: 50, p2: 50, u: 0, t: 'Recuperación' }); } }
+  else b.push({ m: Math.max(10, tot - 15), p: 65, p2: 65, u: 0, t: 'Rodaje' });
+  b.push({ m: 5, p: 55, p2: 45, u: 0, t: 'Vuelta a la calma' }); return b;
+}
+const blkAvg = (k) => (k.p + k.p2) / 2;
+function blkStats(b) {
+  const mins = b.reduce((x, k) => x + k.m, 0), tss = b.reduce((x, k) => x + k.m / 60 * Math.pow(blkAvg(k) / 100, 2) * 100, 0), zt = {};
+  b.forEach((k) => { const z = zOfP(blkAvg(k)); zt[z] = (zt[z] || 0) + k.m; });
+  return { mins, tss: Math.round(tss), IF: mins ? Math.sqrt(tss / 100 / (mins / 60)) : 0, zt, max: Math.max.apply(null, b.map((k) => Math.max(k.p, k.p2))) };
+}
+const sMin = (m) => { m = Math.round(m); return m >= 60 ? Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + m % 60 + ' min' : '') : m + ' min'; };
+const zc = (z) => 'var(--z' + z + ')';
+/* Alto = % de FTP, ancho = tiempo (con un mínimo visible para los intervalos cortos). */
+function blkChart(b, o) {
+  o = o || {}; const W = o.axis ? 360 : 600, H = o.h || 160, pad = o.axis ? 40 : 0, maxP = 170, gap = o.gap != null ? o.gap : 1.5, ftp = ftpNow();
+  const y = (p) => H - 2 - (H - 8) * Math.min(p, maxP) / maxP;
+  if (!b) return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Sin detalle de intervalos"><rect x="2" y="' + (H * 0.45) + '" width="' + (W - 4) + '" height="' + (H * 0.55 - 2) + '" rx="10" fill="none" stroke="var(--ctl)" stroke-width="2" stroke-dasharray="8 6" vector-effect="non-scaling-stroke"/></svg>';
+  const mins = b.reduce((x, k) => x + k.m, 0), minf = o.minf != null ? o.minf : 0.012, raw = b.map((k) => Math.max(k.m / mins, minf)), sum = raw.reduce((x, k) => x + k, 0), fr = raw.map((r) => r / sum);
+  const X = (f) => pad + (W - pad) * f; let acc = 0;
+  let out = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Bloques del entrenamiento por zona de potencia">';
+  if (o.axis) [50, 100, 150].forEach((v) => { out += '<line x1="' + pad + '" x2="' + W + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line)" stroke-width="1" ' + (v === 100 ? 'stroke-dasharray="5 4"' : '') + '/><text x="0" y="' + (y(v) + 4) + '" font-size="12" fill="var(--muted)">' + (ftp ? Math.round(ftp * v / 100) + ' W' : v + ' %') + '</text>'; });
+  else if (o.ftp) out += '<line x1="0" x2="' + W + '" y1="' + y(100) + '" y2="' + y(100) + '" stroke="var(--muted)" stroke-width="1" stroke-dasharray="4 4" opacity=".5"/>';
+  b.forEach((k, i) => {
+    const x1 = X(acc), x2 = X(acc + fr[i]), col = k.u ? 'var(--ctl)' : zc(zOfP(blkAvg(k)));
+    const pts = [[x1 + gap / 2, H - 1], [x1 + gap / 2, y(k.p)], [x2 - gap / 2, y(k.p2)], [x2 - gap / 2, H - 1]].map((q) => q[0].toFixed(1) + ',' + q[1].toFixed(1)).join(' ');
+    out += '<polygon' + (o.pick ? ' data-a="semBlk" data-v="' + i + '"' : '') + ' points="' + pts + '" fill="' + col + '" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round"' + (o.sel === i ? ' style="filter:brightness(1.25)"' : '') + '/>';
+    acc += fr[i];
+  });
+  return out + '</svg>';
+}
+const zbarHtml = (st) => '<div class="sm-zbar" aria-hidden="true">' + Object.keys(st.zt).sort().map((z) => '<i style="flex:' + st.zt[z] + ';background:' + zc(z) + '"></i>').join('') + '</div>';
+/* Sesiones de la semana: el plan de Camino + el detalle de bloques que llega de intervals.icu. */
+const SEM_RACE = /carrera|race|subida a|etape|brevet|gran fondo/i;
+function semBlocks(date, p) {
+  if (DEMO) return demoBlocks(p);
+  const l = (ST.blk && ST.blk[date]) || [], hit = l.find((e) => e.name === p.name) || l[0];
+  return hit ? hit.blocks : null;
+}
+function semDays(a, sh) {
+  const w = weekInfo(a, sh), mv = ST.moved || {};
+  return w.days.map((d) => {
+    let p = d.p, ghost = null, from = null;
+    const m = mv[d.date];
+    if (p && m && m.name === p.name) { ghost = m.to; p = null; }
+    Object.keys(mv).forEach((f) => { if (mv[f].to === d.date) { const q = planFor(f); if (q && q.name === mv[f].name && !p) { p = q; from = f; } } });
+    return { date: d.date, today: d.today, done: d.done, p, ghost, from, wd: d.wd, blocks: p ? (semBlocks(d.date, p) || (from ? semBlocks(from, p) : null)) : null };
+  });
+}
+async function semFetch(ws, we) {
+  if (DEMO || !ST.user) return;
+  const S = (ST.blkSt = ST.blkSt || {}), cur = S[ws];
+  if (cur && (cur.busy || Date.now() - cur.at < (cur.err ? 60000 : 300000))) return;
+  S[ws] = { busy: true, at: Date.now() };
+  try {
+    const tk = await be.token(); if (!tk) throw new Error('sin sesión');
+    const r = await fetch(MOVER_URL + '/semana?desde=' + ws + '&hasta=' + we, { headers: { authorization: 'Bearer ' + tk } });
+    if (!r.ok) throw new Error(String(r.status));
+    const ev = await r.json(); if (!Array.isArray(ev)) throw new Error('formato');
+    ST.blk = ST.blk || {}; const ft = ftpNow(), seen = {};
+    ev.forEach((e) => { if (e.category !== 'WORKOUT' || !e.start_date_local) return; const d = String(e.start_date_local).slice(0, 10); if (!seen[d]) { seen[d] = 1; ST.blk[d] = []; } ST.blk[d].push({ id: e.id, name: e.name || '', blocks: icuBlocks(e, ft) }); });
+    for (let k = 0; k < 7; k++) { const t = parse(ws); t.setDate(t.getDate() + k); const d = ymd(t); if (!seen[d]) delete ST.blk[d]; }
+    S[ws] = { at: Date.now(), ok: true };
+  } catch (e) { S[ws] = { at: Date.now(), err: true }; }
+  soft();
+}
+function semAfter() {
+  if (UI.view !== 'semana' || semTab() !== 'mi') return;
+  const a = meA(), sh = UI.semSh || 0, w = weekInfo(a, sh); semFetch(w.days[0].date, w.days[6].date);
+  const r = document.getElementById('semRail'); if (r) { if (UI.railX != null) { r.scrollLeft = UI.railX; UI.railX = null; } else { const s = r.querySelector('.sm-tile.sel'); if (s && !UI.railInit) { r.scrollLeft = Math.max(0, s.offsetLeft - 14); UI.railInit = true; } } }
+}
+const semTab = () => (hasPanel() && PREF.semTab === 'panel' ? 'panel' : 'mi');
+const semView = () => (PREF.semView === 'C' ? 'C' : 'B');
+const SEM_DN = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+function semTile(d, big, sel) {
+  const hd = '<div class="sm-th"><span class="sm-tw">' + SEM_DN[d.wd] + '</span><span class="sm-td">' + parse(d.date).getDate() + '</span></div>';
+  if (!d.p) return '<div class="sm-tile sm-rest' + (d.today ? ' today' : '') + '">' + hd + '<div class="sm-tr">' + (d.ghost ? 'Movido al ' + esc(shortDate(d.ghost)) : (d.today ? 'Hoy descansas' : 'Descanso')) + '</div></div>';
+  const b = d.blocks, st = b ? blkStats(b) : null, mins = st ? st.mins : (d.p.min || 0);
+  return '<button type="button" class="sm-tile' + (d.today ? ' today' : '') + (SEM_RACE.test(d.p.name || '') ? ' race' : '') + (sel ? ' sel' : '') + (d.done ? ' done' : '') + '" data-a="' + (big ? 'semOpen' : 'semSel') + '" data-v="' + d.date + '" aria-label="' + SEM_DN[d.wd] + ' ' + parse(d.date).getDate() + ': ' + esc(d.p.name) + ', ' + sMin(mins) + (d.done ? ', hecho' : '') + '">'
+    + hd + '<div class="sm-tg">' + blkChart(b, { h: 100, minf: big ? 0.02 : 0.035, gap: big ? 2 : 1.5, ftp: big }) + '</div>'
+    + (big ? '<div class="sm-tb">' + esc(d.p.name) + '</div><div class="sm-tm"><span>' + sMin(mins) + '</span><span>' + (st ? 'TSS ≈ ' + st.tss : 'sin detalle') + '</span></div>' : '<div class="sm-tb">' + sMin(mins) + '</div>') + (d.done ? '<span class="sm-ok" aria-hidden="true">✓</span>' : '') + '</button>';
+}
+function semMi() {
+  const a = meA(), sh = UI.semSh || 0, ds = semDays(a, sh), w = weekInfo(a, sh), vw = semView(), first = ds[0].date, last = ds[6].date;
+  const ttl = sh === 0 ? 'Esta semana' : (sh === 1 ? 'Próxima semana' : (sh === -1 ? 'Semana pasada' : (sh < 0 ? 'Hace ' + (-sh) + ' semanas' : 'En ' + sh + ' semanas')));
+  let sel = UI.semSel && ds.some((d) => d.date === UI.semSel && d.p) ? UI.semSel : ((ds.find((d) => d.today && d.p) || ds.find((d) => d.p && d.date >= off(0)) || ds.find((d) => d.p) || {}).date || null);
+  const nPlan = ds.filter((d) => d.p).length, tot = ds.reduce((x, d) => x + (d.p ? (d.blocks ? blkStats(d.blocks).mins : (d.p.min || 0)) : 0), 0);
+  const stt = (ST.blkSt || {})[first], loading = !DEMO && ST.user && (!stt || stt.busy), noDet = !DEMO && stt && stt.err;
+  let out = '<div class="row between g8" style="align-items:flex-end"><div class="col g4"><div class="muted" style="font-size:14px">' + esc(shortDate(first)) + ' – ' + esc(shortDate(last)) + '</div><h2 class="sm-h">' + ttl + '</h2></div><div class="row g8"><button type="button" class="chip sm-nav" data-a="semShift" data-v="' + (sh - 1) + '"' + (sh <= -8 ? ' disabled' : '') + ' aria-label="Semana anterior">‹</button><button type="button" class="chip sm-nav" data-a="semShift" data-v="' + (sh + 1) + '"' + (sh >= 12 ? ' disabled' : '') + ' aria-label="Semana siguiente">›</button></div></div>';
+  out += '<div class="sm-vsw" role="group" aria-label="Elegir vista de la semana"><span class="sm-vl">Vista</span><button type="button" class="sm-vb' + (vw === 'B' ? ' on' : '') + '" data-a="semView" data-v="B" aria-pressed="' + (vw === 'B') + '">' + SM_IB + 'Carrusel</button><button type="button" class="sm-vb' + (vw === 'C' ? ' on' : '') + '" data-a="semView" data-v="C" aria-pressed="' + (vw === 'C') + '">' + SM_IC + 'Mosaico</button></div>';
+  if (!nPlan) return out + '<section class="card col g8"><p class="soft">No hay entrenamientos en tu plan para esta semana.</p></section>';
+  if (vw === 'C') out += '<div class="sm-gridC">' + ds.map((d) => semTile(d, true, false)).join('') + '</div>';
+  else {
+    const d = ds.find((x) => x.date === sel), st = d && d.blocks ? blkStats(d.blocks) : null, mins = st ? st.mins : (d && d.p ? d.p.min || 0 : 0);
+    out += '<div class="sm-rail" id="semRail">' + ds.map((x) => semTile(x, false, x.date === sel)).join('') + '</div>';
+    if (d && d.p) out += '<section class="sm-focus" aria-label="Entrenamiento seleccionado"><div class="sm-nm">' + esc(d.p.name) + '</div><div class="sm-sb">' + esc(WDF[d.wd]) + ' ' + parse(d.date).getDate() + ' · ' + sMin(mins) + (d.p.km ? ' · ' + d.p.km + ' km' : '') + (d.done ? ' · hecho' : '') + '</div><div class="sm-fg">' + blkChart(d.blocks, { h: 150, minf: 0.012, ftp: true }) + '</div>'
+      + (st ? '<div class="sm-meta"><span><b>' + sMin(st.mins) + '</b></span><span>TSS ≈ <b>' + st.tss + '</b></span><span>IF <b>' + st.IF.toFixed(2).replace('.', ',') + '</b></span></div>' + zbarHtml(st) : '<p class="muted" style="font-size:13px;margin:8px 0 0">' + (loading ? 'Buscando el detalle de intervalos…' : 'No se encontró el detalle de intervalos de esta sesión. Se muestra solo la duración del plan.') + '</p>')
+      + '<button type="button" class="btn" data-a="semOpen" data-v="' + d.date + '" style="margin-top:12px;justify-content:center">Ver detalle' + (DEMO || d.done || d.date < off(0) ? '' : ' y cambiar de día') + '</button></section>';
+    else out += '<section class="sm-focus"><div class="sm-nm">Descanso</div><div class="sm-sb">Sin entrenamiento este día. Recupera para lo que viene.</div></section>';
+  }
+  out += '<div class="sm-legend" aria-label="Zonas de potencia">' + [1, 2, 3, 4, 5, 6].map((z) => '<span><i style="background:' + zc(z) + '"></i>' + ZNAME[z] + '</span>').join('') + '</div>';
+  out += '<p class="muted" style="font-size:12.5px;margin:4px 2px 0">Alto de cada barra = % de tu FTP (línea punteada = 100 %). Ancho = tiempo. TSS e IF son estimados a partir de los bloques.' + (DEMO ? ' Bloques SIMULADOS.' : '') + (noDet ? ' No se pudo leer el detalle desde intervals.icu ahora; se muestran las duraciones del plan.' : '') + (sh === 0 ? '' : '') + '</p>';
+  out += '<div class="muted" style="font-size:12.5px;margin:2px 2px 0">' + nPlan + (nPlan === 1 ? ' sesión' : ' sesiones') + ' · ' + sMin(tot) + ' en total</div>';
+  return out;
+}
+function viewSemana() {
+  const tab = semTab();
+  let out = '<div class="inner"><div class="stack">' + head('Semana', 'Tu semana');
+  if (hasPanel()) out += '<div class="sm-seg" role="tablist" aria-label="Qué ver de la semana"><button type="button" role="tab" class="' + (tab === 'mi' ? 'on' : '') + '" data-a="semTab" data-v="mi" aria-selected="' + (tab === 'mi') + '">Mi semana</button><button type="button" role="tab" class="' + (tab === 'panel' ? 'on' : '') + '" data-a="semTab" data-v="panel" aria-selected="' + (tab === 'panel') + '">Panel</button></div>';
+  out += tab === 'panel' ? viewPanel(true) : semMi();
+  return out + '</div></div>';
+}
+function semMvHtml(d, p) {
+  const today = off(0); if (!p || d < today || DEMO || UI.asId || !ST.user) return '';
+  const mv = UI.mv && UI.mv.date === d ? UI.mv : null;
+  if (mv && mv.done) return '<div class="col g4" style="background:var(--good-soft);border-radius:12px;padding:10px 12px"><b style="color:var(--good)">Movido al ' + esc(WDF[parse(mv.done).getDay()]) + ' ' + esc(shortDate(mv.done)) + '</b><span class="muted" style="font-size:13px">Quedó en intervals.icu. Garmin lo recibe en unas horas.</span></div>';
+  if (mv && mv.open) {
+    let chips = ''; for (let k = Math.max(0, diffDays(today, d) - 3); k <= diffDays(today, d) + 7; k++) { const f = off(k); if (f !== d) chips += '<button type="button" class="chip" data-a="mvPick" data-v="' + f + '"' + (mv.busy ? ' disabled' : '') + '>' + esc(WDF[parse(f).getDay()].slice(0, 3)) + ' ' + esc(shortDate(f)) + '</button>'; }
+    return '<div class="col g8"><div class="eyebrow">Mover a otro día (hasta 7 días de diferencia)</div><div class="row g8 wrap" id="mv-days">' + chips + '</div>' + (mv.busy ? '<span class="muted" style="font-size:13px">Moviendo…</span>' : '') + (mv.err ? '<span style="color:var(--warn);font-size:13px">' + esc(mv.err) + '</span>' : '') + '</div>';
+  }
+  return '<div class="row g8 wrap"><button type="button" class="btn" data-a="mvOpen" data-v="' + d + '" style="justify-content:center">Cambiar de día</button><button type="button" class="chip" data-a="tutOpen" data-v="mover">¿Cómo funciona?</button></div>';
+}
+function semGroups(b) {
+  const eq = (x, y) => y && Math.abs(x.m - y.m) < 0.01 && Math.abs(blkAvg(x) - blkAvg(y)) < 1, g = [];
+  for (let i = 0; i < b.length;) {
+    let n = 1; while (i + 2 * n + 1 < b.length && eq(b[i], b[i + 2 * n]) && eq(b[i + 1], b[i + 2 * n + 1])) n++;
+    if (n >= 2) { g.push({ n, a: b[i], b: b[i + 1], i }); i += 2 * n; } else { g.push({ n: 1, a: b[i], i }); i++; }
+  }
+  return g;
+}
+function semSheetHtml() {
+  const a = meA(), date = UI.sd.date, t0 = parse(off(0)), shw = (t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)), Math.floor(diffDays(ymd(t0), date) / 7)), d = semDays(a, shw).find((x) => x.date === date);
+  const p = d && d.p; if (!p) { UI.sd = null; return ''; }
+  const b = d.blocks, st = b ? blkStats(b) : null, ft = ftpNow(), sel = UI.sd.blk != null && b ? b[UI.sd.blk] : null;
+  const rng = (k) => (Math.round(k.p) === Math.round(k.p2) ? Math.round(k.p) + ' %' : Math.round(k.p) + ' → ' + Math.round(k.p2) + ' %') + (ft ? ' · ' + (Math.round(k.p * ft / 100) === Math.round(k.p2 * ft / 100) ? Math.round(k.p * ft / 100) + ' W' : Math.round(k.p * ft / 100) + ' → ' + Math.round(k.p2 * ft / 100) + ' W') : '');
+  const row = (k, lbl) => { const z = zOfP(blkAvg(k)); return '<div class="sm-step" style="--zc:' + (k.u ? 'var(--ctl)' : zc(z)) + '"><div><div class="t">' + esc(lbl) + '</div><div class="d">' + sMin(k.m) + ' · ' + (k.u ? 'sin objetivo de potencia' : rng(k)) + '</div></div><span class="z">' + (k.u ? '—' : 'Z' + z) + '</span></div>'; };
+  let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px;text-transform:capitalize">' + esc(WDF[d.wd]) + ' ' + esc(shortDate(date)) + '</div><h1 class="title">' + esc(p.name) + '</h1></div><button type="button" class="x" data-a="semClose" style="color:var(--text);min-height:44px;padding:0 8px">Cerrar</button></div>';
+  out += '<div class="sm-big">' + blkChart(b, { axis: true, h: 190, pick: true, sel: UI.sd.blk }) + '</div>';
+  out += '<div class="sm-tip">' + (sel ? '<b>' + esc(sel.t || 'Bloque') + '</b> · ' + sMin(sel.m) + ' · ' + (sel.u ? 'sin objetivo de potencia' : rng(sel) + ' · ' + ZNAME[zOfP(blkAvg(sel))]) : (b ? 'Toca un bloque del gráfico para ver su detalle.' : 'No se encontró el detalle de intervalos de esta sesión; se muestra la duración del plan.')) + '</div>';
+  out += '<div class="sm-kpis"><div class="sm-kpi"><b>' + sMin(st ? st.mins : (p.min || 0)) + '</b><span>duración</span></div>' + (p.km ? '<div class="sm-kpi"><b>' + p.km + ' km</b><span>distancia</span></div>' : '') + (st ? '<div class="sm-kpi"><b>≈ ' + st.tss + '</b><span>TSS (estimado)</span></div><div class="sm-kpi"><b>' + st.IF.toFixed(2).replace('.', ',') + '</b><span>intensidad (IF)</span></div><div class="sm-kpi"><b>' + Math.round(st.max) + ' %</b><span>máx. de tu FTP</span></div>' : '') + '</div>';
+  if (b) out += '<h3 class="sm-h3">Bloques</h3><div class="col g8">' + semGroups(b).map((g) => g.n >= 2 ? '<div class="sm-grp"><div class="sm-gt">' + g.n + ' ×</div><div class="col g8" style="flex:1">' + row(g.a, g.a.t || 'Esfuerzo') + row(g.b, g.b.t || 'Recuperación') + '</div></div>' : row(g.a, g.a.t || 'Bloque ' + (g.i + 1))).join('') + '</div>';
+  const note = dayNoteFor(date); if (note) out += '<h3 class="sm-h3">Nota de tu coach</h3><div class="card soft" style="font-size:15px">' + esc(note) + '</div>';
+  const mvh = semMvHtml(date, p); if (mvh) out += '<h3 class="sm-h3">Cambiar de día</h3>' + mvh;
+  return out + '</div></div>';
+}
+const SM_IB = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="6" height="6" rx="1.5"/><rect x="9" y="6" width="6" height="6" rx="1.5"/><rect x="16" y="6" width="6" height="6" rx="1.5"/><rect x="3" y="15" width="18" height="5" rx="1.5"/></svg>';
+const SM_IC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>';
+
 /* ---------- Panel semanal ("Tu semana", v67) ---------- */
 let PANEL_CACHE = null, PANEL_CUR = null;
 const PANEL_KEYS = ['status', 'week', 'weekStart', 'asOf', 'partial', 'refs', 'sessions', 'blocks', 'plan', 'weeks', 'hist', 'tramos', 'texts', 'src', 'genAt', 'approvedAt', 'updatedAt'];
 const panelStrip = (d) => { const o = {}; PANEL_KEYS.forEach((k) => { if (d[k] !== undefined) o[k] = d[k]; }); return o; };
-function viewPanel() {
+function viewPanel(emb) {
   const asId = UI.asId || null, who = asId ? ST.athletes.find((x) => x.id === asId) : null, list = asId ? (ST.athPanel[asId] || []) : (ST.myPanel || []);
   const sel = list.find((x) => x.id === UI.panelSel) || list[0] || null;
-  let out = '<div class="inner"><div class="stack">' + head('Panel', asId && who ? 'Semana de ' + firstName(who.name) : 'Tu semana');
-  if (!sel) { PANEL_CUR = null; return out + '<section class="card col g8"><p class="soft">Aún no hay un informe semanal. Cuando tu entrenador apruebe el primero, aparecerá aquí con tus datos de la semana.</p></section></div></div>'; }
+  const cl = emb ? '' : '</div></div>'; let out = emb ? '' : '<div class="inner"><div class="stack">' + head('Panel', asId && who ? 'Semana de ' + firstName(who.name) : 'Tu semana');
+  if (!sel) { PANEL_CUR = null; return out + '<section class="card col g8"><p class="soft">Aún no hay un informe semanal. Cuando tu entrenador apruebe el primero, aparecerá aquí con tus datos de la semana.</p></section>' + cl; }
   if (list.length > 1) out += '<div class="row g8 wrap" role="group" aria-label="Semana">' + list.slice(0, 8).map((x) => '<button type="button" class="chip" data-a="panelPick" data-v="' + esc(x.id) + '" aria-pressed="' + (x.id === sel.id ? 'true' : 'false') + '">Sem. ' + esc(String(x.week)) + (asId && x.status === 'draft' ? ' · borrador' : '') + '</button>').join('') + '</div>';
   if (asId && sel.status === 'draft') out += '<section class="card col g10" aria-label="Borrador" style="border:1.5px solid var(--accent)"><div class="eyebrow" style="color:var(--accent)">Borrador · aún no lo ve ' + esc(who ? firstName(who.name) : 'el atleta') + '</div><p class="soft" style="font-size:14px">Revisa las cifras y los textos. Al aprobarlo, el atleta lo verá en su menú Panel. Los textos se editan desde Cabina, en Gestionar.</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="panelOk" data-v="' + esc(asId + '|' + sel.id) + '" style="justify-content:center;width:auto;padding:0 20px;min-height:48px"' + (UI.busy ? ' disabled' : '') + '>Aprobar</button></div></section>';
   const title = asId && who ? firstName(who.name) : 'Tu semana';
   PANEL_CUR = { doc: sel, sig: [asId || '', sel.id, sel.updatedAt || sel.genAt || 0, sel.status, title].join('|'), title, key: asId || (ST.user && ST.user.uid) || 'x' };
-  return out + '<div id="panelHost"></div></div></div>';
+  return out + '<div id="panelHost"></div>' + cl;
 }
 function panelAfter() {
   const host = document.getElementById('panelHost'); if (!host || !PANEL_CUR) return;
@@ -2012,7 +2271,7 @@ function render() {
   if (!ST.user || !ST.profile) { main.innerHTML = ST.user ? viewLoading() : viewLogin(); top.innerHTML = topHtml(); nav.innerHTML = ''; ov.hidden = true; ov.innerHTML = ''; story.innerHTML = ''; return; }
   const ids = tabs().map((t) => t.id); if (ids.indexOf(UI.view) < 0) UI.view = ids[0];
   main.innerHTML = (UI.asId && isCoach() && (UI.view === 'hoy' || UI.view === 'panel' || UI.view === 'datos' || UI.view === 'ruta')) ? viewAs() : VIEWS[UI.view]();
-  panelAfter();
+  panelAfter(); semAfter();
   main.scrollTop = (UI.lastView === UI.view) ? st : 0; UI.lastView = UI.view;
   top.innerHTML = topHtml(); nav.innerHTML = navHtml();
   const h = (UI.wk && UI.asId && isCoach()) ? (asRun(overlayHtml) || '') : overlayHtml(), keep = ov.scrollTop;
@@ -2020,7 +2279,7 @@ function render() {
   tourMaybeOpen();
   story.innerHTML = UI.tour != null ? tourHtml() : ((UI.asId && isCoach() && UI.story != null) ? (asRun(storyHtml) || '') : storyHtml());
 }
-function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes' || h === 'biblioteca') UI.asId = null; render(); }
+function route() { const ids = tabs().map((t) => t.id); let h = location.hash.slice(1); if (h === 'panel' && ids.indexOf('panel') < 0 && ids.indexOf('semana') >= 0) { h = 'semana'; PREF.semTab = 'panel'; savePref(); } if (ids.indexOf(h) < 0) h = ids[0]; UI.view = h; if (h === 'cabina' || h === 'ajustes' || h === 'biblioteca') UI.asId = null; render(); }
 let msgTimer = null;
 function say(msg, kind) { UI.msg = msg; UI.msgKind = kind || 'err'; clearTimeout(msgTimer); if (msg) msgTimer = setTimeout(() => { UI.msg = ''; render(); }, (kind || 'err') === 'ok' ? 6000 : 10000); render(); }
 const friendly = (e) => {
@@ -2072,7 +2331,7 @@ function startSession(user) {
   ownUnsubs.push(be.listenNotes(user.uid, (rows) => { ST.myNotes = rows; soft(); }));
   ownUnsubs.push(be.listenPlan(user.uid, (pl) => { ST.myPlan = pl; soft(); }));
   ownUnsubs.push(be.listenHistory(user.uid, (h) => { ST.myHist = h; soft(); }));
-  ownUnsubs.push(be.listenPanels(user.uid, (rows) => { ST.myPanel = rows; if ((!rows.length && UI.view === 'panel') || (rows.length && location.hash === '#panel' && UI.view !== 'panel')) route(); soft(); }, { quiet: true }));
+  ownUnsubs.push(be.listenPanels(user.uid, (rows) => { ST.myPanel = rows; if ((!rows.length && UI.view === 'panel') || (rows.length && location.hash === '#panel' && UI.view !== 'panel' && UI.view !== 'semana')) route(); soft(); }, { quiet: true }));
   ownUnsubs.push(be.listenEvents(user.uid, (rows) => { ST.myEvents = rows; soft(); }));
   ownUnsubs.push(be.listenBio(user.uid, (b) => { ST.myBio = b; soft(); }, { priv: true, migrate: true }));
 }
@@ -2331,9 +2590,21 @@ const ACT = {
   closeFb() { UI.feedback = null; render(); },
   wkOpen(v) { const t0 = parse(off(0)); t0.setDate(t0.getDate() - ((t0.getDay() + 6) % 7)); const sh = v ? Math.floor(diffDays(ymd(t0), v) / 7) : 0; UI.wk = { shift: sh, focus: v || null }; render(); if (v) { const el = document.getElementById('wkd-' + v); if (el) el.scrollIntoView({ block: 'center' }); } },
   wkClose() { UI.wk = null; render(); },
+  semTab(v) { PREF.semTab = v === 'panel' ? 'panel' : 'mi'; savePref(); if (location.hash === '#panel') { try { history.replaceState(null, '', '#semana'); } catch (e) { /* sin historial */ } } render(); },
+  semView(v) { PREF.semView = v === 'C' ? 'C' : 'B'; savePref(); render(); },
+  semShift(v) { UI.semSh = Math.max(-8, Math.min(12, Number(v) || 0)); UI.semSel = null; UI.railInit = false; render(); },
+  semSel(v) { const r = document.getElementById('semRail'); UI.railX = r ? r.scrollLeft : null; UI.semSel = v; render(); },
+  semOpen(v) { UI.sd = { date: v, blk: null }; if (UI.mv && UI.mv.date !== v) UI.mv = null; render(); const ov = document.getElementById('overlay'); if (ov) ov.scrollTop = 0; },
+  semClose() { UI.sd = null; render(); },
+  semBlk(v) { if (UI.sd) { UI.sd.blk = UI.sd.blk === Number(v) ? null : Number(v); render(); } },
+  semGo() { UI.wk = null; location.hash = '#semana'; render(); },
+  tmNext() { if (TM) tmGo(TM.i + 1); },
+  tmPrev() { if (TM) tmGo(TM.i - 1); },
+  tmEnd() { tmEnd(); },
   mvOpen(v) { UI.mv = { date: v, open: true }; render(); },
   mvClose() { UI.mv = null; render(); },
   async mvPick(f) {
+    if (TM) return; // la guía en pantalla nunca mueve nada de verdad
     const m = UI.mv; if (!m || m.busy || !ST.user) return; m.busy = true; m.err = ''; render();
     try {
       const tk = await be.token(); if (!tk) throw new Error('Vuelve a iniciar sesión.');
@@ -2345,7 +2616,7 @@ const ACT = {
       if (ev.length > 1) throw new Error('Ese día tiene más de un entrenamiento; avísale a tu coach.');
       const r2 = await fetch(MOVER_URL + '/mover', { method: 'POST', headers: Object.assign({ 'content-type': 'application/json' }, H), body: JSON.stringify({ eventId: ev[0].id, fecha: f }) });
       const out = await r2.json(); if (!r2.ok) throw new Error(out.error || 'No se pudo mover.');
-      m.done = f; m.busy = false; m.open = false;
+      m.done = f; (ST.moved = ST.moved || {})[m.date] = { to: f, name: ((planFor(m.date) || {}).name || '') }; ST.blkSt = {}; m.busy = false; m.open = false;
     } catch (e) { m.busy = false; m.err = String(e && e.message || e); }
     render();
   },
@@ -2984,7 +3255,7 @@ document.addEventListener('input', (e) => { if (LV && e.target && e.target.id ==
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && LV && UI.liveOpen && LV.mode !== 'pre' && LV.mode !== 'fin') { lvWake(); render(); } });
 
 /* ---------- v63: Biblioteca (solo coach principal): qué herramientas ve cada atleta, equipo o coach de apoyo ---------- */
-const LIB_TOOLS = [{ id: 'planificar', name: 'Planificar y modo en vivo', sub: 'Planificar eventos, horarios de controles, nutrición y seguimiento en vivo' }];
+const LIB_TOOLS = [{ id: 'semana', name: 'Semana (nueva)', sub: 'Pestaña Semana: gráficos de intervalos a color, Carrusel/Mosaico y el Panel dentro de ella' }, { id: 'planificar', name: 'Planificar y modo en vivo', sub: 'Planificar eventos, horarios de controles, nutrición y seguimiento en vivo' }];
 const libOn = (r, t) => !!(r && r.features && r.features[t] === true);
 const libRecips = () => ST.athletes.filter((r) => (r.role === 'athlete' && r.pending !== true) || r.role === 'viewer').sort((a, b) => String(a.name).localeCompare(String(b.name), 'es'));
 function libGroups() {
