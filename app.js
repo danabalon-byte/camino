@@ -1158,7 +1158,7 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 71;
+const APP_VER = 72;
 const NEWS = [
   'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
@@ -2037,10 +2037,32 @@ function icuText(desc, ftp) {
   });
   flush(); return out.length ? out : null;
 }
+/* Texto libre de intervals.icu (sin pasos estructurados): solo se dibuja lo que el texto dice. Todo lo que no indica intensidad va como "sin objetivo". */
+function icuFree(ev, ftp) {
+  const s = String((ev && ev.description) || '').replace(/Lugar:.*$/gim, '').replace(/\s+/g, ' ').trim(); if (!s) return null;
+  const ms = Number(ev && (ev.moving_time || ev.duration)) || 0;
+  const lead = s.match(/^(\d{1,3})(?:\s*-\s*(\d{1,3}))?\s*min\b/i);
+  const tot = ms > 0 ? ms / 60 : (lead ? (lead[2] ? (+lead[1] + +lead[2]) / 2 : +lead[1]) : 0);
+  const iv = s.match(/(\d{1,2})\s*x\s*(\d+(?:[.,]\d+)?)\s*(min|m|s)\b[^%]{0,30}?(\d{2,3})\s*%/i);
+  if (iv) {
+    const n = Math.min(30, +iv[1]), len = parseFloat(iv[2].replace(',', '.')) / (iv[3].toLowerCase() === 's' ? 60 : 1), pct = +iv[4];
+    if (!(n > 0 && len > 0)) return null;
+    const out = [], gap = tot > n * len ? (tot - n * len) / (n + 1) : 0;
+    for (let i = 0; i < n; i++) { if (gap > 0) out.push({ m: gap, p: 55, p2: 55, u: 1, e: 1, t: 'Suave, sin intensidad indicada' }); out.push({ m: len, p: pct, p2: pct, u: 0, e: 1, t: 'Intervalo ' + pct + ' % FTP' }); }
+    if (gap > 0) out.push({ m: gap, p: 55, p2: 55, u: 1, e: 1, t: 'Suave, sin intensidad indicada' });
+    return out;
+  }
+  if (!(tot > 0)) return null;
+  let p = null, m;
+  if ((m = s.match(/\bZ([1-7])\b/i))) p = ZPCT[+m[1]];
+  else if ((m = s.match(/(\d{2,3})\s*%\s*(?:de\s*)?(?:FTP)?/i)) && /ftp/i.test(s)) p = +m[1];
+  else if (/muy\s+suave|recuperaci/i.test(s)) p = ZPCT[1];
+  return [{ m: tot, p: p == null ? 55 : p, p2: p == null ? 55 : p, u: p == null ? 1 : 0, e: 1, t: p == null ? 'Sin intensidad indicada' : 'Según el texto' }];
+}
 function icuBlocks(ev, ftp) {
   const doc = ev && ev.workout_doc, out = [], f = Number(doc && doc.ftp) || ftp || 0;
   if (doc && Array.isArray(doc.steps)) doc.steps.forEach((s) => icuStep(s, out, f));
-  const b = out.length ? out : icuText(ev && ev.description, f);
+  const b = out.length ? out : (icuText(ev && ev.description, f) || icuFree(ev, f));
   if (!b || !b.length || !(b.reduce((x, k) => x + k.m, 0) > 0)) return null;
   return b.slice(0, 160);
 }
@@ -2125,7 +2147,7 @@ function semTile(d, big, sel) {
   const b = d.blocks, st = b ? blkStats(b) : null, mins = st ? st.mins : (d.p.min || 0);
   return '<button type="button" class="sm-tile' + (d.today ? ' today' : '') + (SEM_RACE.test(d.p.name || '') ? ' race' : '') + (sel ? ' sel' : '') + (d.done ? ' done' : '') + '" data-a="' + (big ? 'semOpen' : 'semSel') + '" data-v="' + d.date + '" aria-label="' + SEM_DN[d.wd] + ' ' + parse(d.date).getDate() + ': ' + esc(d.p.name) + ', ' + sMin(mins) + (d.done ? ', hecho' : '') + '">'
     + hd + '<div class="sm-tg">' + blkChart(b, { h: 100, minf: big ? 0.02 : 0.035, gap: big ? 2 : 1.5, ftp: big }) + '</div>'
-    + (big ? '<div class="sm-tb">' + esc(d.p.name) + '</div><div class="sm-tm"><span>' + sMin(mins) + '</span><span>' + (st ? 'TSS ≈ ' + st.tss : 'sin detalle') + '</span></div>' : '<div class="sm-tb">' + sMin(mins) + '</div>') + (d.done ? '<span class="sm-ok" aria-hidden="true">✓</span>' : '') + '</button>';
+    + (big ? '<div class="sm-tb">' + esc(d.p.name) + '</div><div class="sm-tm"><span>' + sMin(mins) + '</span><span>' + (st ? (b[0].e ? 'según el texto' : 'TSS ≈ ' + st.tss) : 'sin detalle') + '</span></div>' : '<div class="sm-tb">' + sMin(mins) + '</div>') + (d.done ? '<span class="sm-ok" aria-hidden="true">✓</span>' : '') + '</button>';
 }
 function semMi() {
   const a = meA(), sh = UI.semSh || 0, ds = semDays(a, sh), w = weekInfo(a, sh), vw = semView(), first = ds[0].date, last = ds[6].date;
@@ -2184,6 +2206,7 @@ function semSheetHtml() {
   let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4"><div class="muted" style="font-size:14px;text-transform:capitalize">' + esc(WDF[d.wd]) + ' ' + esc(shortDate(date)) + '</div><h1 class="title">' + esc(p.name) + '</h1></div><button type="button" class="x" data-a="semClose" style="color:var(--text);min-height:44px;padding:0 8px">Cerrar</button></div>';
   out += '<div class="sm-big">' + blkChart(b, { axis: true, h: 190, pick: true, sel: UI.sd.blk }) + '</div>';
   out += '<div class="sm-tip">' + (sel ? '<b>' + esc(sel.t || 'Bloque') + '</b> · ' + sMin(sel.m) + ' · ' + (sel.u ? 'sin objetivo de potencia' : rng(sel) + ' · ' + ZNAME[zOfP(blkAvg(sel))]) : (b ? 'Toca un bloque del gráfico para ver su detalle.' : 'No se encontró el detalle de intervalos de esta sesión; se muestra la duración del plan.')) + '</div>';
+  if (b && b[0].e) out += '<p class="soft" style="font-size:13px">Dibujado a partir del texto del entrenamiento. Los tramos en azul no indican intensidad.</p>';
   out += '<div class="sm-kpis"><div class="sm-kpi"><b>' + sMin(st ? st.mins : (p.min || 0)) + '</b><span>duración</span></div>' + (p.km ? '<div class="sm-kpi"><b>' + p.km + ' km</b><span>distancia</span></div>' : '') + (st ? '<div class="sm-kpi"><b>≈ ' + st.tss + '</b><span>TSS (estimado)</span></div><div class="sm-kpi"><b>' + st.IF.toFixed(2).replace('.', ',') + '</b><span>intensidad (IF)</span></div><div class="sm-kpi"><b>' + Math.round(st.max) + ' %</b><span>máx. de tu FTP</span></div>' : '') + '</div>';
   if (b) out += '<h3 class="sm-h3">Bloques</h3><div class="col g8">' + semGroups(b).map((g) => g.n >= 2 ? '<div class="sm-grp"><div class="sm-gt">' + g.n + ' ×</div><div class="col g8" style="flex:1">' + row(g.a, g.a.t || 'Esfuerzo') + row(g.b, g.b.t || 'Recuperación') + '</div></div>' : row(g.a, g.a.t || 'Bloque ' + (g.i + 1))).join('') + '</div>';
   const note = dayNoteFor(date); if (note) out += '<h3 class="sm-h3">Nota de tu coach</h3><div class="card soft" style="font-size:15px">' + esc(note) + '</div>';
