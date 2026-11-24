@@ -1159,8 +1159,9 @@ function viewGuia() {
 
 
 /* ---------- Versión y novedades ---------- */
-const APP_VER = 78;
+const APP_VER = 79;
 const NEWS = [
+  'Nuevo botón "Reg PC" junto a cada control de Planificar: tócalo al pasar por un control para registrar la hora, sin necesidad de abrir el modo en vivo. Tócalo otra vez para quitar el registro.',
   'Cambiar de día: en Tu semana puedes mover un entrenamiento futuro a otro día; el cambio queda en intervals.icu y llega a tu Garmin. Hay un tutorial nuevo en la Guía.',
   'Nuevo menú Panel: tu semana en datos, con tarjetas que se dan vuelta, sesión por sesión, calendario de lo programado y lo hecho, logros y misiones. Aparece cuando tu entrenador aprueba tu primer informe.',
   'Tu Perfil ahora muestra tus medidas (edad, estatura, peso, FTP con W/kg, FC máx y LTHR), te deja actualizarlas cuando cambien y guarda el historial de cada cambio.',
@@ -2990,7 +2991,7 @@ function plNutBox(d) {
 }
 function plNutSave(d) { const n = plNutFix(d.nut), ks = plTramos(d).map((t) => String(t.to)), seg = {}; ks.forEach((k) => { if (n.seg[k] != null) seg[k] = Number(n.seg[k]); }); n.seg = seg; return n; }
 function plNew() { const nut = PL_NUT0(), S = plSug(200 / 24); if (S) { nut.gph = S.g; nut.mlph = S.ml; nut.naph = S.na; } return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, ctl: [], nut, safe: Object.assign(plSafeFix(null), plSafeProfile()) } }; }
-function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop })), nut: plNutFix(e.nut), safe: plSafeFix(e.safe) } }; }
+function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop, reg: c.reg || null })), nut: plNutFix(e.nut), safe: plSafeFix(e.safe) } }; }
 function plEvName(e) { return e.name || 'Evento'; }
 function viewPlanificar() {
   if (!plannerOn()) return '<div class="inner"><div class="stack">' + head('Función no disponible', 'Planificar') + '<section class="card"><p class="soft">Esta función no está habilitada en tu cuenta. Si te interesa, pídesela a tu coach.</p></section></div></div>';
@@ -3029,7 +3030,14 @@ function plEditHtml(P) {
   } else out += '<p class="soft" style="font-size:14px">Carga el archivo GPX del recorrido para ver el mapa, la distancia y el desnivel. Lo descargas desde Garmin Connect, RideWithGPS o Strava (en una ruta o actividad, opción exportar GPX).</p><label class="btn primary" for="pl-file" style="cursor:pointer;justify-content:center"><span>Cargar archivo GPX</span></label>';
   out += '<input id="pl-file" data-pl="file" type="file" accept=".gpx,application/gpx+xml,text/xml,application/xml" style="position:absolute;left:-9999px;width:1px;height:1px" aria-label="Archivo GPX"><p class="muted" style="font-size:12px">El archivo se procesa en tu teléfono y solo se guarda un trazo simplificado.</p></section>';
   out += '<section class="card col g12" aria-label="Controles"><div class="eyebrow">' + (brv ? 'Controles' : 'Paradas') + '</div><p class="soft" style="font-size:13px">' + (brv ? 'Escribe el kilómetro de cada control intermedio. La meta se agrega sola.' : 'Escribe el kilómetro de cada parada planificada.') + '</p>';
-  (d.ctl || []).forEach((c, i) => { out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4 grow">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '"></div></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '"><button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button></div></div>'; });
+  (d.ctl || []).forEach((c, i) => {
+    const regDt = c.reg ? new Date(c.reg) : null, regHm = regDt ? pad(regDt.getHours()) + ':' + pad(regDt.getMinutes()) : '';
+    const ctlLabel = c.name || ('control ' + (i + 1));
+    const regBtn = regDt
+      ? '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" aria-pressed="true" style="width:100%;justify-content:center;padding:0 6px" aria-label="Quitar el registro de paso por ' + esc(ctlLabel) + ', registrado a las ' + regHm + '">' + regHm + '</button>'
+      : '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" style="width:100%;justify-content:center;padding:0 6px" aria-label="Registrar que acabas de pasar por ' + esc(ctlLabel) + '">Reg PC</button>';
+    out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4" style="width:84px;flex:none">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '" style="width:84px"></div><div class="col g4" style="width:92px;flex:none"><span class="muted" style="font-size:13px">Paso</span>' + regBtn + '</div></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '"><button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button></div></div>';
+  });
   out += '<button type="button" class="chip" data-a="plCtlAdd" style="align-self:flex-start;border-color:var(--accent);color:var(--accent);font-weight:600">Agregar ' + (brv ? 'control' : 'parada') + '</button></section>';
   out += '<section class="card col g12" aria-label="Tu ritmo"><div class="eyebrow">Tu ritmo</div><div class="row g8"><div class="col g8 grow">' + lab('pl-speed', 'Velocidad media (km/h)') + '<input class="field" id="pl-speed" data-pl="speed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.speed) + '"></div><div class="col g8 grow">' + lab('pl-stop', 'Parada típica (min)') + '<input class="field" id="pl-stop" data-pl="stop" type="number" inputmode="numeric" min="0" max="600" value="' + esc(d.stop) + '"></div></div><p class="muted" style="font-size:12px">La velocidad es en movimiento, sin contar las paradas.</p></section>';
   out += '<section class="card col g12" aria-label="Nutrición e hidratación"><div class="eyebrow">Nutrición e hidratación</div><div id="pl-nut" class="col g12">' + plNutBox(d) + '</div><p class="muted" style="font-size:12px">Son valores de partida: ajústalos a lo que te funciona y a lo que acuerdes con tu nutricionista. Se calculan sobre el tiempo en movimiento.</p></section>';
@@ -3074,15 +3082,16 @@ Object.assign(ACT, {
   plClose() { UI.pl = null; render(); },
   plKind(v) { const d = UI.pl.d; if (d.kind === v) return; d.kind = v; if (v === 'brevet' && PL_BRV.indexOf(Number(d.km)) < 0) d.km = 200; render(); },
   plBrv(v) { UI.pl.d.km = Number(v); render(); },
-  plCtlAdd() { UI.pl.d.ctl.push({ km: '', name: '', stop: '' }); render(); },
+  plCtlAdd() { UI.pl.d.ctl.push({ km: '', name: '', stop: '', reg: null }); render(); },
   plCtlDel(v) { UI.pl.d.ctl.splice(+v, 1); render(); },
+  plCtlReg(v) { const c = UI.pl.d.ctl[+v]; if (!c) return; c.reg = c.reg ? null : Date.now(); render(); },
   plNoTrack() { UI.pl.d.track = null; render(); },
   plDel() { UI.pl.del = true; render(); },
   plDelNo() { UI.pl.del = false; render(); },
   async plDelYes() { const P = UI.pl; if (!P || !P.id || !ST.user) return; UI.busy = true; try { await be.deleteEvent(ST.user.uid, P.id); UI.pl = null; say('Evento eliminado.', 'ok'); } catch (e) { say(friendly(e)); } UI.busy = false; render(); },
   async plSave() {
     const P = UI.pl; if (!P || !ST.user || UI.busy) return; const d = P.d, er = plValid(d); if (er) { say(er); return; }
-    const ctl = (d.ctl || []).filter((c) => Number(c.km) > 0).map((c) => ({ km: Number(c.km), name: String(c.name || '').slice(0, 40), stop: c.stop === '' || c.stop == null ? null : Number(c.stop) })).sort((a, b) => a.km - b.km);
+    const ctl = (d.ctl || []).filter((c) => Number(c.km) > 0).map((c) => ({ km: Number(c.km), name: String(c.name || '').slice(0, 40), stop: c.stop === '' || c.stop == null ? null : Number(c.stop), reg: c.reg || null })).sort((a, b) => a.km - b.km);
     const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), stop: Number(d.stop) || 0, track: d.track || null, ctl, nut: plNutSave(d), safe: plSafeSave(d), updatedAt: Date.now() };
     const old = (ST.myEvents || []).find((x) => x.id === P.id); if (old && old.result) data.result = old.result;
     UI.busy = true; render();
