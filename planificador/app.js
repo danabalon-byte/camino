@@ -1,10 +1,10 @@
-/* Camino Ruta · Planificar y modo en vivo como app independiente (v2).
+/* Camino Ruta · Planificar y modo en vivo como app independiente (v1).
    El bloque de Planificar (calculo de horarios, GPX, nutricion, modo en vivo) se copia tal cual de Camino v79
    (app.js, lineas 2841-3322); alrededor va una capa propia: sesion, datos, cierre del evento y registro en Camino.
    Sin claves: la configuracion web de Firebase se importa de ../firebase-config.js. */
 import { be } from './data.js';
 
-const RUTA_VER = 2;
+const RUTA_VER = 1;
 const WD = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
@@ -76,6 +76,7 @@ function elevSvg(r) {
   const pts = A.map((v, i) => (i / (n - 1) * 342).toFixed(1) + ' ' + (80 - (v - mn) / sp * 70).toFixed(1));
   return '<svg viewBox="0 0 342 90" width="100%" role="img" aria-label="Perfil de altitud de ' + Math.round(mn) + ' a ' + Math.round(mx) + ' metros" style="display:block"><path d="M' + pts.join(' L') + ' L342 90 L0 90Z" fill="var(--accent)" fill-opacity=".18" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg>';
 }
+function plCtlLocked() { const P = UI.pl; return !!(LV && P && P.id && LV.ev && LV.ev.id === P.id); }
 /* ---------- Planificar: eventos, track GPX y controles (v55) ---------- */
 const PL_BRV = [200, 300, 400, 600, 1000];
 const PL_BANDS = [[0, 200, 34, 15], [200, 400, 32, 15], [400, 600, 30, 15], [600, 1000, 28, 11.428], [1000, 1300, 26, 13.333]];
@@ -124,24 +125,22 @@ function plWindow(km, nominal) {
   return { open, close };
 }
 const plMin = (x) => Math.round(x);
-/* v2: velocidad de un tramo (km/h); si falta o no es válida, la del evento. */
-const plLegV = (x, def) => { const n = Number(x); return x !== '' && x != null && n >= 5 && n <= 60 ? n : def; };
 function plClock(startHm, plus) { const p = String(startHm || '06:00').split(':'), t = (+p[0] || 0) * 60 + (+p[1] || 0) + plus, d = Math.floor(t / 1440), m = ((t % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ':' + pad(m % 60) + (d > 0 ? ' (+' + d + ' d)' : ''); }
 const plDur = (m) => { m = Math.round(m); return Math.floor(m / 60) + ':' + pad(m % 60) + ' h'; };
 function plCalc(d) {
   const brv = d.kind === 'brevet', total = Number(d.km) || 0, v = Number(d.speed) || 0, def = Number(d.stop);
   if (!(total > 0) || !(v > 0)) return null;
-  const cs = (d.ctl || []).map((c) => ({ n: c.name || '', km: Number(c.km), stop: c.stop === '' || c.stop == null ? (isFinite(def) ? def : 10) : Number(c.stop), v: plLegV(c.speed, v) })).filter((c) => c.km > 0 && c.km < total).sort((a, b) => a.km - b.km);
-  cs.push({ n: 'Meta', km: total, stop: 0, meta: true, v: plLegV(d.mspeed, v) });
-  let t = 0, prev = 0, rows = [], ok = true, mv = 0;
+  const cs = (d.ctl || []).map((c) => ({ n: c.name || '', km: Number(c.km), stop: c.stop === '' || c.stop == null ? (isFinite(def) ? def : 10) : Number(c.stop) })).filter((c) => c.km > 0 && c.km < total).sort((a, b) => a.km - b.km);
+  cs.push({ n: 'Meta', km: total, stop: 0, meta: true });
+  let t = 0, prev = 0, rows = [], ok = true;
   cs.forEach((c) => {
-    mv += (c.km - prev) / c.v * 60; const arr = t + (c.km - prev) / c.v * 60; let rec = arr, wait = 0, w = null, margin = null, flag = '';
+    const arr = t + (c.km - prev) / v * 60; let rec = arr, wait = 0, w = null, margin = null, flag = '';
     if (brv) { w = plWindow(c.km, total); if (arr < w.open) { wait = w.open - arr; rec = w.open; flag = 'wait'; } margin = w.close - rec; if (margin < 0) { flag = 'late'; ok = false; } }
-    rows.push({ n: c.n, km: c.km, v: c.v, meta: !!c.meta, arr: Math.round(arr), rec: Math.round(rec), wait: Math.round(wait), w, margin: margin == null ? null : Math.round(margin), stop: c.stop, flag });
+    rows.push({ n: c.n, km: c.km, meta: !!c.meta, arr: Math.round(arr), rec: Math.round(rec), wait: Math.round(wait), w, margin: margin == null ? null : Math.round(margin), stop: c.stop, flag });
     t = rec + c.stop; prev = c.km;
   });
   const last = rows[rows.length - 1];
-  return { rows, ok, finish: last.rec, moving: Math.round(mv), stops: cs.reduce((s, c) => s + (c.meta ? 0 : c.stop), 0), waits: rows.reduce((s, r) => s + r.wait, 0) };
+  return { rows, ok, finish: last.rec, moving: Math.round(total / v * 60), stops: cs.reduce((s, c) => s + (c.meta ? 0 : c.stop), 0), waits: rows.reduce((s, r) => s + r.wait, 0) };
 }
 function plResHtml(d) {
   const r = plCalc(d), brv = d.kind === 'brevet';
@@ -172,7 +171,7 @@ function plSug(h) {
   const load = h >= 6 ? [8, 10, 'carga completa, 3 días antes'] : h >= 3 ? [6, 7, 'carga moderada, 1 a 2 días antes'] : [5, 6, 'sin carga especial'];
   return { g, ml, na, kg: P.kg, load, loadG: [Math.round(P.kg * load[0] / 10) * 10, Math.round(P.kg * load[1] / 10) * 10], caf: [Math.round(P.kg * 1.5 / 5) * 5, Math.round(P.kg * 3 / 5) * 5], capNote: capY < 80 ? (P.years === 'Menos de 1 año' ? 'tope de 60 g/h por tu poca experiencia' : 'tope de ' + capY + ' g/h por tu nivel') : '', P };
 }
-function plMovH(d) { const c = plCalc(d); return c ? c.moving / 60 : 0; }
+function plMovH(d) { const k = Number(d.km), v = Number(d.speed); return k > 0 && v > 0 ? k / v : 0; }
 function plProfBox(d) {
   const h = plMovH(d), S = plSug(h), n = plNutFix(d.nut);
   if (!S) return '<div class="info" role="note">' + infoIcon() + '<span>Con tu peso en el perfil, Camino ajusta estos números a ti. Agrégalo en Perfil, medidas, y tu coach lo aprueba.</span></div>';
@@ -193,7 +192,7 @@ const plR5 = (x) => Math.round(x / 5) * 5;
 const plL = (ml) => (Math.round(ml / 100) / 10).toFixed(1).replace('.', ',') + ' L';
 function plTramos(d) {
   const c = plCalc(d); if (!c) return []; let prev = 0, pn = 'Salida', k = 0;
-  return c.rows.map((r) => { const nm = r.meta ? 'Meta' : (r.n || 'Control ' + (++k)), t = { name: pn + ' → ' + nm, to: r.km, km: r.km - prev, h: (r.km - prev) / r.v }; prev = r.km; pn = nm; return t; });
+  return c.rows.map((r) => { const nm = r.meta ? 'Meta' : (r.n || 'Control ' + (++k)), t = { name: pn + ' → ' + nm, to: r.km, km: r.km - prev, h: (r.km - prev) / Number(d.speed) }; prev = r.km; pn = nm; return t; });
 }
 function plNutCalc(d) {
   const n = plNutFix(d.nut), T = plTramos(d); if (!T.length) return null; const P = n.prods; let sh = { drink: 0, gel: 0, bar: 0 };
@@ -230,8 +229,8 @@ function plNutBox(d) {
   return out + '<div id="pl-nutres">' + plNutResHtml(d) + '</div>';
 }
 function plNutSave(d) { const n = plNutFix(d.nut), ks = plTramos(d).map((t) => String(t.to)), seg = {}; ks.forEach((k) => { if (n.seg[k] != null) seg[k] = Number(n.seg[k]); }); n.seg = seg; return n; }
-function plNew() { const nut = PL_NUT0(), S = plSug(200 / 24); if (S) { nut.gph = S.g; nut.mlph = S.ml; nut.naph = S.na; } return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, mspeed: '', ctl: [], nut, safe: Object.assign(plSafeFix(null), plSafeProfile()) } }; }
-function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, mspeed: e.mspeed == null ? '' : e.mspeed, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop, speed: c.speed == null ? '' : c.speed, reg: c.reg || null })), nut: plNutFix(e.nut), safe: plSafeFix(e.safe) }, res: e.result || null }; }
+function plNew() { const nut = PL_NUT0(), S = plSug(200 / 24); if (S) { nut.gph = S.g; nut.mlph = S.ml; nut.naph = S.na; } return { id: null, d: { name: '', date: off(30), start: '06:00', kind: 'brevet', km: 200, speed: 24, stop: 10, track: null, ctl: [], nut, safe: Object.assign(plSafeFix(null), plSafeProfile()) } }; }
+function plFromEv(e) { return { id: e.id, d: { name: e.name || '', date: e.date || off(30), start: e.start || '06:00', kind: e.kind === 'otro' ? 'otro' : 'brevet', km: e.km || '', speed: e.speed || 24, stop: e.stop != null ? e.stop : 10, track: e.track || null, ctl: (e.ctl || []).map((c) => ({ km: c.km, name: c.name || '', stop: c.stop == null ? '' : c.stop, reg: c.reg || null })), nut: plNutFix(e.nut), safe: plSafeFix(e.safe) } }; }
 function plEvName(e) { return e.name || 'Evento'; }
 function viewPlanificar() {
   if (!plannerOn()) return '<div class="inner"><div class="stack">' + head('Función no disponible', 'Planificar') + '<section class="card"><p class="soft">Esta función no está habilitada en tu cuenta. Si te interesa, pídesela a tu coach.</p></section></div></div>';
@@ -241,12 +240,11 @@ function viewPlanificar() {
   const evs = (ST.myEvents || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date))), today = off(0);
   let out = '<div class="inner"><div class="stack">' + head('Organiza tu próximo reto', 'Planificar') + msgBanner();
   if (LV) out += '<section class="card col g8" aria-label="Evento en curso"><div class="eyebrow">' + (LV.mode === 'fin' ? 'Evento terminado' : 'Evento en curso') + '</div><p class="soft">' + esc(LV.ev.name) + '</p><button type="button" class="btn primary" data-a="lvOpen"><span>' + (LV.mode === 'fin' ? 'Ver resumen' : 'Continuar') + '</span>' + ph('arrow-right', 22) + '</button></section>';
-  if (!LV) evs.filter((e) => e.liveBak && e.liveAt && Date.now() - e.liveAt < 7 * 86400000).forEach((e) => { out += '<section class="card col g8" aria-label="Registro en vivo recuperable" style="border:2px solid var(--warn)"><div class="eyebrow">Registro en vivo guardado</div><p class="soft">' + esc(plEvName(e)) + ': hay un registro en vivo con copia del ' + esc(new Date(e.liveAt).toLocaleString('es-CL', { weekday: 'short', hour: '2-digit', minute: '2-digit' })) + '. Si cambiaste de teléfono o se borró la app, recupéralo para seguir.</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvRestore" data-v="' + esc(e.id) + '" style="width:auto;padding:0 18px"><span>Recuperar registro</span></button><button type="button" class="chip" data-a="lvBakDrop" data-v="' + esc(e.id) + '">Descartar copia</button></div></section>'; });
   if (!evs.length) out += '<section class="card col g12" aria-label="Sin eventos"><div class="eyebrow">Tus eventos</div><p class="soft">Crea un evento, carga su recorrido y calcula horarios y controles antes de salir. Sirve para un brevet o para cualquier salida larga.</p></section>';
   else {
     out += '<section class="card" aria-label="Tus eventos" style="padding-bottom:8px"><div class="eyebrow" style="margin-bottom:6px">Tus eventos</div>' + evs.map((e) => {
       const dd = e.date >= today ? diffDays(today, e.date) : -1, when = dd < 0 ? 'ya pasó' : (dd === 0 ? 'hoy' : 'en ' + dd + (dd === 1 ? ' día' : ' días')), dt = parse(e.date);
-      return '<button type="button" class="mrow" data-a="plOpen" data-v="' + esc(e.id) + '" style="width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);min-height:64px"><span class="col grow g4" style="min-width:0"><span style="font-weight:600;font-size:16px">' + esc(plEvName(e)) + '</span><span class="muted" style="font-size:13px">' + cap(WD[dt.getDay()]) + ' ' + dt.getDate() + ' ' + FC_MES[dt.getMonth()] + ' · ' + when + '</span><span class="muted" style="font-size:13px">' + (e.kind === 'brevet' ? 'Brevet ' : '') + (e.km ? String(e.km).replace('.', ',') + ' km' : '') + (e.track ? ' · con recorrido' : '') + ((e.ctl || []).length ? ' · ' + e.ctl.length + (e.ctl.length === 1 ? ' control' : ' controles') : '') + '</span>' + (e.result && e.result.start && e.result.end ? '<span style="font-size:13px;font-weight:600">' + (e.result.done ? 'Terminado' : 'Incompleto') + ' · ' + plDur((e.result.end - e.result.start) / 60000) + (e.result.km ? ' · ' + String(e.result.km).replace('.', ',') + ' km' : '') + '</span>' : '') + '</span>' + ph('caret-right', 20, 'var(--muted)') + '</button>';
+      return '<button type="button" class="mrow" data-a="plOpen" data-v="' + esc(e.id) + '" style="width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);min-height:64px"><span class="col grow g4" style="min-width:0"><span style="font-weight:600;font-size:16px">' + esc(plEvName(e)) + '</span><span class="muted" style="font-size:13px">' + cap(WD[dt.getDay()]) + ' ' + dt.getDate() + ' ' + FC_MES[dt.getMonth()] + ' · ' + when + '</span><span class="muted" style="font-size:13px">' + (e.kind === 'brevet' ? 'Brevet ' : '') + (e.km ? String(e.km).replace('.', ',') + ' km' : '') + (e.track ? ' · con recorrido' : '') + ((e.ctl || []).length ? ' · ' + e.ctl.length + (e.ctl.length === 1 ? ' control' : ' controles') : '') + '</span></span>' + ph('caret-right', 20, 'var(--muted)') + '</button>';
     }).join('') + '</section>';
   }
   out += '<button type="button" class="btn primary" data-a="plNew"><span>Nuevo evento</span>' + ph('arrow-right', 22) + '</button></div></div>';
@@ -271,19 +269,19 @@ function plEditHtml(P) {
   } else out += '<p class="soft" style="font-size:14px">Carga el archivo GPX del recorrido para ver el mapa, la distancia y el desnivel. Lo descargas desde Garmin Connect, RideWithGPS o Strava (en una ruta o actividad, opción exportar GPX).</p><label class="btn primary" for="pl-file" style="cursor:pointer;justify-content:center"><span>Cargar archivo GPX</span></label>';
   out += '<input id="pl-file" data-pl="file" type="file" accept=".gpx,application/gpx+xml,text/xml,application/xml" style="position:absolute;left:-9999px;width:1px;height:1px" aria-label="Archivo GPX"><p class="muted" style="font-size:12px">El archivo se procesa en tu teléfono y solo se guarda un trazo simplificado.</p></section>';
   out += '<section class="card col g12" aria-label="Controles"><div class="eyebrow">' + (brv ? 'Controles' : 'Paradas') + '</div><p class="soft" style="font-size:13px">' + (brv ? 'Escribe el kilómetro de cada control intermedio. La meta se agrega sola.' : 'Escribe el kilómetro de cada parada planificada.') + '</p>';
+  const lockCtl = !!(LV && P.id && LV.ev && LV.ev.id === P.id);
   (d.ctl || []).forEach((c, i) => {
     const regDt = c.reg ? new Date(c.reg) : null, regHm = regDt ? pad(regDt.getHours()) + ':' + pad(regDt.getMinutes()) : '';
     const ctlLabel = c.name || ('control ' + (i + 1));
     const regBtn = regDt
-      ? '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" aria-pressed="true" style="width:100%;justify-content:center;padding:0 6px" aria-label="Quitar el registro de paso por ' + esc(ctlLabel) + ', registrado a las ' + regHm + '">' + regHm + '</button>'
-      : '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" style="width:100%;justify-content:center;padding:0 6px" aria-label="Registrar que acabas de pasar por ' + esc(ctlLabel) + '">Reg PC</button>';
-    out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4" style="width:84px;flex:none">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '" style="width:84px"></div><div class="col g4" style="width:92px;flex:none"><span class="muted" style="font-size:13px">Paso</span>' + regBtn + '</div></div><div class="col g4">' + lab('plc-v' + i, 'Velocidad del tramo hasta este control (km/h, opcional)') + '<input class="field" id="plc-v' + i + '" data-pl="cv" data-i="' + i + '" type="number" inputmode="decimal" min="5" max="60" value="' + esc(c.speed) + '" placeholder="' + esc(d.speed) + '"></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '"><button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button></div></div>';
+      ? '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" aria-pressed="true"' + (lockCtl ? ' disabled' : '') + ' style="width:100%;justify-content:center;padding:0 6px" aria-label="Quitar el registro de paso por ' + esc(ctlLabel) + ', registrado a las ' + regHm + '">' + regHm + '</button>'
+      : '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" style="width:100%;justify-content:center;padding:0 6px" aria-label="Registrar que acabas de pasar por ' + esc(ctlLabel) + '">Registrar</button>';
+    out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4" style="width:84px;flex:none">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '" style="width:84px"></div><div class="col g4" style="width:92px;flex:none"><span class="muted" style="font-size:13px">Paso</span>' + regBtn + '</div></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '">' + (lockCtl ? '' : '<button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button>') + '</div></div>';
   });
   out += '<button type="button" class="chip" data-a="plCtlAdd" style="align-self:flex-start;border-color:var(--accent);color:var(--accent);font-weight:600">Agregar ' + (brv ? 'control' : 'parada') + '</button></section>';
-  out += '<section class="card col g12" aria-label="Tu ritmo"><div class="eyebrow">Tu ritmo</div><div class="row g8"><div class="col g8 grow">' + lab('pl-speed', 'Velocidad media (km/h)') + '<input class="field" id="pl-speed" data-pl="speed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.speed) + '"></div><div class="col g8 grow">' + lab('pl-stop', 'Parada típica (min)') + '<input class="field" id="pl-stop" data-pl="stop" type="number" inputmode="numeric" min="0" max="600" value="' + esc(d.stop) + '"></div></div><div class="col g8">' + lab('pl-mspeed', 'Velocidad del último tramo a la meta (km/h, opcional)') + '<input class="field" id="pl-mspeed" data-pl="mspeed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.mspeed) + '" placeholder="' + esc(d.speed) + '"></div><p class="muted" style="font-size:12px">La velocidad es en movimiento, sin contar las paradas. Si un tramo es más duro (más desnivel), ponle su propia velocidad en el control donde termina; los demás usan la general.</p></section>';
+  out += '<section class="card col g12" aria-label="Tu ritmo"><div class="eyebrow">Tu ritmo</div><div class="row g8"><div class="col g8 grow">' + lab('pl-speed', 'Velocidad media (km/h)') + '<input class="field" id="pl-speed" data-pl="speed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.speed) + '"></div><div class="col g8 grow">' + lab('pl-stop', 'Parada típica (min)') + '<input class="field" id="pl-stop" data-pl="stop" type="number" inputmode="numeric" min="0" max="600" value="' + esc(d.stop) + '"></div></div><p class="muted" style="font-size:12px">La velocidad es en movimiento, sin contar las paradas.</p></section>';
   out += '<section class="card col g12" aria-label="Nutrición e hidratación"><div class="eyebrow">Nutrición e hidratación</div><div id="pl-nut" class="col g12">' + plNutBox(d) + '</div><p class="muted" style="font-size:12px">Son valores de partida: ajústalos a lo que te funciona y a lo que acuerdes con tu nutricionista. Se calculan sobre el tiempo en movimiento.</p></section>';
   out += '<section class="card col g8" aria-label="Horarios"><div class="eyebrow">' + (brv ? 'Horarios y ventanas de control' : 'Horarios estimados') + '</div><div id="pl-res">' + plResHtml(d) + '</div></section>';
-  if (P.id && P.res && P.res.controls && P.res.controls.length) out += plRealHtml(d, P.res);
   out += '<section class="card col g12" aria-label="Hoja de seguridad"><div class="eyebrow">Hoja de seguridad</div><p class="soft" style="font-size:13px">Opcional. Deja a tu gente informada: cómo seguirte, a quién llamar y desde qué hora preocuparse.</p><div id="pl-safe" class="col g12">' + plSafeBox(d) + '</div></section>';
   out += '<button type="button" class="btn primary" data-a="plSave"' + (UI.busy ? ' disabled' : '') + '><span>Guardar evento</span>' + ph('check', 22) + '</button>';
   if (P.id) out += '<button type="button" class="btn" data-a="lvStart" data-v="' + esc(P.id) + '"><span>Iniciar evento<small style="display:block;font-size:13px;font-weight:500;color:var(--muted)">Sigue tu avance en vivo. Usa la versión guardada.</small></span>' + ph('arrow-right', 22) + '</button>';
@@ -291,32 +289,14 @@ function plEditHtml(P) {
   if (P.id) out += P.del ? '<div class="row g8 wrap"><button type="button" class="chip" data-a="plDelYes" style="border-color:var(--warn);font-weight:700">Sí, eliminar este evento</button><button type="button" class="chip" data-a="plDelNo">No, conservarlo</button></div>' : '<button type="button" class="btn ghost" data-a="plDel">Eliminar evento</button>';
   return out + '</div></div>';
 }
-/* v2: tramos reales de un resultado guardado: minutos en movimiento = llegada − salida del control anterior (o su parada planificada si no hay salida registrada). */
-function plLegs(d, res) {
-  const cs = d.ctl || [], def = Number(d.stop) || 0, rows = (plCalc(d) || { rows: [] }).rows; let pk = 0, leave = 0; const out = [];
-  (res && res.controls || []).forEach((x) => {
-    const dist = Number(x.km) - pk, mov = Number(x.arr) - leave, plan = rows.find((r) => Number(r.km) === Number(x.km));
-    const sp = dist > 0 && mov >= 10 ? Math.round(dist / (mov / 60) * 10) / 10 : null;
-    out.push({ n: x.n, km: Number(x.km), dist, mov, real: sp && sp >= 5 && sp <= 60 ? sp : null, plan: plan ? plan.v : null, meta: Number(x.km) >= Number(d.km) });
-    const c = cs.find((q) => Number(q.km) === Number(x.km)), ps = c && c.stop !== '' && c.stop != null ? Number(c.stop) : def;
-    leave = x.dep != null ? Number(x.dep) : Number(x.arr) + ps; pk = Number(x.km);
-  });
-  return out;
-}
-function plRealHtml(d, res) {
-  const L = plLegs(d, res); if (!L.length) return '';
-  return '<section class="card col g8" aria-label="Resultado real"><div class="eyebrow">Resultado real por tramo</div><p class="soft" style="font-size:13px">Velocidad real = km del tramo ÷ tiempo desde que saliste del control anterior hasta llegar. Incluye detenciones fuera de los controles.</p>'
-    + L.map((x) => '<div class="mrow"><div class="col grow g4" style="min-width:0"><span style="font-weight:600">' + esc(x.meta ? 'Meta' : (x.n || 'Control')) + ' · km ' + String(x.km).replace('.', ',') + '</span><span class="muted" style="font-size:13px">' + lvKm1(x.dist) + ' km en ' + plDur(x.mov) + '</span></div><span class="muted" style="font-size:13px;text-align:right">' + (x.real ? lvKm1(x.real) + ' km/h' : '—') + (x.plan ? '<br>plan ' + lvKm1(x.plan) + '</span>' : '</span>') + '</div>').join('')
-    + '<button type="button" class="btn" data-a="plClone" style="justify-content:center"><span>Crear un evento nuevo con mi ritmo real por tramo</span></button><p class="muted" style="font-size:12px">Copia el evento con otra fecha y pone como velocidad de cada tramo la que hiciste. Revísalo antes de guardar.</p></section>';
-}
 function plInput(t) {
   const P = UI.pl, k = t.dataset && t.dataset.pl; if (!P || !k) return false; const d = P.d, v = t.value;
   if (k === 'file') return true;
   if (k === 'sl' || k === 'sn' || k === 'sp' || k === 'su' || k === 'dk') { d.safe = plSafeFix(d.safe); if (k === 'sl') d.safe.link = v.trim(); else if (k === 'sn') d.safe.name = v; else if (k === 'sp') d.safe.phone = v; else if (k === 'su') d.safe.until = v; else { const r = d.safe.dead[+t.dataset.i]; if (r) r[t.dataset.w] = v; } plSafeRefresh(); return true; }
   if (k === 'name') { d.name = v; const h = document.querySelector('h1.title'); if (h) h.textContent = v || 'Evento'; return true; }
   if (k === 'ng' || k === 'nm' || k === 'nn' || k === 'np') { d.nut = plNutFix(d.nut); if (k === 'np') d.nut.prods[t.dataset.k].g = plNum(v, d.nut.prods[t.dataset.k].g, 1, 200); else { const f = { ng: 'gph', nm: 'mlph', nn: 'naph' }[k]; d.nut[f] = plNum(v, d.nut[f], 0, f === 'gph' ? 200 : 2000); } }
-  else if (k === 'date' || k === 'start' || k === 'km' || k === 'speed' || k === 'stop' || k === 'mspeed') d[k] = v;
-  else { const c = d.ctl[+t.dataset.i]; if (!c) return true; if (k === 'ck') c.km = v; else if (k === 'cs') c.stop = v; else if (k === 'cn') c.name = v; else if (k === 'cv') c.speed = v; }
+  else if (k === 'date' || k === 'start' || k === 'km' || k === 'speed' || k === 'stop') d[k] = v;
+  else { const c = d.ctl[+t.dataset.i]; if (!c) return true; if (k === 'ck') c.km = v; else if (k === 'cs') c.stop = v; else if (k === 'cn') c.name = v; }
   const r = document.getElementById('pl-res'); if (r) r.innerHTML = plResHtml(d);
   const nb = document.getElementById('pl-nut'); if (nb) { if (nb.contains(t)) { const nr = document.getElementById('pl-nutres'); if (nr) nr.innerHTML = plNutResHtml(d); const pp = document.getElementById('pl-prof'); if (pp) pp.innerHTML = plProfBox(d); } else nb.innerHTML = plNutBox(d); }
   return true;
@@ -327,8 +307,7 @@ function plValid(d) {
   if (!/^\d{2}:\d{2}$/.test(d.start || '')) return 'Indica la hora de salida.';
   const km = Number(d.km); if (!(km > 0 && km <= 2000)) return 'Indica la distancia del evento.';
   const v = Number(d.speed); if (!(v >= 5 && v <= 60)) return 'La velocidad media debe estar entre 5 y 60 km/h.';
-  for (const c of d.ctl || []) { const k = Number(c.km); if (!(k > 0 && k < km)) return 'Cada control debe estar entre 0 y ' + km + ' km.'; if (c.stop !== '' && c.stop != null && !(Number(c.stop) >= 0 && Number(c.stop) <= 600)) return 'Las paradas van de 0 a 600 minutos.'; if (c.speed !== '' && c.speed != null && !(Number(c.speed) >= 5 && Number(c.speed) <= 60)) return 'La velocidad de cada tramo debe estar entre 5 y 60 km/h.'; }
-  if (d.mspeed !== '' && d.mspeed != null && !(Number(d.mspeed) >= 5 && Number(d.mspeed) <= 60)) return 'La velocidad del último tramo debe estar entre 5 y 60 km/h.';
+  for (const c of d.ctl || []) { const k = Number(c.km); if (!(k > 0 && k < km)) return 'Cada control debe estar entre 0 y ' + km + ' km.'; if (c.stop !== '' && c.stop != null && !(Number(c.stop) >= 0 && Number(c.stop) <= 600)) return 'Las paradas van de 0 a 600 minutos.'; }
   const sf = plSafeFix(d.safe); if (sf.link && !/^https:\/\/[^\s]+$/i.test(sf.link)) return 'El enlace de seguimiento debe empezar con https://';
   for (const r of sf.dead) { if (r.a === '' && r.b === '') continue; if (!(Number(r.a) >= 0 && Number(r.b) > Number(r.a) && Number(r.b) <= km)) return 'Cada tramo sin señal debe ir desde un km menor a uno mayor, dentro de ' + km + ' km.'; }
   return '';
@@ -343,24 +322,17 @@ Object.assign(ACT, {
   plClose() { UI.pl = null; render(); },
   plKind(v) { const d = UI.pl.d; if (d.kind === v) return; d.kind = v; if (v === 'brevet' && PL_BRV.indexOf(Number(d.km)) < 0) d.km = 200; render(); },
   plBrv(v) { UI.pl.d.km = Number(v); render(); },
-  plCtlAdd() { UI.pl.d.ctl.push({ km: '', name: '', stop: '', speed: '', reg: null }); render(); },
-  plCtlDel(v) { UI.pl.d.ctl.splice(+v, 1); render(); },
-  plCtlReg(v) { const c = UI.pl.d.ctl[+v]; if (!c) return; c.reg = c.reg ? null : Date.now(); render(); },
+  plCtlAdd() { UI.pl.d.ctl.push({ km: '', name: '', stop: '', reg: null }); render(); },
+  plCtlDel(v) { if (plCtlLocked()) { say('El evento está en curso: ya no se pueden quitar controles.'); return; } UI.pl.d.ctl.splice(+v, 1); render(); },
+  plCtlReg(v) { const c = UI.pl.d.ctl[+v]; if (!c) return; if (c.reg && plCtlLocked()) { say('El evento está en curso: el registro del paso no se puede quitar.'); return; } c.reg = c.reg ? null : Date.now(); render(); },
   plNoTrack() { UI.pl.d.track = null; render(); },
-  plClone() {
-    const P = UI.pl; if (!P || !P.res) return; const d = P.d, L = plLegs(d, P.res), nd = JSON.parse(JSON.stringify(d));
-    nd.name = String(d.name || 'Evento').slice(0, 70) + ' (nuevo)'; nd.date = off(30);
-    nd.ctl = (nd.ctl || []).map((c) => { const l = L.find((x) => !x.meta && x.km === Number(c.km)); return Object.assign({}, c, { reg: null, speed: l && l.real ? l.real : c.speed }); });
-    const lm = L.find((x) => x.meta); nd.mspeed = lm && lm.real ? lm.real : nd.mspeed;
-    UI.pl = { id: null, d: nd, res: null }; say('Evento nuevo con tu ritmo real por tramo. Cambia la fecha y revisa antes de guardar.', 'ok'); window.scrollTo(0, 0);
-  },
   plDel() { UI.pl.del = true; render(); },
   plDelNo() { UI.pl.del = false; render(); },
   async plDelYes() { const P = UI.pl; if (!P || !P.id || !ST.user) return; UI.busy = true; try { await be.deleteEvent(ST.user.uid, P.id); UI.pl = null; say('Evento eliminado.', 'ok'); } catch (e) { say(friendly(e)); } UI.busy = false; render(); },
   async plSave() {
     const P = UI.pl; if (!P || !ST.user || UI.busy) return; const d = P.d, er = plValid(d); if (er) { say(er); return; }
-    const ctl = (d.ctl || []).filter((c) => Number(c.km) > 0).map((c) => ({ km: Number(c.km), name: String(c.name || '').slice(0, 40), stop: c.stop === '' || c.stop == null ? null : Number(c.stop), speed: c.speed === '' || c.speed == null ? null : Number(c.speed), reg: c.reg || null })).sort((a, b) => a.km - b.km);
-    const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), mspeed: d.mspeed === '' || d.mspeed == null ? null : Number(d.mspeed), stop: Number(d.stop) || 0, track: d.track || null, ctl, nut: plNutSave(d), safe: plSafeSave(d), updatedAt: Date.now() };
+    const ctl = (d.ctl || []).filter((c) => Number(c.km) > 0).map((c) => ({ km: Number(c.km), name: String(c.name || '').slice(0, 40), stop: c.stop === '' || c.stop == null ? null : Number(c.stop), reg: c.reg || null })).sort((a, b) => a.km - b.km);
+    const data = { name: String(d.name).trim().slice(0, 80), date: d.date, start: d.start, kind: d.kind, km: Number(d.km), speed: Number(d.speed), stop: Number(d.stop) || 0, track: d.track || null, ctl, nut: plNutSave(d), safe: plSafeSave(d), updatedAt: Date.now() };
     const old = (ST.myEvents || []).find((x) => x.id === P.id); if (old && old.result) data.result = old.result;
     UI.busy = true; render();
     try { await be.saveEvent(ST.user.uid, P.id || ('e' + Date.now().toString(36)), data); UI.pl = null; say('Evento guardado.', 'ok'); } catch (e) { say(friendly(e)); }
@@ -382,20 +354,7 @@ document.addEventListener('change', (e) => { const t = e.target; if (t && t.data
 var LV = null;
 const lvKey = () => 'camino-live-v1-' + (ST.user ? ST.user.uid : '');
 const lvLoad = () => { try { const r = JSON.parse(localStorage.getItem(lvKey()) || 'null'); if (r && r.ev) { r.confirmEnd = 0; r.gpsBusy = false; return r; } return null; } catch (e) { return null; } };
-const lvSave = () => { try { if (LV) localStorage.setItem(lvKey(), JSON.stringify(LV)); else localStorage.removeItem(lvKey()); } catch (e) { /* sin almacenamiento */ } lvBackupSoon(); };
-/* v2: copia del registro en vivo en el evento (liveBak). Cada 20 s como mucho y solo si cambió; sin señal, Firestore la envía al volver. */
-let bakT = null, bakLast = '';
-function lvBakData() { if (!LV || !LV.start) return null; return JSON.stringify({ v: 1, mode: LV.mode, start: LV.start, idx: LV.idx, depMs: LV.depMs, depKm: LV.depKm, lastKm: LV.lastKm, lastKmAt: LV.lastKmAt, arrMs: LV.arrMs || null, end: LV.end || null, log: LV.log, rec: LV.rec || [], msg: LV.msg || '', fin: LV.fin || null }); }
-function lvBackupSoon() {
-  if (!LV || !LV.start || !ST.user || bakT) return;
-  bakT = setTimeout(() => { bakT = null; if (!LV || !ST.user || !(ST.myEvents || []).some((x) => x.id === LV.ev.id)) return; const s = lvBakData(); if (!s || s === bakLast) return; bakLast = s; be.mergeEvent(ST.user.uid, LV.ev.id, { liveBak: s, liveAt: Date.now() }).catch(() => { bakLast = ''; }); }, 20000);
-}
-function lvClearBak(id) { bakLast = ''; if (ST.user && id && (ST.myEvents || []).some((x) => x.id === id)) be.mergeEvent(ST.user.uid, id, { liveBak: null, liveAt: null }).catch(() => { /* se reintenta al cerrar */ }); }
-function lvFromBak(e) {
-  try { const b = JSON.parse(e.liveBak); if (!b || !b.start || !Array.isArray(b.log)) return null;
-    return { ev: { id: e.id, name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, mspeed: e.mspeed || null, stop: e.stop, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null, safe: e.safe || null }, mode: b.mode, start: b.start, idx: b.idx, depMs: b.depMs, depKm: b.depKm, lastKm: b.lastKm, lastKmAt: b.lastKmAt, arrMs: b.arrMs, end: b.end, log: b.log, rec: b.rec || [], msg: b.msg || '', posMsg: '', fin: b.fin || undefined };
-  } catch (er) { return null; }
-}
+const lvSave = () => { try { if (LV) localStorage.setItem(lvKey(), JSON.stringify(LV)); else localStorage.removeItem(lvKey()); } catch (e) { /* sin almacenamiento */ } };
 const lvClock = (ms) => { const d = new Date(ms), s = new Date(LV && LV.start ? LV.start : ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + (ymd(d) !== ymd(s) ? ' (+' + Math.max(1, Math.round((parse(ymd(d)) - parse(ymd(s))) / 86400000)) + ' d)' : ''); };
 const lvHMS = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)); return Math.floor(t / 3600) + ':' + pad(Math.floor(t % 3600 / 60)) + ':' + pad(t % 60); };
 const lvKm1 = (x) => (Math.round(x * 10) / 10).toFixed(1).replace('.', ',');
@@ -417,31 +376,16 @@ function lvProject(tr, lat, lon, kmFrom, maxAdv) {
   }
   return best;
 }
-function lvPlanAt(c, v, km) { let prev = { km: 0, dep: 0 }; for (const r of c.rows) { if (km <= r.km) return prev.dep + (km - prev.km) / (r.v || v) * 60; prev = { km: r.km, dep: r.rec + r.stop }; } return prev.dep; }
-/* v2: minutos en movimiento que el plan prevé hasta un km. */
-function lvPlanMov(c, km) { let s = 0, prev = 0; for (const r of c.rows) { if (km <= r.km) return s + (km - prev) / r.v * 60; s += (r.km - prev) / r.v * 60; prev = r.km; } return s; }
+function lvPlanAt(c, v, km) { let prev = { km: 0, dep: 0 }; for (const r of c.rows) { if (km <= r.km) return prev.dep + (km - prev.km) / v * 60; prev = { km: r.km, dep: r.rec + r.stop }; } return prev.dep; }
 function lvPaused(a, b) { let s = 0; (LV.rec || []).forEach((e) => { if (e.type !== 'detencion') return; s += Math.max(0, Math.min(e.end || Date.now(), b) - Math.max(e.start, a)); }); return s; }
 function lvAna() {
   const c = plCalc(plFromEv(LV.ev).d), r = c.rows[LV.idx], v = Number(LV.ev.speed), brv = LV.ev.kind === 'brevet';
   const at = LV.lastKmAt || LV.depMs, km = Math.max(LV.lastKm, LV.depKm), segKm = km - LV.depKm, rem = Math.max(0, r.km - km), mov = (at - LV.depMs) - lvPaused(LV.depMs, at);
   const avg = segKm >= 1 && mov >= 300000 ? segKm / (mov / 3600000) : null;
-  let etaMs = at + rem / (avg || r.v || v) * 3600000, wait = false; if (brv) { const op = LV.start + r.w.open * 60000; if (etaMs < op) { etaMs = op; wait = true; } }
+  let etaMs = at + rem / (avg || v) * 3600000, wait = false; if (brv) { const op = LV.start + r.w.open * 60000; if (etaMs < op) { etaMs = op; wait = true; } }
   const delay = (at - LV.start) / 60000 - lvPlanAt(c, v, km), marg = brv ? r.w.close - (etaMs - LV.start) / 60000 : null;
   const stopsMs = LV.log.reduce((s, x) => s + Math.max(0, (x.dep || at) - x.arr), 0), movAll = (at - LV.start) - stopsMs - lvPaused(LV.start, at), avgAll = km >= 1 && movAll >= 300000 ? km / (movAll / 3600000) : null;
-  /* v2: proyección a meta. (1) con el atraso actual constante; (2) con tu ritmo real frente al del plan. */
-  const mr = c.rows[c.rows.length - 1], projEnd = mr.rec + delay, projMarg = brv ? mr.w.close - projEnd : null;
-  let projPaceEnd = null, projPaceMarg = null; const pm = lvPlanMov(c, km), movAllMin = movAll / 60000;
-  if (avgAll && pm > 30 && movAllMin > 30) { const ratio = Math.max(0.5, Math.min(1.5, pm / movAllMin)), stopsLeft = c.rows.reduce((s, x, i) => s + (x.meta || i < LV.idx + (LV.mode === 'stop' ? 1 : 0) ? 0 : x.stop), 0); projPaceEnd = (at - LV.start) / 60000 + (c.moving - pm) / ratio + stopsLeft; projPaceMarg = brv ? mr.w.close - projPaceEnd : null; }
-  return { c, r, v, brv, km, rem, avg, avgAll, etaMs, wait, delay, marg, at, projEnd, projMarg, projPaceEnd, projPaceMarg };
-}
-const lvMarg = (m) => (m < 0 ? '-' : '') + plDur(Math.abs(m));
-/* v2: barra de ruta: controles como marcas y un punto con el avance. */
-function lvRail(a) {
-  const tot = Number(LV.ev.km) || 1, pct = (k) => Math.max(0, Math.min(100, k / tot * 100)).toFixed(1);
-  const ticks = a.c.rows.filter((x) => !x.meta).map((x) => '<i style="position:absolute;left:' + pct(x.km) + '%;top:-3px;width:2px;height:12px;background:' + (x.km <= a.km ? 'var(--accent)' : 'var(--line)') + '"></i>').join('');
-  return '<section class="card col g8" aria-label="Avance en la ruta"><div class="row between"><span class="num" style="font-size:22px">' + lvKm1(a.km) + ' <small class="muted" style="font-size:13px">/ ' + String(tot).replace('.', ',') + ' km</small></span><span class="muted" style="font-size:13px">' + Math.round(a.km / tot * 100) + ' %</span></div>'
-    + '<div role="img" aria-label="Avance: ' + lvKm1(a.km) + ' de ' + tot + ' kilómetros" style="position:relative;height:6px;border-radius:4px;background:var(--line);margin:8px 7px"><div style="position:absolute;left:0;top:0;bottom:0;width:' + pct(a.km) + '%;border-radius:4px;background:var(--accent)"></div>' + ticks + '<b style="position:absolute;left:' + pct(a.km) + '%;top:-4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--accent);border:3px solid var(--surface)"></b></div>'
-    + '<span class="muted" style="font-size:12px">Faltan ' + lvKm1(a.rem) + ' km al próximo control · ' + lvKm1(Math.max(0, tot - a.km)) + ' km a la meta</span></section>';
+  return { c, r, v, brv, km, rem, avg, avgAll, etaMs, wait, delay, marg, at };
 }
 function lvStatus(a) {
   const d = a.delay; let lv = 'ok', t, ch;
@@ -519,10 +463,10 @@ function liveHtml() {
   }
   const a = lvAna(), r = a.r, rn = r.meta ? 'Meta' : (r.n || 'Control'), tot = Date.now() - LV.start;
   if (LV.mode === 'stop') {
-    const lg = LV.log[LV.log.length - 1], st = lg.delay >= 3 ? lvMinTxt(lg.delay) + ' atrasado' : lg.delay <= -3 ? lvMinTxt(lg.delay) + ' adelantado' : 'en horario', nx = a.c.rows[LV.idx + 1] || a.r;
+    const lg = LV.log[LV.log.length - 1], st = lg.delay >= 3 ? lvMinTxt(lg.delay) + ' atrasado' : lg.delay <= -3 ? lvMinTxt(lg.delay) + ' adelantado' : 'en horario', nx = a.r;
     out += lvStatCard('Llegada registrada', esc(lg.name), 'Llegaste a las ' + lvClock(lg.arr) + ' · ' + st, '', lg.delay >= 3)
       + lvStatCard('Detenido en este control', '<span id="lv-stop">' + lvHMS(Date.now() - LV.arrMs) + '</span>', 'Parada planificada: ' + (lg.stopPlan || 0) + ' min', '', false)
-      + '<div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + lvTile('Tiempo del tramo', plDur(lg.moveMs / 60000)) + lvTile('Ritmo del tramo', lvKm1(lg.speed || 0) + ' km/h') + (a.brv ? lvTile('Margen al cierre', (lg.margClose < 0 ? '-' : '') + plDur(Math.abs(lg.margClose))) : '') + lvTile('Tiempo total', '<span id="lv-tot">' + lvHMS(tot) + '</span>') + (a.brv ? lvTile('Margen a meta (plan + atraso)', lvMarg(a.projMarg)) + lvTile('Margen a meta (ritmo real)', a.projPaceMarg == null ? '—' : lvMarg(a.projPaceMarg)) : '') + '</div>'
+      + '<div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + lvTile('Tiempo del tramo', plDur(lg.moveMs / 60000)) + lvTile('Ritmo del tramo', lvKm1(lg.speed || 0) + ' km/h') + (a.brv ? lvTile('Margen al cierre', (lg.margClose < 0 ? '-' : '') + plDur(Math.abs(lg.margClose))) : '') + lvTile('Tiempo total', '<span id="lv-tot">' + lvHMS(tot) + '</span>') + '</div>'
       + '<section class="card col g4"><div class="eyebrow">Tramo que viene</div><p class="soft">' + esc(nx.meta ? 'Meta' : (nx.n || 'Control')) + ' · km ' + String(nx.km).replace('.', ',') + ' · ' + lvKm1(nx.km - lg.km) + ' km</p>' + (a.brv ? '<p class="muted" style="font-size:13px">Abre ' + lvClock(LV.start + nx.w.open * 60000) + ' · cierra ' + lvClock(LV.start + nx.w.close * 60000) + '</p>' : '') + '</section>'
       + (() => { const nu2 = plNutCalc(plFromEv(ev).d), nt2 = nu2 && nu2.rows[LV.idx + 1]; return nt2 ? '<section class="card col g4"><div class="eyebrow">Nutrición del tramo que viene</div><p style="font-size:16px;font-weight:600">' + nt2.g + ' g carbohidratos · ' + plL(nt2.ml) + ' · ' + nt2.na.toLocaleString('es-CL') + ' mg sodio</p><p class="muted" style="font-size:12px">Aprovecha esta parada para reabastecer agua y comer algo sólido.</p></section>' : ''; })()
       + '<button type="button" class="btn primary" data-a="lvDepart"><span>Marcar salida de este control</span>' + ph('arrow-right', 22) + '</button><p class="muted" style="font-size:13px">Toca esto cuando retomes la bicicleta: desde ahí se mide el tramo siguiente.</p><button type="button" class="btn ghost" data-a="lvUndo">Deshacer esta llegada</button>';
@@ -530,13 +474,12 @@ function liveHtml() {
   }
   const st = lvStatus(a), age = Math.round((Date.now() - (LV.lastKmAt || LV.depMs)) / 60000), openD = (LV.rec || []).find((e) => e.type === 'detencion' && !e.end);
   out += lvStatCard(st.ch, st.t, LV.lastKmAt && LV.lastKm > LV.depKm ? 'Según tu posición de hace <span id="lv-age">' + age + '</span> min' : 'Dime dónde estás para calcular tu avance', '', st.lv === 'warn');
-  out += lvRail(a);
   if (openD) out += '<section class="card col g8" style="text-align:center"><div class="eyebrow">Detención en curso</div><div class="num" id="lv-det" style="font-size:34px">' + lvHMS(Date.now() - openD.start) + '</div><button type="button" class="btn" data-a="lvEvEnd" style="justify-content:center"><span>Finalizar detención</span></button></section>';
   out += '<section class="card col g12"><div class="eyebrow">Próximo control: ' + esc(rn) + ' · km ' + String(r.km).replace('.', ',') + '</div><button type="button" class="btn primary" data-a="lvGps"' + (LV.gpsBusy ? ' disabled' : '') + '><span>' + (LV.gpsBusy ? 'Buscando señal GPS…' : 'Dime dónde estoy') + '</span>' + ph('flag', 22) + '</button>'
     + '<div class="col g8"><label for="lv-km" class="muted" style="font-size:13px">O ingresa el km de tu ciclocomputador</label><div class="row g8"><input class="field" id="lv-km" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Km"><button type="button" class="chip" data-a="lvCalc">Calcular</button></div></div>'
     + (LV.posMsg ? '<p class="soft" style="font-size:13px">' + esc(LV.posMsg) + '</p>' : '') + '<button type="button" class="btn" data-a="lvArrive" style="justify-content:center"><span>Llegué a ' + esc(rn) + '</span></button><p class="muted" style="font-size:12px">Úsalo cuando estés en el control, aunque el km del GPS no coincida exactamente.</p></section>';
   out += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + lvTile('Km recorridos', lvKm1(a.km)) + lvTile('Faltan al control', lvKm1(a.rem) + ' km') + lvTile('Ritmo del tramo', a.avg ? lvKm1(a.avg) + ' km/h' : '—') + lvTile('Ritmo total', a.avgAll ? lvKm1(a.avgAll) + ' km/h' : '—')
-    + lvTile('Llegada estimada', lvClock(a.etaMs) + (a.wait ? '*' : '')) + lvTile('Programa', lvClock(LV.start + r.rec * 60000)) + (a.brv ? lvTile('Cierra', lvClock(LV.start + r.w.close * 60000)) + lvTile('Margen al cierre', (a.marg < 0 ? '-' : '') + plDur(Math.abs(a.marg))) : '') + lvTile('Tiempo total', '<span id="lv-tot">' + lvHMS(tot) + '</span>') + (a.brv ? lvTile('Margen a meta (plan + atraso)', lvMarg(a.projMarg)) + lvTile('Margen a meta (ritmo real)', a.projPaceMarg == null ? '—' : lvMarg(a.projPaceMarg)) : '') + '</div>';
+    + lvTile('Llegada estimada', lvClock(a.etaMs) + (a.wait ? '*' : '')) + lvTile('Programa', lvClock(LV.start + r.rec * 60000)) + (a.brv ? lvTile('Cierra', lvClock(LV.start + r.w.close * 60000)) + lvTile('Margen al cierre', (a.marg < 0 ? '-' : '') + plDur(Math.abs(a.marg))) : '') + lvTile('Tiempo total', '<span id="lv-tot">' + lvHMS(tot) + '</span>') + '</div>';
   if (a.wait) out += '<p class="muted" style="font-size:12px">* Llegarías antes de que abra el control: esperas hasta la apertura.</p>';
   const nu = plNutCalc(plFromEv(ev).d), nt = nu && nu.rows[LV.idx];
   if (nt) out += '<section class="card col g4"><div class="eyebrow">Nutrición de este tramo</div><p style="font-size:16px;font-weight:600">' + nt.g + ' g carbohidratos · ' + plL(nt.ml) + ' · ' + nt.na.toLocaleString('es-CL') + ' mg sodio</p>' + (nt.cnt ? '<p class="soft" style="font-size:14px">' + [nt.cnt.drink ? nt.cnt.drink + (nt.cnt.drink === 1 ? ' bidón' : ' bidones') : '', nt.cnt.gel ? nt.cnt.gel + (nt.cnt.gel === 1 ? ' gel' : ' geles') : '', nt.cnt.bar ? nt.cnt.bar + (nt.cnt.bar === 1 ? ' barra' : ' barras') : ''].filter(Boolean).join(' · ') + '</p>' : '') + '<p class="muted" style="font-size:12px">Para todo el tramo hasta ' + esc(nt.name.split(' → ')[1]) + '.</p></section>';
@@ -556,7 +499,7 @@ Object.assign(ACT, {
     if (LV && LV.ev.id !== v) { say('Ya tienes un evento en curso. Termínalo o ciérralo antes de iniciar otro.'); return; }
     if (LV) { UI.liveOpen = true; render(); return; }
     const e = (ST.myEvents || []).find((x) => x.id === v); if (!e) return; const d = plFromEv(e).d; if (!plCalc(d)) { say('Completa la distancia y tu velocidad media para iniciar.'); return; }
-    LV = { ev: { id: e.id, name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, mspeed: e.mspeed || null, stop: e.stop, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null, safe: e.safe || null }, mode: 'pre', start: null, idx: 0, depMs: null, depKm: 0, lastKm: 0, lastKmAt: null, log: [], rec: [], msg: '', posMsg: '' };
+    LV = { ev: { id: e.id, name: e.name, date: e.date, start: e.start, kind: e.kind, km: e.km, speed: e.speed, stop: e.stop, track: e.track || null, ctl: e.ctl || [], nut: e.nut || null, safe: e.safe || null }, mode: 'pre', start: null, idx: 0, depMs: null, depKm: 0, lastKm: 0, lastKmAt: null, log: [], rec: [], msg: '', posMsg: '' };
     UI.pl = null; UI.liveOpen = true; lvSave(); render(); window.scrollTo(0, 0);
   },
   lvOpen() { UI.liveOpen = true; UI.pl = null; render(); },
@@ -617,14 +560,6 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ====================================================================
    Capa propia de Camino Ruta (no viene de Camino)
    ==================================================================== */
-
-/* ---------- v2: recuperar registro en vivo ---------- */
-Object.assign(ACT, {
-  lvRestore(v) { if (LV) { say('Ya tienes un evento en curso en este teléfono.'); return; } const e = (ST.myEvents || []).find((x) => x.id === v), L = e && lvFromBak(e); if (!L) { say('No pude leer la copia de ese registro.'); return; } LV = L; UI.liveOpen = true; lvSave(); lvWake(); say('Registro recuperado.', 'ok'); window.scrollTo(0, 0); },
-  lvBakDrop(v) { lvClearBak(v); const e = (ST.myEvents || []).find((x) => x.id === v); if (e) { e.liveBak = null; e.liveAt = null; } render(); },
-  lvDrop() { const id = LV && LV.ev.id; LV = null; lvSave(); UI.liveOpen = false; if (id) lvClearBak(id); render(); },
-  lvDropEnd() { const id = LV && LV.ev.id; LV = null; lvSave(); UI.liveOpen = false; if (id) lvClearBak(id); render(); }
-});
 
 /* ---------- Cierre del evento: formulario y registro en Camino ---------- */
 const HEAT = ['Frío', 'Templado', 'Caluroso', 'Muy caluroso'], CARBS = ['No', 'Parcial', 'Sí'], HYDRA = ['Poca', 'Normal', 'Bastante'], ENERGY = ['Baja', 'Normal', 'Alta'];
@@ -726,13 +661,13 @@ Object.assign(ACT, {
     if (F.reg && !(F.rpe >= 1 && F.rpe <= 10)) { say('Indica tu esfuerzo de 1 a 10 para registrar la salida en Camino, o elige «Solo guardar el evento».'); return; }
     const parts = ridePartsByDay(), last = LV.log[LV.log.length - 1], uid = ST.user.uid;
     const km = last && last.meta ? Number(LV.ev.km) : Math.max(LV.lastKm || 0, last ? last.km : 0);
-    const res = { start: LV.start, end: LV.end, done: !!(last && last.meta), controls: LV.log.map((x) => ({ n: x.name, km: x.km, arr: Math.round((x.arr - LV.start) / 60000), dep: x.dep ? Math.round((x.dep - LV.start) / 60000) : null, delay: Math.round(x.delay) })), stops: (LV.rec || []).filter((x) => x.type === 'detencion').length,
+    const res = { start: LV.start, end: LV.end, done: !!(last && last.meta), controls: LV.log.map((x) => ({ n: x.name, km: x.km, arr: Math.round((x.arr - LV.start) / 60000), delay: Math.round(x.delay) })), stops: (LV.rec || []).filter((x) => x.type === 'detencion').length,
       km: Math.round(km * 10) / 10, min: parts.reduce((s, p) => s + p.min, 0), rpe: F.reg ? F.rpe : null, src: 'ruta', reg: !!F.reg,
       rec: (LV.rec || []).slice(0, 60).map((x) => ({ t: x.type, s: Math.round(x.start / 1000), e: x.end ? Math.round(x.end / 1000) : null, d: String(x.detail || '').slice(0, 80) })) };
     const ctl = (e.ctl || []).map((c) => { const lg = LV.log.find((x) => !x.meta && Number(x.km) === Number(c.km)); return lg ? Object.assign({}, c, { reg: lg.arr }) : c; });
     UI.busy = true; render();
     try {
-      const mv = await be.settle(be.mergeEvent(uid, e.id, { result: res, ctl, liveBak: null, liveAt: null, updatedAt: Date.now() }), 8000);
+      const mv = await be.settle(be.mergeEvent(uid, e.id, { result: res, ctl, updatedAt: Date.now() }), 8000);
       let note = mv === 'timeout' ? 'Resultado guardado en el teléfono; se sincroniza al volver la señal.' : 'Resultado guardado en el evento.';
       if (F.reg && parts.length) {
         const fuel = {}; ['carbs', 'hydra', 'energy'].forEach((k) => { if (F[k] != null) fuel[k] = F[k]; }); if (F.gi) fuel.gi = F.gi;
@@ -783,7 +718,7 @@ be.onAuth((u) => {
   if (u) {
     LV = lvLoad(); UI.liveOpen = !!(LV && LV.start);
     unW.push(be.watchProfile(u.uid, (p) => { ST.profile = p; ST.profLoaded = true; softRender(); }, () => { ST.profLoaded = true; softRender(); }));
-    unW.push(be.watchEvents(u.uid, (rows) => { ST.myEvents = rows; ST.evLoaded = true; if (LV && UI.liveOpen && LV.mode !== 'fin') return; softRender(); }, () => { ST.evLoaded = true; softRender(); }));
+    unW.push(be.watchEvents(u.uid, (rows) => { ST.myEvents = rows; ST.evLoaded = true; softRender(); }, () => { ST.evLoaded = true; softRender(); }));
     loadBio(u.uid); flushPend();
   } else LV = null;
   render();
