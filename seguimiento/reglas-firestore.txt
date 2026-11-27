@@ -1,0 +1,23 @@
+// Pegar DENTRO de "match /databases/{database}/documents { ... }" en las reglas desplegadas
+// (Firebase Console > Firestore > Reglas). NO reemplazar las reglas existentes: solo agregar este bloque.
+// El archivo firestore.rules del repositorio no trae las reglas de eventos, así que no sirve para desplegar.
+
+    // Seguimiento familiar sin cuenta (Camino Ruta v3).
+    // - Lectura: solo "get" (nunca list) y solo si el token existe y no venció. El token (24 caracteres aleatorios) hace de llave.
+    // - Escritura: solo una persona con sesión, y solo sobre documentos de los que es dueña. Vence en 7 días como máximo.
+    match /tracks/{token} {
+      allow get: if token.size() >= 22 && resource.data.exp > request.time.toMillis();
+      allow create: if request.auth != null && token.size() >= 22 && token.size() <= 40
+        && request.resource.data.keys().hasOnly(['owner', 'u', 'exp', 'j'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.u is number
+        && request.resource.data.exp is number && request.resource.data.exp <= request.time.toMillis() + 7 * 86400000
+        && request.resource.data.j is string && request.resource.data.j.size() <= 9000;
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid
+        && request.resource.data.keys().hasOnly(['owner', 'u', 'exp', 'j'])
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.u is number
+        && request.resource.data.exp is number && request.resource.data.exp <= request.time.toMillis() + 7 * 86400000
+        && request.resource.data.j is string && request.resource.data.j.size() <= 9000;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
