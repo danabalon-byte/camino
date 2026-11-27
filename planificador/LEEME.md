@@ -1,4 +1,4 @@
-# Camino Ruta (planificador independiente) · v1
+# Camino Ruta (planificador independiente) · v2
 
 App web instalable, en carpeta propia del sitio de Camino (`/camino/planificador/`). Es la sección **Planificar y modo en vivo** de Camino como app aparte: misma cuenta, mismos datos, funciona sin abrir Camino.
 
@@ -19,3 +19,16 @@ Igual que Planificar: `users/{id}.features.planificar === true` (Biblioteca, por
 
 ## Publicar
 Subir la carpeta `planificador/` al repositorio y aplicar el cambio de `sw.js` de Camino (la línea de `activate` solo borra cachés `camino-shell-*`).
+
+## Novedades v2 (27-nov-2026)
+- **Velocidad por tramo**: cada control puede llevar la velocidad del tramo que termina en él, y la meta una velocidad propia para el último tramo; sin dato usa la general. Con un solo valor el resultado es idéntico a v1.
+- **Margen a meta** en el modo en vivo (brevet): con el plan más tu atraso actual y con tu ritmo real frente al del plan.
+- **Barra de ruta** con los controles como marcas y el punto de avance.
+- **Copia del registro en vivo** en el evento (`liveBak`, cada 20 s como máximo): si se pierde el teléfono o se borra la app, la lista de eventos ofrece «Recuperar registro». Se borra al guardar o cerrar el evento.
+- **Resultado real por tramo** y botón para crear un evento nuevo con tu ritmo real; la lista muestra si el evento está terminado y su tiempo.
+- La salida de cada control se guarda ahora en el resultado (`controls[].dep`).
+- **Service worker** `ruta-shell-v2`: la red tiene 4 s; si no responde, abre lo guardado. No guarda respuestas con error. Fuentes en caché y carga no bloqueante.
+- Corregido: «Tramo que viene» (parada en un control) mostraba el mismo control con 0,0 km; ahora muestra el siguiente. El mismo error existe en el código de Camino v79 del que se copió.
+
+## Pruebas
+`pruebas/` no se publica; se corrieron 19 pruebas del cálculo con el Brevet 1000 (Plan A reproducido al minuto) y 7 del service worker.
