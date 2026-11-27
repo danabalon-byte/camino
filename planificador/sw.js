@@ -1,7 +1,7 @@
-// Service worker de Camino Ruta (v2): guarda la carcasa de la app (y el SDK de Firebase y las fuentes) para abrirla sin conexion.
+// Service worker de Camino Ruta (v3): guarda la carcasa de la app (y el SDK de Firebase y las fuentes) para abrirla sin conexion.
 // Los datos los maneja Firestore con su propia cache local. Cache propia: no se mezcla con la de Camino.
 // v2: la red tiene 4 s para responder; si no, se usa lo guardado (mala cobertura = igual abre rapido). Solo se guardan respuestas correctas.
-const CACHE = 'ruta-shell-v2', FONTS = 'ruta-fonts-v1', WAIT = 4000;
+const CACHE = 'ruta-shell-v3', FONTS = 'ruta-fonts-v1', WAIT = 4000;
 const SHELL = ['./', 'index.html', 'app.js', 'data.js', 'ruta.css', 'manifest.webmanifest', '../styles.css', '../firebase-config.js', '../icon-180.png', '../icon-192.png', '../icon-512.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => { /* un archivo ausente no bloquea la instalacion */ })))).then(() => self.skipWaiting())); });
 // Solo borra versiones antiguas de ESTA app; nunca las cachés de Camino u otras apps del mismo sitio.

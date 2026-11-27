@@ -1,4 +1,4 @@
-# Camino Ruta (planificador independiente) · v2
+# Camino Ruta (planificador independiente) · v3
 
 App web instalable, en carpeta propia del sitio de Camino (`/camino/planificador/`). Es la sección **Planificar y modo en vivo** de Camino como app aparte: misma cuenta, mismos datos, funciona sin abrir Camino.
 
@@ -29,6 +29,10 @@ Subir la carpeta `planificador/` al repositorio y aplicar el cambio de `sw.js` d
 - La salida de cada control se guarda ahora en el resultado (`controls[].dep`).
 - **Service worker** `ruta-shell-v2`: la red tiene 4 s; si no responde, abre lo guardado. No guarda respuestas con error. Fuentes en caché y carga no bloqueante.
 - Corregido: «Tramo que viene» (parada en un control) mostraba el mismo control con 0,0 km; ahora muestra el siguiente. El mismo error existe en el código de Camino v79 del que se copió.
+
+## Novedades v3 (27-nov-2026)
+- **Seguimiento familiar sin cuenta**: en la Hoja de seguridad, «Crear enlace de seguimiento». La familia abre `/camino/seguimiento/#t=<token>` y ve km, controles, atraso y próximo control, sin cuenta. Requiere agregar una regla de Firestore (ver `../seguimiento/LEEME.md`). El mensaje para el grupo y el de avance en vivo incluyen el enlace.
+- El modo en vivo muestra si el seguimiento se está publicando.
 
 ## Pruebas
 `pruebas/` no se publica; se corrieron 19 pruebas del cálculo con el Brevet 1000 (Plan A reproducido al minuto) y 7 del service worker.

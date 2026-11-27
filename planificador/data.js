@@ -43,6 +43,9 @@ export const be = {
   },
   saveEvent(uid, id, data) { return setDoc(doc(db, 'users', uid, 'events', String(id)), clean(data)); },
   mergeEvent(uid, id, part) { return setDoc(doc(db, 'users', uid, 'events', String(id)), clean(part), { merge: true }); },
+  // v3: seguimiento familiar sin cuenta (documento tracks/{token}; la regla de Firestore lo deja leer solo con el token).
+  trkSet(token, data) { return setDoc(doc(db, 'tracks', String(token)), clean(data)); },
+  trkDel(token) { return deleteDoc(doc(db, 'tracks', String(token))); },
   deleteEvent(uid, id) { return deleteDoc(doc(db, 'users', uid, 'events', String(id))); },
   async getCheckin(uid, date) { const s = await getDoc(doc(db, 'users', uid, 'checkins', date)); return s.exists() ? s.data() : null; },
   saveCheckin(uid, c) { return setDoc(doc(db, 'users', uid, 'checkins', c.date), clean(c)); },

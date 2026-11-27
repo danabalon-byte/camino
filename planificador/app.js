@@ -4,7 +4,7 @@
    Sin claves: la configuracion web de Firebase se importa de ../firebase-config.js. */
 import { be } from './data.js';
 
-const RUTA_VER = 2;
+const RUTA_VER = 3;
 const WD = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const pad = (n) => (n < 10 ? '0' + n : '' + n);
@@ -76,7 +76,6 @@ function elevSvg(r) {
   const pts = A.map((v, i) => (i / (n - 1) * 342).toFixed(1) + ' ' + (80 - (v - mn) / sp * 70).toFixed(1));
   return '<svg viewBox="0 0 342 90" width="100%" role="img" aria-label="Perfil de altitud de ' + Math.round(mn) + ' a ' + Math.round(mx) + ' metros" style="display:block"><path d="M' + pts.join(' L') + ' L342 90 L0 90Z" fill="var(--accent)" fill-opacity=".18" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg>';
 }
-function plCtlLocked() { const P = UI.pl; return !!(LV && P && P.id && LV.ev && LV.ev.id === P.id); }
 /* ---------- Planificar: eventos, track GPX y controles (v55) ---------- */
 const PL_BRV = [200, 300, 400, 600, 1000];
 const PL_BANDS = [[0, 200, 34, 15], [200, 400, 32, 15], [400, 600, 30, 15], [600, 1000, 28, 11.428], [1000, 1300, 26, 13.333]];
@@ -272,14 +271,13 @@ function plEditHtml(P) {
   } else out += '<p class="soft" style="font-size:14px">Carga el archivo GPX del recorrido para ver el mapa, la distancia y el desnivel. Lo descargas desde Garmin Connect, RideWithGPS o Strava (en una ruta o actividad, opción exportar GPX).</p><label class="btn primary" for="pl-file" style="cursor:pointer;justify-content:center"><span>Cargar archivo GPX</span></label>';
   out += '<input id="pl-file" data-pl="file" type="file" accept=".gpx,application/gpx+xml,text/xml,application/xml" style="position:absolute;left:-9999px;width:1px;height:1px" aria-label="Archivo GPX"><p class="muted" style="font-size:12px">El archivo se procesa en tu teléfono y solo se guarda un trazo simplificado.</p></section>';
   out += '<section class="card col g12" aria-label="Controles"><div class="eyebrow">' + (brv ? 'Controles' : 'Paradas') + '</div><p class="soft" style="font-size:13px">' + (brv ? 'Escribe el kilómetro de cada control intermedio. La meta se agrega sola.' : 'Escribe el kilómetro de cada parada planificada.') + '</p>';
-  const lockCtl = !!(LV && P.id && LV.ev && LV.ev.id === P.id);
   (d.ctl || []).forEach((c, i) => {
     const regDt = c.reg ? new Date(c.reg) : null, regHm = regDt ? pad(regDt.getHours()) + ':' + pad(regDt.getMinutes()) : '';
     const ctlLabel = c.name || ('control ' + (i + 1));
     const regBtn = regDt
-      ? '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" aria-pressed="true"' + (lockCtl ? ' disabled' : '') + ' style="width:100%;justify-content:center;padding:0 6px" aria-label="Quitar el registro de paso por ' + esc(ctlLabel) + ', registrado a las ' + regHm + '">' + regHm + '</button>'
-      : '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" style="width:100%;justify-content:center;padding:0 6px" aria-label="Registrar que acabas de pasar por ' + esc(ctlLabel) + '">Registrar</button>';
-    out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4" style="width:84px;flex:none">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '" style="width:84px"></div><div class="col g4" style="width:92px;flex:none"><span class="muted" style="font-size:13px">Paso</span>' + regBtn + '</div></div><div class="col g4">' + lab('plc-v' + i, 'Velocidad del tramo hasta este control (km/h, opcional)') + '<input class="field" id="plc-v' + i + '" data-pl="cv" data-i="' + i + '" type="number" inputmode="decimal" min="5" max="60" value="' + esc(c.speed) + '" placeholder="' + esc(d.speed) + '"></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '">' + (lockCtl ? '' : '<button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button>') + '</div></div>';
+      ? '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" aria-pressed="true" style="width:100%;justify-content:center;padding:0 6px" aria-label="Quitar el registro de paso por ' + esc(ctlLabel) + ', registrado a las ' + regHm + '">' + regHm + '</button>'
+      : '<button type="button" class="chip" data-a="plCtlReg" data-v="' + i + '" style="width:100%;justify-content:center;padding:0 6px" aria-label="Registrar que acabas de pasar por ' + esc(ctlLabel) + '">Reg PC</button>';
+    out += '<div class="col g8" style="border-top:1px solid var(--line);padding-top:10px"><div class="row g8"><div class="col g4 grow">' + lab('plc-k' + i, 'Kilómetro') + '<input class="field" id="plc-k' + i + '" data-pl="ck" data-i="' + i + '" type="number" inputmode="decimal" min="1" value="' + esc(c.km) + '"></div><div class="col g4" style="width:84px;flex:none">' + lab('plc-s' + i, 'Parada (min)') + '<input class="field" id="plc-s' + i + '" data-pl="cs" data-i="' + i + '" type="number" inputmode="numeric" min="0" max="600" value="' + esc(c.stop) + '" placeholder="' + esc(d.stop) + '" style="width:84px"></div><div class="col g4" style="width:92px;flex:none"><span class="muted" style="font-size:13px">Paso</span>' + regBtn + '</div></div><div class="col g4">' + lab('plc-v' + i, 'Velocidad del tramo hasta este control (km/h, opcional)') + '<input class="field" id="plc-v' + i + '" data-pl="cv" data-i="' + i + '" type="number" inputmode="decimal" min="5" max="60" value="' + esc(c.speed) + '" placeholder="' + esc(d.speed) + '"></div><div class="row g8"><input class="field grow" id="plc-n' + i + '" data-pl="cn" data-i="' + i + '" type="text" maxlength="40" value="' + esc(c.name) + '" placeholder="Nombre del control (opcional)" aria-label="Nombre del control ' + (i + 1) + '"><button type="button" class="chip" data-a="plCtlDel" data-v="' + i + '" aria-label="Quitar control ' + (i + 1) + '">Quitar</button></div></div>';
   });
   out += '<button type="button" class="chip" data-a="plCtlAdd" style="align-self:flex-start;border-color:var(--accent);color:var(--accent);font-weight:600">Agregar ' + (brv ? 'control' : 'parada') + '</button></section>';
   out += '<section class="card col g12" aria-label="Tu ritmo"><div class="eyebrow">Tu ritmo</div><div class="row g8"><div class="col g8 grow">' + lab('pl-speed', 'Velocidad media (km/h)') + '<input class="field" id="pl-speed" data-pl="speed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.speed) + '"></div><div class="col g8 grow">' + lab('pl-stop', 'Parada típica (min)') + '<input class="field" id="pl-stop" data-pl="stop" type="number" inputmode="numeric" min="0" max="600" value="' + esc(d.stop) + '"></div></div><div class="col g8">' + lab('pl-mspeed', 'Velocidad del último tramo a la meta (km/h, opcional)') + '<input class="field" id="pl-mspeed" data-pl="mspeed" type="number" inputmode="decimal" min="5" max="60" value="' + esc(d.mspeed) + '" placeholder="' + esc(d.speed) + '"></div><p class="muted" style="font-size:12px">La velocidad es en movimiento, sin contar las paradas. Si un tramo es más duro (más desnivel), ponle su propia velocidad en el control donde termina; los demás usan la general.</p></section>';
@@ -346,8 +344,8 @@ Object.assign(ACT, {
   plKind(v) { const d = UI.pl.d; if (d.kind === v) return; d.kind = v; if (v === 'brevet' && PL_BRV.indexOf(Number(d.km)) < 0) d.km = 200; render(); },
   plBrv(v) { UI.pl.d.km = Number(v); render(); },
   plCtlAdd() { UI.pl.d.ctl.push({ km: '', name: '', stop: '', speed: '', reg: null }); render(); },
-  plCtlDel(v) { if (plCtlLocked()) { say('El evento está en curso: ya no se pueden quitar controles.'); return; } UI.pl.d.ctl.splice(+v, 1); render(); },
-  plCtlReg(v) { const c = UI.pl.d.ctl[+v]; if (!c) return; if (c.reg && plCtlLocked()) { say('El evento está en curso: el registro del paso no se puede quitar.'); return; } c.reg = c.reg ? null : Date.now(); render(); },
+  plCtlDel(v) { UI.pl.d.ctl.splice(+v, 1); render(); },
+  plCtlReg(v) { const c = UI.pl.d.ctl[+v]; if (!c) return; c.reg = c.reg ? null : Date.now(); render(); },
   plNoTrack() { UI.pl.d.track = null; render(); },
   plClone() {
     const P = UI.pl; if (!P || !P.res) return; const d = P.d, L = plLegs(d, P.res), nd = JSON.parse(JSON.stringify(d));
@@ -384,7 +382,7 @@ document.addEventListener('change', (e) => { const t = e.target; if (t && t.data
 var LV = null;
 const lvKey = () => 'camino-live-v1-' + (ST.user ? ST.user.uid : '');
 const lvLoad = () => { try { const r = JSON.parse(localStorage.getItem(lvKey()) || 'null'); if (r && r.ev) { r.confirmEnd = 0; r.gpsBusy = false; return r; } return null; } catch (e) { return null; } };
-const lvSave = () => { try { if (LV) localStorage.setItem(lvKey(), JSON.stringify(LV)); else localStorage.removeItem(lvKey()); } catch (e) { /* sin almacenamiento */ } lvBackupSoon(); };
+const lvSave = () => { try { if (LV) localStorage.setItem(lvKey(), JSON.stringify(LV)); else localStorage.removeItem(lvKey()); } catch (e) { /* sin almacenamiento */ } lvBackupSoon(); trkSoon(); };
 /* v2: copia del registro en vivo en el evento (liveBak). Cada 20 s como mucho y solo si cambió; sin señal, Firestore la envía al volver. */
 let bakT = null, bakLast = '';
 function lvBakData() { if (!LV || !LV.start) return null; return JSON.stringify({ v: 1, mode: LV.mode, start: LV.start, idx: LV.idx, depMs: LV.depMs, depKm: LV.depKm, lastKm: LV.lastKm, lastKmAt: LV.lastKmAt, arrMs: LV.arrMs || null, end: LV.end || null, log: LV.log, rec: LV.rec || [], msg: LV.msg || '', fin: LV.fin || null }); }
@@ -455,6 +453,7 @@ function lvShareText() {
   const a = lvAna(), nm = (ST.profile && ST.profile.name) || (ST.user && ST.user.name) || 'Yo', f = firstName(nm), st = lvStatus(a);
   let s = f + ' · ' + LV.ev.name + '. Salió a las ' + lvClock(LV.start) + '. ' + (LV.mode === 'fin' ? 'Terminó el evento a las ' + lvClock(LV.end) + '.' : 'Va en el km ' + lvKm1(a.km) + ' de ' + LV.ev.km + ' (' + st.t.replace('Vas ', 'va ') + '). Próximo control: ' + (a.r.meta ? 'la meta' : (a.r.n || 'control')) + ' km ' + a.r.km + ', llegada estimada ' + lvClock(a.etaMs) + (a.brv ? ', cierra ' + lvClock(LV.start + a.r.w.close * 60000) : '') + '.');
   if (LV.msg && LV.msg.trim()) s += ' ' + LV.msg.trim();
+  if (trkOk(LV.ev.safe && LV.ev.safe.trk)) s += ' Sigue mi avance en vivo: ' + trkUrl(LV.ev.safe.trk);
   return s;
 }
 function lvTile(l, v, id) { return '<div class="col g4" style="background:var(--surface);border-radius:16px;padding:12px 14px;min-width:0"><span class="num" style="font-size:22px;line-height:1.05"' + (id ? ' id="' + id + '"' : '') + '>' + v + '</span><span class="muted" style="font-size:12px">' + l + '</span></div>'; }
@@ -462,7 +461,7 @@ function lvStatCard(chip, big, sub, subId, warn) { return '<section class="card 
 /* ---------- v64: Hoja de seguridad del evento ---------- */
 function plSafeFix(x) {
   x = x && typeof x === 'object' ? x : {};
-  return { link: String(x.link || '').trim().slice(0, 300), name: String(x.name || '').slice(0, 80), phone: String(x.phone || '').slice(0, 30), until: /^\d{2}:\d{2}$/.test(x.until || '') ? x.until : '',
+  return { trk: trkOk(x.trk) ? x.trk : '', link: String(x.link || '').trim().slice(0, 300), name: String(x.name || '').slice(0, 80), phone: String(x.phone || '').slice(0, 30), until: /^\d{2}:\d{2}$/.test(x.until || '') ? x.until : '',
     dead: (Array.isArray(x.dead) ? x.dead : []).slice(0, 10).map((r) => ({ a: r && r.a != null ? r.a : '', b: r && r.b != null ? r.b : '' })) };
 }
 function plSafeProfile() { const e = (bioMain() || {}).emergency || {}; return { name: e.name || '', phone: e.phone || '' }; }
@@ -472,6 +471,7 @@ function plSafeText(d) {
   const dead = s.dead.filter((r) => Number(r.b) > Number(r.a) && Number(r.a) >= 0).map((r) => 'km ' + kmf(r.a) + ' al ' + kmf(r.b));
   let t = 'Hola, salgo a hacer ' + (d.name || 'mi evento') + ' (' + kmf(d.km) + ' km) el ' + shortDate(d.date) + ' a las ' + d.start + '.';
   if (c) t += ' Llegada estimada: ' + plClock(d.start, c.finish) + '.';
+  if (s.trk) t += ' Sigue mi avance en vivo (sin cuenta): ' + trkUrl(s.trk);
   if (s.link) t += ' Puedes seguir mi ubicación aquí: ' + s.link;
   if (dead.length) t += ' Tramos sin señal celular: ' + dead.join(', ') + '.';
   if (s.until) t += ' Si no tienes noticias mías después de las ' + s.until + ', intenta llamarme' + (s.name || s.phone ? ' y, si no respondo, avisa a ' + [s.name, s.phone].filter(Boolean).join(' · ') : '') + '.';
@@ -483,10 +483,73 @@ function plSafeBox(d) {
   out += '<div class="col g8"><span class="eyebrow">Contacto responsable</span><div class="row g8"><div class="col g8 grow">' + lab('pl-sn', 'Nombre') + '<input class="field" id="pl-sn" data-pl="sn" type="text" maxlength="80" value="' + esc(s.name) + '"></div><div class="col g8 grow">' + lab('pl-sp', 'Teléfono') + '<input class="field" id="pl-sp" data-pl="sp" type="tel" inputmode="tel" maxlength="30" value="' + esc(s.phone) + '"></div></div>' + (hasProf ? '<button type="button" class="chip" data-a="plSafeProf" style="align-self:flex-start">Usar el contacto de emergencia de mi perfil</button>' : '') + '</div>';
   out += '<div class="col g8">' + lab('pl-su', 'Si no hay noticias mías después de las') + '<div class="row g8" style="align-items:center"><input class="field" id="pl-su" data-pl="su" type="time" value="' + esc(s.until) + '" style="max-width:160px"><button type="button" class="chip" data-a="plSafeAuto">Llegada estimada + 2 h</button></div></div>';
   out += '<div class="col g8"><span class="eyebrow">Tramos sin señal celular</span>' + s.dead.map((r, i) => '<div class="row g8" style="align-items:flex-end"><div class="col g4 grow">' + lab('pl-da' + i, 'Desde el km') + '<input class="field" id="pl-da' + i + '" data-pl="dk" data-w="a" data-i="' + i + '" type="number" inputmode="decimal" min="0" value="' + esc(r.a) + '"></div><div class="col g4 grow">' + lab('pl-db' + i, 'Hasta el km') + '<input class="field" id="pl-db' + i + '" data-pl="dk" data-w="b" data-i="' + i + '" type="number" inputmode="decimal" min="0" value="' + esc(r.b) + '"></div><button type="button" class="chip" data-a="plDeadDel" data-v="' + i + '" aria-label="Quitar tramo ' + (i + 1) + '">Quitar</button></div>').join('') + (s.dead.length < 10 ? '<button type="button" class="chip" data-a="plDeadAdd" style="align-self:flex-start">Agregar tramo sin señal</button>' : '') + '</div>';
+  out += trkBox(s);
   out += '<div class="col g8"><span class="eyebrow">Mensaje para tu grupo</span><p class="soft" id="pl-safemsg" style="font-size:14px;background:var(--surface2);border-radius:14px;padding:12px 14px">' + esc(plSafeText(d)) + '</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="plSafeWa" style="width:auto;padding:0 18px"><span>Compartir por WhatsApp</span></button><button type="button" class="btn" data-a="plSafeCopy" style="width:auto;padding:0 18px"><span>Copiar mensaje</span></button></div></div>';
   out += '<div class="info" role="note" style="border-color:var(--warn)">' + infoIcon() + '<span>Quien reciba el enlace verá dónde estás mientras dure el seguimiento. Compártelo solo con personas de confianza y desactívalo al terminar.</span></div>';
   return out;
 }
+/* ---------- v3: seguimiento familiar sin cuenta (documento público por token: tracks/{token}) ---------- */
+/* La familia abre un enlace con el token en el fragmento (#t=...). La página lee SOLO ese documento (get, nunca list).
+   Se publican km, controles y estado; nunca coordenadas, teléfono ni nombre completo. Vence solo y se puede borrar. */
+const trkOk = (t) => /^[A-Za-z0-9_-]{22,40}$/.test(t || '');
+const trkUrl = (t) => (location.origin || '') + String(location.pathname || '/').replace(/planificador\/.*$/, '').replace(/[^/]*$/, '') + 'seguimiento/#t=' + t;
+function trkToken() { const b = new Uint8Array(18); crypto.getRandomValues(b); let s = ''; b.forEach((x) => { s += String.fromCharCode(x); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function trkPlanStart(d) { const p = parse(d.date), h = String(d.start || '06:00').split(':'); return new Date(p.getFullYear(), p.getMonth(), p.getDate(), +h[0] || 0, +h[1] || 0).getTime(); }
+/* «Si no hay noticias después de las HH:MM»: se toma la ocurrencia de esa hora más cercana a la llegada planificada. */
+function trkUntil(d, S) {
+  const s = plSafeFix(d.safe), c = plCalc(d); if (!s.until || !c) return null;
+  const fin = S + c.finish * 60000, p = s.until.split(':'), base = new Date(fin); base.setHours(+p[0], +p[1], 0, 0);
+  let best = null; [-1, 0, 1].forEach((k) => { const t = base.getTime() + k * 86400000; if (best == null || Math.abs(t - fin) < Math.abs(best - fin)) best = t; });
+  return best;
+}
+function trkJ(d, o) {
+  const c = plCalc(d), brv = d.kind === 'brevet', S = o.start, rows = c ? c.rows : []; let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* sin zona */ }
+  const j = { v: 1, ev: String(d.name || 'Evento').slice(0, 70), who: String(o.who || '').slice(0, 30), km: Number(d.km) || 0, brv, mode: o.mode, start: S, at: o.at || null, pos: Math.round((o.pos || 0) * 10) / 10, end: o.end || null,
+    delay: o.delay == null ? null : Math.round(o.delay), st: String(o.st || '').slice(0, 30), next: o.next || null, pm: o.pm == null ? null : Math.round(o.pm), tz, un: trkUntil(d, S), msg: String(o.msg || '').slice(0, 140), stopAt: String(o.stopAt || '').slice(0, 40),
+    ctl: rows.slice(0, 40).map((r, i) => { const lg = (o.log || []).find((x) => x.i === i); return { n: String(r.meta ? 'Meta' : (r.n || 'Control')).slice(0, 40), k: r.km, p: Math.round(S + r.rec * 60000), c: brv ? Math.round(S + r.w.close * 60000) : null, a: lg ? lg.arr : null, d: lg && lg.dep ? lg.dep : null }; }) };
+  return JSON.stringify(j);
+}
+const trkWho = () => firstName((ST.profile && ST.profile.name) || (ST.user && ST.user.name) || '');
+function trkPlace(d) { const S = trkPlanStart(d); return trkJ(d, { start: S, mode: 'pre', who: trkWho() }); }
+function trkLive() {
+  const a = lvAna(), d = plFromEv(LV.ev).d, st = lvStatus(a), last = LV.log[LV.log.length - 1], fin = LV.mode === 'fin';
+  return trkJ(d, { start: LV.start, mode: LV.mode, pos: fin ? Number(LV.ev.km) : a.km, at: fin ? LV.end : a.at, end: LV.end, delay: a.delay, st: st.ch, who: trkWho(), pm: a.brv ? a.projMarg : null, log: LV.log, msg: LV.msg && LV.msg.trim() ? LV.msg.trim() : '',
+    stopAt: LV.mode === 'stop' && last ? last.name : '', next: fin ? null : { n: a.r.meta ? 'Meta' : (a.r.n || 'Control'), k: a.r.km, eta: Math.round(a.etaMs), c: a.brv ? Math.round(LV.start + a.r.w.close * 60000) : null } });
+}
+let trkT = null, trkHb = null, trkLast = '', trkAt = 0, trkMsg = '';
+function trkShow(m) { trkMsg = m; const el = document.getElementById('lv-trk'); if (el) el.textContent = m; }
+function trkSoon() { if (!LV || !LV.start || !ST.user || !trkOk(LV.ev.safe && LV.ev.safe.trk) || trkT) return; trkT = setTimeout(trkPush, 4000); }
+function trkPush() {
+  trkT = null; if (!LV || !LV.start || !ST.user) return; const tk = LV.ev.safe && LV.ev.safe.trk; if (!trkOk(tk)) return;
+  const j = trkLive(), now = Date.now(), live = LV.mode === 'ride' || LV.mode === 'stop';
+  if (live && !trkHb) trkHb = setTimeout(() => { trkHb = null; trkLast = ''; trkSoon(); }, 120000);
+  if (j === trkLast && now - trkAt < 120000) return;
+  trkLast = j; trkAt = now;
+  be.trkSet(tk, { owner: ST.user.uid, u: now, exp: now + (live ? 72 : 48) * 3600000, j }).then(() => trkShow('Seguimiento familiar: actualizado a las ' + pad(new Date(now).getHours()) + ':' + pad(new Date(now).getMinutes()) + '.'),
+    (e) => { trkLast = ''; trkShow(e && e.code === 'permission-denied' ? 'Seguimiento familiar: NO se pudo publicar (falta activar la regla en Firebase).' : 'Seguimiento familiar: no se pudo publicar; se reintenta.'); });
+}
+function trkBox(s) {
+  const t = '<span class="eyebrow">Seguimiento para tu familia (sin cuenta)</span>';
+  if (!s.trk) return '<div class="col g8">' + t + '<p class="soft" style="font-size:13px">Crea un enlace que tu gente abre en el navegador, sin cuenta ni app: ven tu avance, el próximo control y si vas con atraso. Lo puedes desactivar cuando quieras.</p><button type="button" class="btn" data-a="trkNew" style="width:auto;padding:0 18px;align-self:flex-start"><span>Crear enlace de seguimiento</span></button></div>';
+  return '<div class="col g8">' + t + '<p class="soft" id="pl-trkurl" style="font-size:13px;word-break:break-all;background:var(--surface2);border-radius:14px;padding:12px 14px">' + esc(trkUrl(s.trk)) + '</p><div class="row g8 wrap"><button type="button" class="btn" data-a="trkCopy" style="width:auto;padding:0 18px"><span>Copiar enlace</span></button><button type="button" class="chip" data-a="trkOff">Desactivar y borrar enlace</button></div><p class="muted" style="font-size:12px">Guarda el evento para conservar el enlace. Se publica mientras el modo en vivo está abierto y vence 72 h después de la última actualización. Quien lo tenga ve tu km y los controles, no tu ubicación exacta. El mensaje para tu grupo de abajo ya lo incluye.</p></div>';
+}
+Object.assign(ACT, {
+  async trkNew() {
+    const P = UI.pl; if (!P || !ST.user) { say('Inicia sesión para crear el enlace.'); return; }
+    const d = P.d; d.safe = plSafeFix(d.safe); const tk = trkToken(), now = Date.now();
+    let r; try { r = await be.settle(be.trkSet(tk, { owner: ST.user.uid, u: now, exp: now + 72 * 3600000, j: trkPlace(d) }), 8000); } catch (e) { say(e && e.code === 'permission-denied' ? 'Falta activar la regla de seguimiento en Firebase. No se creó el enlace.' : 'No pude crear el enlace. Reintenta con señal.', 'err'); return; }
+    if (r === 'timeout') { say('Sin señal: no se creó el enlace. Reintenta con conexión.', 'err'); return; }
+    d.safe.trk = tk; const b = document.getElementById('pl-safe'); if (b) b.innerHTML = plSafeBox(d); say('Enlace creado. Guarda el evento para conservarlo.', 'ok');
+  },
+  async trkOff() {
+    const P = UI.pl, d = P && P.d, tk = d && d.safe && d.safe.trk; if (!tk) return;
+    try { await be.settle(be.trkDel(tk), 6000); } catch (e) { /* ya no existe o sin permiso */ }
+    d.safe = plSafeFix(d.safe); d.safe.trk = '';
+    if (P.id && ST.user) { try { await be.settle(be.mergeEvent(ST.user.uid, P.id, { safe: plSafeSave(d) }), 6000); } catch (e) { /* queda al guardar */ } }
+    const b = document.getElementById('pl-safe'); if (b) b.innerHTML = plSafeBox(d); say('Enlace desactivado.', 'ok');
+  },
+  async trkCopy() { const P = UI.pl, tk = P && P.d.safe && P.d.safe.trk; if (!tk) return; const u = trkUrl(tk); try { await navigator.clipboard.writeText(u); say('Enlace copiado.', 'ok'); } catch (e) { say('No pude copiar. Mantén presionado el enlace para copiarlo.'); } }
+});
 function plSafeSave(d) { const s = plSafeFix(d.safe); s.dead = s.dead.filter((r) => r.a !== '' && r.b !== '' && Number(r.b) > Number(r.a)).map((r) => ({ a: Number(r.a), b: Number(r.b) })); return s; }
 async function safeShare(d, how) {
   const t = plSafeText(d);
@@ -508,7 +571,7 @@ function liveHtml() {
   const ev = LV.ev; let out = '<div class="inner"><div class="stack"><div class="row between"><div class="col g4" style="min-width:0"><div class="muted" style="font-size:14px">' + (LV.mode === 'fin' ? 'Evento terminado' : 'Evento en curso') + '</div><h1 class="title">' + esc(ev.name) + '</h1></div><button type="button" class="chip" data-a="lvHide">Salir</button></div>' + msgBanner();
   if (LV.mode === 'pre') {
     out += '<section class="card col g12"><div class="eyebrow">Antes de salir</div><p class="soft">Salida programada: <b>' + esc(ev.start) + '</b>. Toca el botón en el momento exacto de la salida: desde ahí corre el cronómetro y se calculan los horarios.</p><button type="button" class="btn primary" data-a="lvGo"><span>Confirmar salida ahora</span>' + ph('arrow-right', 22) + '</button><div class="col g8"><label for="lv-ago" class="muted" style="font-size:13px">¿Ya saliste? Indica hace cuántos minutos</label><div class="row g8"><input class="field" id="lv-ago" type="number" inputmode="numeric" min="0" max="600" placeholder="Ejemplo: 20"><button type="button" class="chip" data-a="lvGoAgo">Aplicar</button></div></div></section><button type="button" class="btn ghost" data-a="lvDrop">Cancelar, no voy a salir</button>';
-    { const sf = plSafeFix(ev.safe); if (sf.link || sf.name || sf.phone || sf.until) out += '<section class="card col g8" aria-label="Hoja de seguridad"><div class="eyebrow">Hoja de seguridad</div><p class="soft" style="font-size:14px">' + esc(plSafeText(plFromEv(ev).d)) + '</p><div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvSafeWa" style="width:auto;padding:0 18px"><span>Compartir por WhatsApp</span></button><button type="button" class="btn" data-a="lvSafeCopy" style="width:auto;padding:0 18px"><span>Copiar mensaje</span></button></div></section>'; }
+    { const sf = plSafeFix(ev.safe); if (sf.link || sf.name || sf.phone || sf.until || sf.trk) out += '<section class="card col g8" aria-label="Hoja de seguridad"><div class="eyebrow">Hoja de seguridad</div><p class="soft" style="font-size:14px">' + esc(plSafeText(plFromEv(ev).d)) + '</p>' + (sf.trk ? '<p class="muted" style="font-size:13px" id="lv-trk">' + esc(trkMsg || 'Seguimiento familiar: se publica al iniciar el registro.') + '</p>' : '') + '<div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvSafeWa" style="width:auto;padding:0 18px"><span>Compartir por WhatsApp</span></button><button type="button" class="btn" data-a="lvSafeCopy" style="width:auto;padding:0 18px"><span>Copiar mensaje</span></button></div></section>'; }
     return out + '</div></div>';
   }
   if (LV.mode === 'fin') {
@@ -543,7 +606,7 @@ function liveHtml() {
   const nu = plNutCalc(plFromEv(ev).d), nt = nu && nu.rows[LV.idx];
   if (nt) out += '<section class="card col g4"><div class="eyebrow">Nutrición de este tramo</div><p style="font-size:16px;font-weight:600">' + nt.g + ' g carbohidratos · ' + plL(nt.ml) + ' · ' + nt.na.toLocaleString('es-CL') + ' mg sodio</p>' + (nt.cnt ? '<p class="soft" style="font-size:14px">' + [nt.cnt.drink ? nt.cnt.drink + (nt.cnt.drink === 1 ? ' bidón' : ' bidones') : '', nt.cnt.gel ? nt.cnt.gel + (nt.cnt.gel === 1 ? ' gel' : ' geles') : '', nt.cnt.bar ? nt.cnt.bar + (nt.cnt.bar === 1 ? ' barra' : ' barras') : ''].filter(Boolean).join(' · ') + '</p>' : '') + '<p class="muted" style="font-size:12px">Para todo el tramo hasta ' + esc(nt.name.split(' → ')[1]) + '.</p></section>';
   out += '<section class="card col g8"><div class="eyebrow">Registrar algo</div><select class="field" id="lv-evt" aria-label="Tipo de registro"><option value="detencion">Detención (pinchazo, baño, mecánica)</option><option value="botellas">Botellas / hidratación</option><option value="comida">Comida extra</option><option value="sales">Sales / electrolitos</option><option value="sensacion">Sensación</option><option value="otro">Otro</option></select><input class="field" id="lv-evd" type="text" maxlength="80" placeholder="Detalle (opcional)" aria-label="Detalle"><button type="button" class="btn" data-a="lvEv" style="justify-content:center"><span>Registrar</span></button><p class="muted" style="font-size:12px">La detención pausa el cálculo del ritmo. El resto solo queda anotado con la hora.</p></section>';
-  out += '<section class="card col g8"><div class="eyebrow">Compartir avance</div><textarea id="lv-msg" rows="2" maxlength="200" placeholder="Mensaje personal (opcional)" aria-label="Mensaje personal">' + esc(LV.msg || '') + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvWa" style="width:auto;padding:0 20px;min-height:48px;justify-content:center">Compartir por WhatsApp</button><button type="button" class="chip" data-a="lvCopy">Copiar mensaje</button></div><p class="muted" style="font-size:12px">El mensaje dice tu km y tu próximo control, no tu ubicación exacta.</p></section>';
+  out += '<section class="card col g8"><div class="eyebrow">Compartir avance</div><textarea id="lv-msg" rows="2" maxlength="200" placeholder="Mensaje personal (opcional)" aria-label="Mensaje personal">' + esc(LV.msg || '') + '</textarea><div class="row g8 wrap"><button type="button" class="btn primary" data-a="lvWa" style="width:auto;padding:0 20px;min-height:48px;justify-content:center">Compartir por WhatsApp</button><button type="button" class="chip" data-a="lvCopy">Copiar mensaje</button></div><p class="muted" style="font-size:12px">El mensaje dice tu km y tu próximo control, no tu ubicación exacta.</p>' + (trkOk(LV.ev.safe && LV.ev.safe.trk) ? '<p class="muted" style="font-size:13px" id="lv-trk">' + esc(trkMsg || 'Seguimiento familiar: se publica en unos segundos.') + '</p>' : '') + '</section>';
   if ((LV.rec || []).length) out += '<details class="card"><summary style="font-weight:600;min-height:44px;display:flex;align-items:center">Eventos registrados (' + LV.rec.length + ')</summary>' + LV.rec.map((e) => '<div class="mrow"><div class="col grow g4"><span style="font-weight:600">' + ({ detencion: 'Detención', botellas: 'Botellas', comida: 'Comida extra', sales: 'Sales', sensacion: 'Sensación', otro: 'Otro' }[e.type] || 'Otro') + ' · ' + lvClock(e.start) + '</span><span class="muted" style="font-size:13px">' + esc(e.detail || '') + (e.type === 'detencion' && e.end ? ' · ' + lvHMS(e.end - e.start) : '') + '</span></div></div>').join('') + '</details>';
   const lvSafe = '<button type="button" class="btn primary" data-a="lvEndNo" style="justify-content:center;min-height:60px"><span>Seguir en el evento</span></button>';
   out += LV.confirmEnd === 1 ? '<section class="card col g12" role="alertdialog" aria-label="Terminar el evento: paso 1 de 2" style="border:2px solid var(--warn)"><div class="eyebrow">Terminar el evento · paso 1 de 2</div><p style="font-size:17px;font-weight:700;line-height:1.3">¿Quieres dejar de registrar este evento?</p><p class="soft" style="font-size:14px">Si sigues, tendrás que confirmar una vez más.</p>' + lvSafe + '<button type="button" class="chip" data-a="lvEndYes" style="min-height:56px;justify-content:center;border-color:var(--warn);font-weight:700">Quiero terminar el evento</button></section>'
