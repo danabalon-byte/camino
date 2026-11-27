@@ -1,0 +1,4 @@
+/* Camino Ruta: usa los estilos de Camino (../styles.css); aqui solo lo propio de esta app. */
+#nav { display: none !important; }
+.scroll { padding-bottom: env(safe-area-inset-bottom, 0px); }
+textarea { width: 100%; font: inherit; color: inherit; background: var(--surface2, transparent); border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 14px; resize: vertical; }
